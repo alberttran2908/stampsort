@@ -1,0 +1,11 @@
+# File gói gốc: quá lớn, không commit
+*.apk
+*.xapk
+*.apks
+*.aab
+# Bản giải nén APK: commit được, nhưng bỏ native libs (không cần cho game design, rất nặng)
+research/raw/**/lib/
+research/raw/**/*.so
+research/apk/*/extracted/lib/
+__pycache__/
+.venv/
