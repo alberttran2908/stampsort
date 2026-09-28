@@ -1,0 +1,474 @@
+<title>Little Post Office</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700&display=swap">
+<style>
+/* Layout: one-screen app. Slots row on top, tableau in the middle, deck + boosters pinned at the bottom. */
+:root{
+  --bg:#f6efe3; --paper:#fffaf1; --ink:#3b2f2a; --muted:#8a7a6e; --line:#e2d5c2;
+  --accent:#d9743c; --accent-ink:#fff; --good:#5b9a5b; --warn:#c8a02a; --bad:#c9524a;
+  --kraft:#c9a97c; --kraft2:#b8955f; --shadow:0 4px 14px rgba(70,45,20,.14);
+  --font-display:'Baloo 2','Nunito',system-ui,sans-serif; --font-body:'Nunito',system-ui,sans-serif;
+  --card-w:64px; --card-h:80px; --stack-gap:24px;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#2b2420; --paper:#3a312b; --ink:#f3e9dc; --muted:#b8a798; --line:#55473d;
+  --accent:#e58b52; --kraft:#8c6c46; --kraft2:#6e5233; --shadow:0 4px 14px rgba(0,0,0,.35); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#2b2420; --paper:#3a312b; --ink:#f3e9dc; --muted:#b8a798; --line:#55473d;
+  --accent:#e58b52; --kraft:#8c6c46; --kraft2:#6e5233; --shadow:0 4px 14px rgba(0,0,0,.35); color-scheme:dark }
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;-webkit-user-select:none;user-select:none;touch-action:manipulation;overflow-x:hidden}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,.card:focus-visible,.slot:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#app{height:100%;display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding-inline:12px;box-sizing:border-box}
+h1,h2{font-family:var(--font-display);margin:0;text-wrap:balance}
+/* HUD */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-block:8px 4px}
+.hud .lvl{font-family:var(--font-display);font-weight:800;font-size:18px}
+.hud .lvl small{font-weight:600;color:var(--muted);font-size:12px;margin-left:6px}
+.moves{display:flex;flex-direction:column;align-items:center;line-height:1}
+.moves b{font-family:var(--font-display);font-size:26px;font-variant-numeric:tabular-nums}
+.moves span{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.stars{display:flex;gap:2px;font-size:14px;margin-top:2px}
+.stars i{opacity:.25;font-style:normal}.stars i.on{opacity:1}
+.coins{display:flex;align-items:center;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-weight:700;font-variant-numeric:tabular-nums}
+/* Slots */
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-block:6px}
+.slots.n2{grid-template-columns:repeat(2,1fr);max-width:60%;margin:0 auto}
+.slots.n3{grid-template-columns:repeat(3,1fr);max-width:85%;margin:0 auto}
+.slot{position:relative;min-height:74px;border-radius:12px;background:var(--paper);border:2px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;box-sizing:border-box;transition:transform .15s,border-color .15s}
+.slot.open{border-style:solid;border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,var(--paper))}
+.slot.target{border-color:var(--accent);transform:scale(1.04);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.slot.shake{animation:shake .3s}
+.slot .who{font-family:var(--font-display);font-weight:700;font-size:12px;line-height:1.1;text-align:center}
+.slot .face{font-size:22px;line-height:1}
+.slot .cnt{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.slot .empty{font-size:11px;color:var(--muted)}
+.slot .hint{position:absolute;top:-8px;right:-4px;font-size:16px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+/* Tableau */
+.tableau{flex:1;display:flex;justify-content:center;gap:8px;padding-block:10px 6px;min-height:0;overflow:auto}
+.col{position:relative;width:var(--card-w);min-height:calc(var(--card-h) + 8px);flex:0 0 auto;border-radius:10px;background:color-mix(in srgb,var(--ink) 5%,transparent);}
+.col.target{box-shadow:inset 0 0 0 3px var(--accent)}
+.card{position:absolute;left:0;width:var(--card-w);height:var(--card-h);box-sizing:border-box;border-radius:6px;background:#fff;padding:5px;transition:top .18s,transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.card .in{width:100%;height:100%;border-radius:3px;background:color-mix(in srgb,var(--c) 18%,#fff);border:2px dotted var(--c);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;color:var(--c)}
+.card .in .face{font-size:26px;line-height:1;filter:saturate(.9)}
+.card .in .n{font-size:8px;font-weight:700;letter-spacing:.03em;opacity:.8;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.card.down{background:var(--kraft);background-image:repeating-linear-gradient(45deg,transparent 0 6px,rgba(255,255,255,.12) 6px 8px)}
+.card.down .in{border:2px solid var(--kraft2);background:transparent;color:var(--kraft2)}
+.card.down .in .face{font-size:18px}
+.card.top{cursor:pointer}
+.card.top:hover{transform:translateY(-3px)}
+.card.sel{transform:translateY(-8px) rotate(-3deg);box-shadow:0 8px 18px rgba(0,0,0,.25);z-index:50}
+.card.hint::after{content:"🐱";position:absolute;top:-14px;right:-10px;font-size:20px;animation:bob 1s infinite}
+.card.wiggle{animation:shake .3s}
+@keyframes bob{50%{transform:translateY(-3px)}}
+/* Bottom bar */
+.bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;padding-block:6px calc(10px + env(safe-area-inset-bottom,0px))}
+.pile{display:flex;gap:8px;align-items:flex-end;padding-bottom:18px}
+.pile .card{position:relative;left:auto}
+.pile .deck{cursor:pointer}
+.pile .deck .cnt{position:absolute;bottom:-16px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)}
+.pile .placeholder{width:var(--card-w);height:var(--card-h);border-radius:6px;border:2px dashed var(--line);box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;text-align:center;padding:4px}
+.tools{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:54px;padding:6px 4px;border-radius:12px;background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow)}
+.tool .ico{font-size:20px;line-height:1}
+.tool .lab{font-size:10px;font-weight:700}
+.tool .sub{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tool:disabled{opacity:.4;cursor:default}
+.tool.arm{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+/* Overlays */
+.overlay{position:fixed;inset:0;background:rgba(40,28,18,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:100}
+.sheet{background:var(--paper);color:var(--ink);border-radius:18px;padding:20px;max-width:360px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+.sheet h2{font-size:24px}
+.sheet p{margin:0;line-height:1.45}
+.sheet .row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:120px;padding:12px 14px;border-radius:12px;font-family:var(--font-display);font-weight:700;font-size:15px;background:var(--accent);color:var(--accent-ink);text-align:center}
+.btn.ghost{background:transparent;border:2px solid var(--line);color:var(--ink)}
+.btn:disabled{opacity:.45}
+.letter{background:#fff8ea;color:#3b2f2a;border:1px solid #e8d7b8;border-radius:10px;padding:12px 14px;font-style:italic;line-height:1.5;position:relative}
+.letter b{font-style:normal;display:block;margin-bottom:4px;font-family:var(--font-display)}
+.letter .stamp{position:absolute;top:-10px;right:10px;font-size:22px;transform:rotate(8deg)}
+.bigstars{font-size:34px;text-align:center;letter-spacing:4px}
+.bigstars i{opacity:.2;font-style:normal}.bigstars i.on{opacity:1}
+.tip{font-size:12px;color:var(--muted)}
+/* Level select */
+.levels{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding-block:10px}
+.lv{aspect-ratio:1;border-radius:12px;background:var(--paper);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;box-shadow:var(--shadow)}
+.lv small{font-size:10px;letter-spacing:1px}
+.lv:disabled{opacity:.35;box-shadow:none}
+.lv.cur{border:2px solid var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:700;font-size:13px;z-index:90;pointer-events:none;opacity:0;transition:opacity .2s}
+.toast.on{opacity:1}
+@media (max-width:400px){:root{--card-w:56px;--card-h:70px;--stack-gap:21px}.card .in .face{font-size:22px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ==================== Data ==================== */
+const CATS = {
+  banh:   {name:'Bánh',     who:'Bà Marigold', face:'🧁', c:'#c85a7a'},
+  dongho: {name:'Đồng hồ',  who:'Ông Finch',   face:'⏰', c:'#3f6fb5'},
+  hoaxuan:{name:'Hoa xuân', who:'Lina',        face:'🌸', c:'#d0842f'},
+  chimse: {name:'Chim sẻ',  who:'Otto',        face:'🐦', c:'#4f8f4a'},
+  camoi:  {name:'Cá mòi',   who:'Pip',         face:'🐟', c:'#2e8f95'},
+  chiakhoa:{name:'Chìa khoá',who:'Otto',       face:'🔑', c:'#8a5fb8'},
+};
+const FLAVOR = {
+  banh:['Bánh hôm nay nở đẹp, chắc nhờ trời nắng.','Có ai lấy trộm một cái bánh quế rồi. Chắc là Pip.','Bà để dành cho cháu miếng bánh táo nhé.','Lò mới mua kêu to như còi tàu.','Hôm nay thử công thức mới, hơi ngọt một chút.'],
+  dongho:['Thư trễ ba phút. Ta có ghi vào sổ.','Đồng hồ nhà bà Marigold lại chạy nhanh.','Cái lò xo này cứng đầu y như ông chủ nó.','Sáng nay ta dậy đúng 5:00. Như mọi ngày.','Tem này răng cưa đều. Ta chấp nhận.'],
+  hoaxuan:['Cúc họa mi đã nở, em ép một cánh vào đây.','Hôm nay bán hết hoa từ trưa!','Penpal của em vừa gửi hạt giống lạ lắm.','Mèo Pip lại ngủ trong chậu tulip.','Hoa hồng vàng hợp với cô Ines, em nghĩ vậy.'],
+  chimse:['Chim sẻ ngoài hiên đã đẻ ba quả trứng.','Cháu làm tốt lắm. Ta nói thật đấy.','Hộc số 3 hơi kẹt, ta đã tra dầu.','Sáng nay sương nhiều, tem hơi ẩm, không sao.','Ngày xưa ta cũng bắt đầu từ hộc thư này.'],
+  camoi:['(Pip ngáp) meo.','Pip đã ngủ trên đúng lá thư bạn tìm.','Cá mòi. Cá mòi. Cá mòi.','Pip không nhận là đã làm đổ lọ mực.','Pip trực sớm hôm nay. Chỉ hôm nay.'],
+  chiakhoa:['Chìa khoá này mở ngăn kéo mà ta quên mất là ngăn nào.','Mỗi chìa là một cánh cửa của thị trấn.','Cháu giữ giúp ta chìa dự phòng nhé.','Chìa số 7 hơi rỉ, để ta lau.'],
+};
+// Level table: chapter 1, from docs/design/level-design-rules.md section 4
+const LEVELS = [
+ {id:1, role:'tutorial', cats:['banh','dongho'], cols:[4,4], down:0, deck:0, k:'+6', joker:0, preOpen:true, teach:'Chạm vào tem để đưa vào đúng hộc thư của cư dân.'},
+ {id:2, role:'tutorial', cats:['banh','dongho','hoaxuan'], cols:[4,4,4], down:2, deck:0, k:1.60, joker:0, teach:'Hộc đang trống. Chọn tem rồi chạm hộc trống để mở hộc cho cư dân đó. Tem úp tự lật khi lộ ra.'},
+ {id:3, role:'tutorial', cats:['banh','hoaxuan','chimse'], cols:[3,3,3], down:2, deck:3, k:1.60, joker:0, hintFree:1, teach:'Bao thư dưới góc: chạm để rút. Chỉ lá trên cùng dùng được. Pip có thể chỉ đường một lần.'},
+ {id:4, role:'tutorial', cats:['banh','dongho','hoaxuan','chimse'], cols:[4,4,4,4], down:4, deck:0, k:1.60, joker:0, teach:'Chọn tem rồi chạm cột khác để chuyển cột, đào tem bên dưới. Nhầm thì Return to Sender.'},
+ {id:5, role:'tutorial', cats:['banh','dongho','hoaxuan','chimse'], cols:[4,4,4,4], down:5, deck:0, k:1.45, joker:1, teach:'Otto tặng một Tem vàng: chọn hộc đang mở, tem sâu nhất của cư dân đó bay lên.'},
+ {id:6, role:'normal', cats:['dongho','hoaxuan','chimse','camoi'], cols:[3,3,3,3], down:4, deck:4, k:1.60, joker:0},
+ {id:7, role:'normal', cats:['banh','dongho','hoaxuan','chimse','camoi'], cols:[4,4,4,4], down:5, deck:4, k:1.55, joker:0, teach:'5 loại thư, 4 hộc. Giao xong một hộc mới nhận loại mới.'},
+ {id:8, role:'bump', cats:['banh','dongho','hoaxuan','chimse','camoi'], cols:[4,4,4,4], down:6, deck:4, k:1.45, joker:0},
+ {id:9, role:'breather', cats:['banh','dongho','chimse','camoi'], cols:[4,4,4,4], down:4, deck:0, k:1.60, joker:0},
+ {id:10, role:'milestone', cats:['banh','dongho','hoaxuan','chimse','camoi'], cols:[4,3,3,3,3], down:6, deck:4, k:1.55, joker:0},
+ {id:11, role:'normal', cats:['banh','dongho','hoaxuan','chimse','camoi'], cols:[4,3,3,3,3], down:6, deck:4, k:1.45, joker:0},
+ {id:12, role:'normal', cats:['dongho','hoaxuan','chimse','camoi','chiakhoa'], cols:[4,3,3,3,3], down:7, deck:4, k:1.45, joker:0},
+ {id:13, role:'normal', cats:['banh','hoaxuan','camoi','chiakhoa'], cols:[3,3,3,3], down:4, deck:4, k:1.50, joker:0},
+ {id:14, role:'normal', cats:['banh','dongho','chimse','camoi','chiakhoa'], cols:[3,3,3,3,2], down:6, deck:6, k:1.45, joker:0},
+ {id:15, role:'normal', cats:['banh','dongho','hoaxuan','chimse','camoi'], cols:[4,3,3,3,3], down:8, deck:4, k:1.45, joker:0},
+ {id:16, role:'normal', cats:['banh','dongho','hoaxuan','chimse','camoi','chiakhoa'], cols:[4,4,4,3,3], down:6, deck:6, k:1.50, joker:0, teach:'6 loại thư, 4 hộc.'},
+ {id:17, role:'normal', cats:['banh','dongho','hoaxuan','chimse','camoi','chiakhoa'], cols:[4,4,4,3,3], down:8, deck:6, k:1.45, joker:0},
+ {id:18, role:'wall', cats:['banh','dongho','hoaxuan','chimse','camoi','chiakhoa'], cols:[4,4,4,3,3], down:9, deck:6, k:1.30, joker:1},
+ {id:19, role:'breather', cats:['banh','dongho','hoaxuan','chimse'], cols:[3,3,3,3], down:3, deck:4, k:1.60, joker:0},
+ {id:20, role:'milestone', cats:['banh','dongho','hoaxuan','chimse','camoi'], cols:[4,3,3,3,3], down:6, deck:4, k:1.50, joker:0},
+];
+const K = 4;
+const ECON = {start:150, win:[20,30,40], undo:10, hint:25, joker:60, extra:90, undoFree:3, hintMax:3, jokerMax:2, extraMax:2};
+
+/* ==================== Utils ==================== */
+function rng(seed){ let s = seed>>>0 || 1; return ()=>{ s ^= s<<13; s>>>=0; s ^= s>>>17; s ^= s<<5; s>>>=0; return s/4294967296; }; }
+function shuffle(arr, r){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+const clone = s => JSON.parse(JSON.stringify(s));
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),1400); }
+
+/* ==================== Generator ==================== */
+function generate(def, seed){
+  const r = rng(seed);
+  const cards = [];
+  def.cats.forEach(cat=>{ for(let a=1;a<=K;a++) cards.push({id:cat+a, cat, art:a}); });
+  shuffle(cards, r);
+  const columns = def.cols.map(n=>cards.splice(0,n).map(c=>({...c, faceUp:true})));
+  const deck = cards.map(c=>({...c, faceUp:true}));
+  // Distribute face-down among non-top positions, bottom-most first, round-robin.
+  let down = def.down;
+  const capacity = columns.reduce((s,c)=>s+Math.max(0,c.length-1),0);
+  down = Math.min(down, capacity);
+  let depth = 0;
+  while(down>0){
+    let placed=false;
+    for(const col of columns){ if(down>0 && depth < col.length-1){ col[depth].faceUp=false; down--; placed=true; } }
+    if(!placed) break; depth++;
+  }
+  return {columns, deck};
+}
+
+/* ==================== Core state & rules ==================== */
+function newState(def, seed){
+  const {columns, deck} = generate(def, seed);
+  const nSlots = Math.min(4, def.cats.length);
+  const slots = Array.from({length:nSlots}, ()=>({cat:null, count:0, target:K}));
+  if(def.preOpen) def.cats.forEach((c,i)=>{ if(i<nSlots) slots[i]={cat:c,count:0,target:K}; });
+  return {columns, deck, waste:[], slots, moves:0, done:0, total:def.cats.length*K};
+}
+function tops(st){ // sources: {col:i} / {waste:true}
+  const out=[];
+  st.columns.forEach((col,i)=>{ if(col.length) out.push({src:{col:i}, card:col[col.length-1]}); });
+  if(st.waste.length) out.push({src:{waste:true}, card:st.waste[st.waste.length-1]});
+  return out;
+}
+function takeCard(st, src){
+  if(src.waste) return st.waste.pop();
+  const col = st.columns[src.col]; const c = col.pop();
+  if(col.length) col[col.length-1].faceUp = true; // FLIP, 0 move
+  return c;
+}
+function openSlotFor(st, cat){ return st.slots.findIndex(s=>s.cat===cat); }
+function remaining(st, cat){ // cards of cat not yet in a slot
+  let n=0; st.columns.forEach(c=>c.forEach(x=>{ if(x.cat===cat) n++; })); st.deck.forEach(x=>{ if(x.cat===cat) n++; }); st.waste.forEach(x=>{ if(x.cat===cat) n++; });
+  return n;
+}
+// Returns {ok, reason} and mutates st when ok.
+function applyAction(st, a){
+  switch(a.type){
+    case 'PLACE': { const slot=st.slots[a.slot]; const t=tops(st).find(x=>sameSrc(x.src,a.src)); if(!t) return {ok:false};
+      if(slot.cat!==t.card.cat) return {ok:false, reason:'wrong'};
+      takeCard(st,a.src); slot.count++; st.moves++;
+      if(slot.count>=slot.target){ st.done+=slot.count; st.slots[a.slot]={cat:null,count:0,target:K}; return {ok:true, delivered:t.card.cat}; }
+      return {ok:true}; }
+    case 'OPEN': { const slot=st.slots[a.slot]; const t=tops(st).find(x=>sameSrc(x.src,a.src)); if(!t) return {ok:false};
+      const existing=openSlotFor(st,t.card.cat);
+      if(existing>=0) return applyAction(st,{type:'PLACE',src:a.src,slot:existing});
+      if(slot.cat) return {ok:false, reason:'occupied'};
+      const target = remaining(st,t.card.cat);
+      takeCard(st,a.src); st.slots[a.slot]={cat:t.card.cat,count:1,target}; st.moves++;
+      if(target<=1){ st.done+=1; st.slots[a.slot]={cat:null,count:0,target:K}; return {ok:true, delivered:t.card.cat}; }
+      return {ok:true}; }
+    case 'MOVE_COLUMN': { if(a.from===a.to) return {ok:false}; const col=st.columns[a.from]; if(!col.length) return {ok:false};
+      const c=takeCard(st,{col:a.from}); st.columns[a.to].push(c); st.moves++; return {ok:true}; }
+    case 'DRAW': { if(!st.deck.length) return {ok:false}; st.waste.push(st.deck.shift()); st.moves++; return {ok:true}; }
+    case 'RECYCLE': { if(st.deck.length||!st.waste.length) return {ok:false}; st.deck=st.waste.splice(0); return {ok:true}; }
+  }
+  return {ok:false};
+}
+function sameSrc(a,b){ return !!a.waste===!!b.waste && (a.waste || a.col===b.col); }
+function isWon(st){ return st.done>=st.total; }
+
+/* ==================== Greedy solver / hint (priority from gdd-core.md section 4) ==================== */
+function bestAction(st){
+  const T = tops(st);
+  // 1. PLACE that completes a slot
+  for(const t of T){ const i=openSlotFor(st,t.card.cat); if(i>=0 && st.slots[i].count+1>=st.slots[i].target) return {type:'PLACE',src:t.src,slot:i}; }
+  // 2. any PLACE, prefer column with most face-down cards
+  let best=null, bestScore=-1;
+  for(const t of T){ const i=openSlotFor(st,t.card.cat); if(i<0) continue; const sc = t.src.waste?0:st.columns[t.src.col].filter(c=>!c.faceUp).length+1; if(sc>bestScore){bestScore=sc;best={type:'PLACE',src:t.src,slot:i};} }
+  if(best) return best;
+  // 3. OPEN with the category having most face-up tops
+  const closed = st.slots.findIndex(s=>!s.cat);
+  if(closed>=0){ const cnt={}; for(const t of T){ if(openSlotFor(st,t.card.cat)<0) cnt[t.card.cat]=(cnt[t.card.cat]||0)+1; }
+    let bc=null,bn=0; for(const c in cnt){ if(cnt[c]>bn){bn=cnt[c];bc=c;} }
+    if(bc){ const t=T.find(x=>x.card.cat===bc && !x.src.waste) || T.find(x=>x.card.cat===bc); return {type:'OPEN',src:t.src,slot:closed}; } }
+  // 4. DRAW if the deck still has a card not yet seen this cycle, and it could help
+  if(st.deck.length) return {type:'DRAW'};
+  // 5. MOVE_COLUMN: dig toward the shallowest needed card (a card whose slot is open), else toward a face-down card
+  const needed = new Set(st.slots.filter(s=>s.cat).map(s=>s.cat));
+  let from=-1, bestDepth=1e9;
+  st.columns.forEach((col,i)=>{ for(let d=0; d<col.length-1; d++){ const c=col[col.length-1-d]; if(d>0 && (needed.has(c.cat)||!c.faceUp) && d<bestDepth){bestDepth=d;from=i;} } });
+  if(from<0) st.columns.forEach((col,i)=>{ if(col.length>1 && from<0) from=i; });
+  if(from>=0){ let to=-1, minLen=1e9; st.columns.forEach((col,i)=>{ if(i!==from && col.length<minLen){minLen=col.length;to=i;} }); if(to>=0) return {type:'MOVE_COLUMN',from,to}; }
+  if(st.waste.length && !st.deck.length) return {type:'RECYCLE'};
+  return null;
+}
+function solve(def, seed){
+  const st = newState(def, seed); let guard=0;
+  while(!isWon(st) && guard++<3000){ const a=bestAction(st); if(!a) break; if(a.type==='RECYCLE'){ applyAction(st,a); applyAction(st,{type:'DRAW'}); continue; } const r=applyAction(st,a); if(!r.ok) break; }
+  return isWon(st)? st.moves : null;
+}
+
+/* ==================== Game controller ==================== */
+const SAVE_KEY='lpo-proto-v1';
+function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{}; }catch(e){ return {}; } }
+function store(s){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(s)); }catch(e){} }
+let save = Object.assign({coins:ECON.start, unlocked:1, stars:{}, attempts:{}}, loadSave());
+
+const G = { def:null, st:null, budget:0, solver:0, thr:null, undoStack:[], undoUsed:0, hintsUsed:0, jokers:0, jokersUsed:0, extraUsed:0, sel:null, hint:null, armed:null, screen:'levels', seedOffset:0, hintFree:0 };
+
+function startLevel(id, retry){
+  const def = LEVELS[id-1]; G.def=def;
+  const attempt = (save.attempts[id]||0) + (retry?0:1); save.attempts[id]=attempt; store(save);
+  const seed = 1000+id*17 + (retry? 0 : 0); // same seed on retry (GDD 1: failure becomes information)
+  let solver = solve(def, seed);
+  if(solver==null) solver = def.cats.length*K*2; // fallback, should not happen with unconstrained MOVE_COLUMN
+  G.solver=solver;
+  G.budget = def.k==='+6' ? solver+6 : Math.ceil(solver*def.k);
+  const S = G.budget - solver;
+  G.thr = {three: Math.ceil(0.75*S), two: Math.ceil(0.4*S)};
+  G.st = newState(def, seed);
+  G.undoStack=[]; G.undoUsed=0; G.hintsUsed=0; G.jokers=def.joker||0; G.jokersUsed=0; G.extraUsed=0; G.sel=null; G.hint=null; G.armed=null; G.hintFree=def.hintFree||0;
+  G.screen='play'; G.overlay = null;
+  if(def.teach && !retry) G.overlay={type:'teach', text:def.teach};
+  render();
+}
+function movesLeft(){ return G.budget - G.st.moves; }
+function pushUndo(){ G.undoStack.push(clone(G.st)); if(G.undoStack.length>30) G.undoStack.shift(); }
+function afterAction(res){
+  G.sel=null; G.hint=null; G.armed=null;
+  if(res.delivered){ G.undoStack=[]; toast(`Đã giao thư cho ${CATS[res.delivered].who} 💌`); }
+  if(isWon(G.st)) return win();
+  if(movesLeft()<=0) G.overlay={type:'late'};
+  render();
+}
+function doAction(a){
+  const before = clone(G.st);
+  const res = applyAction(G.st, a);
+  if(!res.ok){ if(res.reason==='wrong'){ shakeSlot(a.slot); G.sel=null; render(); } return; }
+  if(a.type!=='RECYCLE'){ G.undoStack.push(before); if(G.undoStack.length>30) G.undoStack.shift(); }
+  afterAction(res);
+}
+function shakeSlot(i){ const el=document.querySelector(`.slot[data-i="${i}"]`); if(el){ el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),350); } }
+function stars(){ const m=movesLeft(); return m>=G.thr.three?3 : m>=G.thr.two?2 : 1; }
+function win(){
+  const s=stars(); const prev=save.stars[G.def.id]||0; save.stars[G.def.id]=Math.max(prev,s);
+  const coins=ECON.win[s-1]; save.coins+=coins;
+  if(G.def.id>=save.unlocked && G.def.id<LEVELS.length) save.unlocked=G.def.id+1;
+  store(save);
+  const cat = G.def.cats[Math.floor(Math.random()*G.def.cats.length)];
+  const pool = FLAVOR[cat]; const line = pool[Math.floor(Math.random()*pool.length)];
+  G.overlay={type:'win', stars:s, coins, cat, line}; render();
+}
+function spend(n){ if(save.coins<n){ toast('Không đủ tem điểm'); return false; } save.coins-=n; store(save); return true; }
+
+// Player interactions
+function onCardTap(src){
+  if(G.overlay) return;
+  const t = tops(G.st).find(x=>sameSrc(x.src,src)); if(!t) return;
+  if(G.armed==='joker') return;
+  if(G.sel && sameSrc(G.sel,src)){ G.sel=null; render(); return; }
+  const i = openSlotFor(G.st, t.card.cat);
+  if(i>=0){ doAction({type:'PLACE',src,slot:i}); return; } // tap = auto PLACE
+  // otherwise select (for OPEN / MOVE_COLUMN by tapping a target)
+  G.sel=src; G.hint=null; render();
+}
+function onSlotTap(i){
+  if(G.overlay) return;
+  if(G.armed==='joker'){ useJoker(i); return; }
+  const slot=G.st.slots[i];
+  if(!G.sel){ if(!slot.cat) toast('Chọn một lá thư trước, rồi chạm hộc trống để mở'); return; }
+  if(slot.cat) doAction({type:'PLACE',src:G.sel,slot:i}); else doAction({type:'OPEN',src:G.sel,slot:i});
+}
+function onColumnTap(i){
+  if(G.overlay) return;
+  if(!G.sel){ const col=G.st.columns[i]; if(col.length) onCardTap({col:i}); return; }
+  if(G.sel.waste){ toast('Thư trong bao chỉ vào hộc, không sang cột'); G.sel=null; render(); return; }
+  if(G.sel.col===i){ G.sel=null; render(); return; }
+  doAction({type:'MOVE_COLUMN',from:G.sel.col,to:i});
+}
+function onDeckTap(){
+  if(G.overlay) return; G.sel=null;
+  if(G.st.deck.length) doAction({type:'DRAW'});
+  else if(G.st.waste.length){ applyAction(G.st,{type:'RECYCLE'}); toast('Lật lại bao thư (0 move)'); render(); }
+}
+function undo(){
+  if(G.overlay||!G.undoStack.length) return;
+  if(G.undoUsed>=ECON.undoFree && !spend(ECON.undo)) return;
+  G.st=G.undoStack.pop(); G.undoUsed++; G.sel=null; G.hint=null; toast('Return to Sender ↩'); render();
+}
+function hint(){
+  if(G.overlay) return;
+  if(G.hintsUsed>=ECON.hintMax) return;
+  if(G.hintFree>0) G.hintFree--; else if(!spend(ECON.hint)) return;
+  G.hintsUsed++; G.sel=null;
+  const a=bestAction(G.st); G.hint=a; render();
+  if(!a) toast('Pip cũng chịu 🐱');
+}
+function armJoker(){ if(G.overlay) return; if(G.jokersUsed>=ECON.jokerMax) return; if(!G.st.slots.some(s=>s.cat)){ toast('Cần một hộc đang mở'); return; } G.armed = G.armed==='joker'?null:'joker'; G.sel=null; render(); if(G.armed) toast('Chọn hộc để Tem vàng kéo thư sâu nhất lên'); }
+function useJoker(i){
+  const slot=G.st.slots[i]; if(!slot.cat){ toast('Hộc này đang trống'); return; }
+  if(G.jokers<=0 && !spend(ECON.joker)) return;
+  if(G.jokers>0) G.jokers--;
+  G.jokersUsed++;
+  const st=G.st; const cat=slot.cat;
+  // deepest: face-down deepest in tableau -> deck -> waste -> top card
+  let found=null;
+  let bestDepth=-1;
+  st.columns.forEach((col,ci)=>{ col.forEach((c,idx)=>{ if(c.cat===cat){ const depth=col.length-1-idx; if(!c.faceUp && depth>bestDepth){bestDepth=depth; found={col:ci,idx};} } }); });
+  if(!found){ const di=st.deck.findIndex(c=>c.cat===cat); if(di>=0) found={deck:di}; }
+  if(!found){ const wi=st.waste.findIndex(c=>c.cat===cat); if(wi>=0) found={waste:wi}; }
+  if(!found){ st.columns.forEach((col,ci)=>{ col.forEach((c,idx)=>{ if(c.cat===cat){ const depth=col.length-1-idx; if(depth>bestDepth){bestDepth=depth; found={col:ci,idx};} } }); }); }
+  if(!found){ toast('Không còn thư nào của cư dân này'); render(); return; }
+  if(found.deck!=null) st.deck.splice(found.deck,1); else if(found.waste!=null) st.waste.splice(found.waste,1);
+  else { const col=st.columns[found.col]; col.splice(found.idx,1); if(col.length) col[col.length-1].faceUp=true; }
+  slot.count++; G.undoStack=[]; G.armed=null;
+  const res={ok:true};
+  if(slot.count>=slot.target){ st.done+=slot.count; st.slots[i]={cat:null,count:0,target:K}; res.delivered=cat; }
+  toast('✨ Tem vàng');
+  afterAction(res);
+}
+function extraMoves(){
+  if(G.extraUsed>=ECON.extraMax) return;
+  if(!spend(ECON.extra)) return;
+  G.extraUsed++; G.budget+=5; G.overlay=null; toast('Ca tối: +5 moves'); render();
+}
+
+/* ==================== Render ==================== */
+const app=document.getElementById('app');
+function render(){
+  if(G.screen==='levels') return renderLevels();
+  const st=G.st, def=G.def; const ml=movesLeft(); const s = ml>=G.thr.three?3: ml>=G.thr.two?2:1;
+  const nSlots=st.slots.length;
+  let h = `<div class="hud">
+    <div><div class="lvl">Level ${def.id}<small>${def.role==='wall'?'khó':def.role==='breather'?'nghỉ':'Phố Chính'}</small></div>
+      <button class="tip" id="btnBack" style="text-decoration:underline">← Chọn level</button></div>
+    <div class="moves"><b>${ml}</b><span>moves</span><div class="stars" title="Mốc sao: 2★ còn ≥${G.thr.two}, 3★ còn ≥${G.thr.three}">${[1,2,3].map(i=>`<i class="${i<=s?'on':''}">★</i>`).join('')}</div></div>
+    <div class="coins">🎫 ${save.coins}</div>
+  </div>`;
+  h += `<div class="slots n${nSlots}">` + st.slots.map((sl,i)=>{
+    const isTarget = (G.sel && (!sl.cat || sl.cat===topCat(G.sel))) || (G.hint && (G.hint.type==='PLACE'||G.hint.type==='OPEN') && G.hint.slot===i) || (G.armed==='joker' && sl.cat);
+    if(sl.cat){ const c=CATS[sl.cat]; return `<button class="slot open ${isTarget?'target':''}" data-i="${i}" style="--c:${c.c}"><span class="face">${c.face}</span><span class="who">${c.who}</span><span class="cnt">${sl.count}/${sl.target}</span>${G.hint&&G.hint.slot===i?'<span class="hint">🐾</span>':''}</button>`; }
+    return `<button class="slot ${isTarget?'target':''}" data-i="${i}"><span class="face" style="opacity:.35">📮</span><span class="empty">Hộc trống</span></button>`;
+  }).join('') + `</div>`;
+  h += `<div class="tableau">` + st.columns.map((col,ci)=>{
+    const isTarget = (G.sel && !G.sel.waste && G.sel.col!==ci) || (G.hint && G.hint.type==='MOVE_COLUMN' && G.hint.to===ci);
+    const height = Math.max(1,col.length-1)*24 + 80 + 8;
+    return `<div class="col ${isTarget?'target':''}" data-col="${ci}" style="height:${height}px">` + col.map((c,idx)=>{
+      const top = idx===col.length-1; const sel = G.sel && !G.sel.waste && G.sel.col===ci && top;
+      const hinted = G.hint && top && ((G.hint.src && !G.hint.src.waste && G.hint.src.col===ci) || (G.hint.type==='MOVE_COLUMN' && G.hint.from===ci));
+      return cardHtml(c, idx*24, top, sel, hinted);
+    }).join('') + `</div>`;
+  }).join('') + `</div>`;
+  const wt = st.waste[st.waste.length-1];
+  const hintWaste = G.hint && G.hint.src && G.hint.src.waste;
+  h += `<div class="bottom"><div class="pile">
+    <div class="deck" id="deck" style="position:relative">${st.deck.length? `<div class="card down"><div class="in"><span class="face">✉️</span></div></div>` : `<div class="placeholder">${st.waste.length?'lật lại':'hết thư'}</div>`}<span class="cnt" style="position:absolute;bottom:-16px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)">${st.deck.length}${G.hint&&G.hint.type==='DRAW'?' 🐾':''}</span></div>
+    <div id="waste">${wt? wasteHtml(wt, G.sel&&G.sel.waste, hintWaste) : `<div class="placeholder">bao thư</div>`}</div>
+  </div><div class="tools">
+    <button class="tool" id="btnUndo" ${G.undoStack.length?'':'disabled'}><span class="ico">↩</span><span class="lab">Return</span><span class="sub">${Math.max(0,ECON.undoFree-G.undoUsed)} free</span></button>
+    <button class="tool" id="btnHint" ${G.hintsUsed>=ECON.hintMax?'disabled':''}><span class="ico">🐱</span><span class="lab">Pip</span><span class="sub">${G.hintFree?'free':ECON.hint+'🎫'} · ${ECON.hintMax-G.hintsUsed}</span></button>
+    <button class="tool ${G.armed==='joker'?'arm':''}" id="btnJoker" ${G.jokersUsed>=ECON.jokerMax||!st.slots.some(x=>x.cat)?'disabled':''}><span class="ico">⭐</span><span class="lab">Tem vàng</span><span class="sub">${G.jokers?G.jokers+' có sẵn':ECON.joker+'🎫'}</span></button>
+  </div></div>`;
+  if(G.overlay) h += overlayHtml();
+  app.innerHTML=h;
+  bind();
+}
+function topCat(src){ const t=tops(G.st).find(x=>sameSrc(x.src,src)); return t?t.card.cat:null; }
+function cardHtml(c, top, isTop, sel, hinted){
+  if(!c.faceUp) return `<div class="card down" style="top:${top}px"><div class="in"><span class="face">✉️</span></div></div>`;
+  const k=CATS[c.cat];
+  return `<div class="card ${isTop?'top':''} ${sel?'sel':''} ${hinted?'hint':''}" style="top:${top}px;--c:${k.c}" tabindex="${isTop?0:-1}"><div class="in"><span class="face">${k.face}</span><span class="n">${k.name.toUpperCase()}·${c.art}</span></div></div>`;
+}
+function wasteHtml(c, sel, hinted){ const k=CATS[c.cat]; return `<div class="card top ${sel?'sel':''} ${hinted?'hint':''}" style="position:relative;--c:${k.c}" tabindex="0"><div class="in"><span class="face">${k.face}</span><span class="n">${k.name.toUpperCase()}·${c.art}</span></div></div>`; }
+function overlayHtml(){
+  const o=G.overlay;
+  if(o.type==='teach') return `<div class="overlay"><div class="sheet"><h2>Level ${G.def.id}</h2><p>${o.text}</p><p class="tip">Ngân sách ${G.budget} moves. 3★ nếu còn ≥ ${G.thr.three}, 2★ nếu còn ≥ ${G.thr.two}.</p><div class="row"><button class="btn" id="ovOk">Bắt đầu ca làm</button></div></div></div>`;
+  if(o.type==='late') return `<div class="overlay"><div class="sheet"><h2>Thư bị trễ 📭</h2><p>Hết giờ làm việc hôm nay. Không sao, mai giao tiếp.</p><div class="row">
+    <button class="btn" id="ovExtra" ${G.extraUsed>=ECON.extraMax||save.coins<ECON.extra?'disabled':''}>Ca tối +5 moves · ${ECON.extra}🎫</button>
+    <button class="btn ghost" id="ovRetry">Mai giao tiếp</button></div>
+    <p class="tip">Chơi lại giữ nguyên vị trí thư (cùng seed). Không mất gì.</p></div></div>`;
+  if(o.type==='win'){ const c=CATS[o.cat]; return `<div class="overlay"><div class="sheet"><h2>Giao xong! 💌</h2>
+    <div class="bigstars">${[1,2,3].map(i=>`<i class="${i<=o.stars?'on':''}">★</i>`).join('')}</div>
+    <div class="letter"><span class="stamp">${c.face}</span><b>${c.who} viết:</b>${o.line}</div>
+    <p>+${o.coins} 🎫 tem điểm · còn ${movesLeft()} moves</p>
+    <div class="row"><button class="btn" id="ovNext" ${G.def.id>=LEVELS.length?'disabled':''}>Level tiếp</button><button class="btn ghost" id="ovLevels">Chọn level</button></div></div></div>`; }
+  return '';
+}
+function bind(){
+  document.querySelectorAll('.slot').forEach(el=>el.addEventListener('click',()=>onSlotTap(+el.dataset.i)));
+  document.querySelectorAll('.col').forEach(el=>el.addEventListener('click',e=>{ e.stopPropagation(); onColumnTap(+el.dataset.col); }));
+  const w=document.querySelector('#waste .card'); if(w) w.addEventListener('click',()=>onCardTap({waste:true}));
+  const d=document.getElementById('deck'); if(d) d.addEventListener('click',onDeckTap);
+  const q=id=>document.getElementById(id);
+  q('btnUndo')?.addEventListener('click',undo); q('btnHint')?.addEventListener('click',hint); q('btnJoker')?.addEventListener('click',armJoker);
+  q('btnBack')?.addEventListener('click',()=>{ G.screen='levels'; render(); });
+  q('ovOk')?.addEventListener('click',()=>{ G.overlay=null; render(); });
+  q('ovExtra')?.addEventListener('click',extraMoves);
+  q('ovRetry')?.addEventListener('click',()=>startLevel(G.def.id,true));
+  q('ovNext')?.addEventListener('click',()=>startLevel(G.def.id+1));
+  q('ovLevels')?.addEventListener('click',()=>{ G.screen='levels'; render(); });
+}
+function renderLevels(){
+  app.innerHTML = `<div class="hud"><div><h1 style="font-size:22px">Little Post Office</h1><div class="tip">Prototype · Chapter 1: Phố Chính</div></div><div class="coins">🎫 ${save.coins}</div></div>
+  <p class="tip" style="margin:4px 0 0">Chạm tem để đưa vào hộc đúng cư dân. Chọn tem rồi chạm hộc trống để mở hộc, hoặc chạm cột khác để chuyển cột. Mỗi thao tác tốn 1 move.</p>
+  <div class="levels">${LEVELS.map(l=>{ const st=save.stars[l.id]||0; const locked=l.id>save.unlocked; return `<button class="lv ${l.id===save.unlocked?'cur':''}" data-lv="${l.id}" ${locked?'disabled':''}>${l.role==='wall'?'🔥':''}${l.id}<small>${st?'★'.repeat(st):(l.role==='breather'?'☕':'')}</small></button>`; }).join('')}</div>
+  <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="btnPlay">Chơi level ${save.unlocked}</button><button class="btn ghost" id="btnReset">Xoá tiến độ</button></div>
+  <p class="tip" style="margin-top:12px">Ngân sách moves = số move của bộ giải tham lam × hệ số tier (GDD). Chưa có ads; Ca tối và booster trả bằng tem điểm.</p>`;
+  document.querySelectorAll('.lv').forEach(b=>b.addEventListener('click',()=>startLevel(+b.dataset.lv)));
+  document.getElementById('btnPlay').addEventListener('click',()=>startLevel(save.unlocked));
+  document.getElementById('btnReset').addEventListener('click',()=>{ save={coins:ECON.start,unlocked:1,stars:{},attempts:{}}; store(save); render(); });
+}
+render();
+</script>
