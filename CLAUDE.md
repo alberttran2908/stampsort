@@ -20,3 +20,9 @@ Dự án nghiên cứu và thiết kế game puzzle mobile, lấy **Stamp Solita
 - File `.apk/.xapk` và thư mục `research/raw/` không commit (xem `.gitignore`). Chỉ commit phần đã trích xuất có giá trị (JSON/CSV config, strings, report).
 - Bóc tách APK: `python3 tools/apk_dump.py <file.apk|thư mục đã giải nén> --out research/apk`.
 - Cách đưa APK lớn vào phiên làm việc: xem `docs/apk-analysis-guide.md`.
+
+## Hướng concept hiện tại (cập nhật 2026-09-28)
+- Core: template Solitaire Associations (4 category ẩn, tableau, moves limit) như Stamp Solitaire.
+- Theme: **tem / bưu điện**, sub-fantasy **"Little Post Office"** (người chơi là nhân viên bưu điện nhỏ), tone **cozy, cute, có narrative nhẹ** qua thư.
+- Postcard vẫn là phương án dự phòng nếu creative test cho CPI xấu. Xem `docs/design/theme-options.md`, `docs/design/theme-stamp.md`, `docs/product/positioning-stamp-vs-alt.md`.
+- Concept pitch: `docs/design/concept-little-post-office.md`.
