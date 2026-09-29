@@ -9,3 +9,7 @@ research/raw/**/*.so
 research/apk/*/extracted/lib/
 __pycache__/
 .venv/
+# Video gameplay tham khảo: giữ ở máy, không push (quá lớn)
+research/video/*.mp4
+research/video/*.mkv
+research/video/*.mov

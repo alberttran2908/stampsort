@@ -49,3 +49,25 @@ python3 tools/apk_dump.py research/raw/<package_name> --out research/apk --packa
 ```
 
 Kết quả: `research/apk/<package_name>/report.md` (tổng quan), `extracted/` (file text), `unity/` (TextAsset, ScriptableObject nếu là Unity), `strings.json`. Từ đây gọi agent `game-designer` để teardown cơ chế và `product-owner` để phân tích stack monetization.
+
+## Cách 0 (đơn giản nhất): làm việc trên máy của bạn
+
+Clone repo về máy và chạy Claude Code tại thư mục đó. Agent, CLAUDE.md và script đi theo repo, còn file lớn thì để ngay trên máy, không cần đưa lên đâu cả:
+
+```bash
+git clone https://github.com/alberttran2908/stampsort
+cd stampsort
+git checkout claude/serene-curie-pfjfu6
+mkdir -p research/raw research/video
+# copy XAPK và video vào đây (cả hai đã nằm trong .gitignore, không bị push)
+cp ~/Downloads/"Stamp+Solitaire_+Card+Matching_0.9.5_APKPure.xapk" research/raw/
+cp ~/Downloads/YTDown.com_YouTube_Media_fXxL3sDSrFA_Stamp-Solitaire-levels-1-9_001_1080p.mp4 research/video/levels-1-9.mp4
+pip install --ignore-installed androguard UnityPy   # cho apk_dump.py
+claude
+```
+
+Rồi nhắn trong Claude Code, ví dụ:
+- "Chạy `tools/apk_dump.py` với file trong `research/raw/`, rồi dùng game-designer đối chiếu report với `docs/design/teardown-stamp-solitaire.md`."
+- "Dùng ffmpeg cắt frame `research/video/levels-1-9.mp4` mỗi 2 giây vào `research/video/frames/`, xem các frame và ghi lại layout, số cột, số hộc, moves từng level vào teardown."
+
+Cần có `ffmpeg` trên máy để cắt frame (`brew install ffmpeg` trên macOS, `winget install ffmpeg` trên Windows).
