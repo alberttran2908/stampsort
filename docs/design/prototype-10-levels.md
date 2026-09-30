@@ -13,6 +13,8 @@ python3 -m http.server 8765 --directory prototype/stamp
 
 Mở `http://localhost:8765`. Điện thoại cùng wifi mở `http://<IP máy>:8765`. Thêm `?debug` để hiện bảng debug (tự giải, thêm moves, thắng ngay, lật hết lá, qua level, xóa save). Thêm `?level=N` để vào thẳng level N.
 
+Bản web test: https://notbad.games/stampsort/ (nhánh `gh-pages`, deploy lại bằng `tools/deploy_web.sh`). Bản này chứa art APK tạm, chỉ để test nội bộ.
+
 Art và âm thanh nằm trong `prototype/stamp/assets/`, bị `.gitignore`, build lại bằng script trên. Khi có art order, giữ nguyên tên file trong `assets/ui/` và `assets/cards/<topic>/` rồi thay file là xong. Bảng tên file và sprite gốc nằm ở `ASSET_MAP` trong `tools/build_proto_assets.py`.
 
 ## 2. Luật chơi

@@ -21,3 +21,5 @@ research/video/sheets/
 research/video/key/
 # Art/audio tạm từ APK cho prototype (build bằng tools/build_proto_assets.py)
 prototype/stamp/assets/
+# Bản build web (deploy lên nhánh gh-pages)
+dist/
