@@ -14,6 +14,10 @@ Dự án nghiên cứu và thiết kế game puzzle mobile, lấy **Stamp Solita
 - `docs/product/` – tài liệu product (PRD, roadmap, backlog, KPI).
 - `research/apk/<package>/` – kết quả bóc tách APK (report.md, inventory.json, extracted/).
 - `tools/apk_dump.py` – script bóc tách APK (manifest, engine, SDK, asset text, Unity bundle).
+- `tools/stamp_levels_decode.py` – giải mã 963 level, 224 topic, booster config của Stamp Solitaire (Unity không typetree) và export asset tham khảo.
+- `research/apk/com.stamp.solit/levels/` – level data đã giải mã (JSON/CSV). Teardown đã xác nhận: `docs/design/teardown-video-apk-0.9.5.md`.
+- `tools/ocr_frames.swift` – OCR hàng loạt frame video bằng macOS Vision (đọc moves, deck, bộ đếm ô) để xác minh luật từ video.
+- `prototype/stamp/` – prototype 10 level (web, art tạm từ APK). Design: `docs/design/prototype-10-levels.md`. Asset: `tools/build_proto_assets.py`; level: `node tools/gen_proto_levels.mjs`.
 
 ## Quy ước làm việc
 - Mọi kết luận về game đối thủ phải ghi rõ **nguồn**: từ APK dump (đường dẫn file), từ store listing, từ gameplay quan sát, hay là **giả thuyết**.

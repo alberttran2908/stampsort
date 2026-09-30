@@ -1,6 +1,8 @@
 # Teardown: Stamp Solitaire: Card Matching (ABI Game Studio)
 
 **Ngày phân tích:** 2026-09-25
+
+> **Cập nhật 2026-09-30:** đã có APK 0.9.5 và video level 1-9. Luật chơi, level data, booster, economy đã xác nhận nằm ở `teardown-video-apk-0.9.5.md`. Mục 3, 4, 5, 11, 12 dưới đây là giả thuyết cũ, nhiều điểm đã sai (K = 4 cố định, Joker tự đưa lá lên, không có lives).
 **Trạng thái nguồn:** KHÔNG có APK dump (`research/apk/` trống). Toàn bộ dựa trên nguồn công khai qua WebSearch. WebFetch/curl tới `play.google.com`, `apps.apple.com`, `appbrain.com`, `apkpure.com`, `mwm.ai`, `youtube.com` và các site rule-guide đều bị **egress proxy chặn**, nên chỉ đọc được snippet tìm kiếm, không đọc được trang gốc, ảnh screenshot hay video. Mọi nhận định vì thế được gắn nhãn `[STORE]` (snippet từ store/aggregator), `[PLAY]` (review người chơi được trích qua snippet), hoặc `[GIẢ THUYẾT]`.
 
 ## 0. Nguồn đã dùng

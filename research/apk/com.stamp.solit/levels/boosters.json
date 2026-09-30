@@ -1,0 +1,34 @@
+[
+ {
+  "name": "Hint",
+  "desc": "Suggestion for your next move",
+  "type": 0,
+  "priceCoin": 300,
+  "unlockLevel": 2,
+  "flag": 0
+ },
+ {
+  "name": "Pack",
+  "desc": "Add 2 random hidden cards to a Topic",
+  "type": 1,
+  "priceCoin": 500,
+  "unlockLevel": 5,
+  "flag": 0
+ },
+ {
+  "name": "Indicate",
+  "desc": "Choose a Topic to add one card",
+  "type": 2,
+  "priceCoin": 500,
+  "unlockLevel": 7,
+  "flag": 0
+ },
+ {
+  "name": "Joker",
+  "desc": "Play on any card. Any card can be played on it.",
+  "type": 3,
+  "priceCoin": 1200,
+  "unlockLevel": 9,
+  "flag": 1
+ }
+]

@@ -13,3 +13,11 @@ __pycache__/
 research/video/*.mp4
 research/video/*.mkv
 research/video/*.mov
+# Art/audio export từ APK đối thủ: chỉ để tham khảo trên máy, không push
+research/apk/*/assets_export/
+# Frame/sheet cắt từ video gameplay: dựng lại được bằng ffmpeg
+research/video/frames/
+research/video/sheets/
+research/video/key/
+# Art/audio tạm từ APK cho prototype (build bằng tools/build_proto_assets.py)
+prototype/stamp/assets/
