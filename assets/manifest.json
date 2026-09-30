@@ -1,0 +1,238 @@
+{
+ "Cat": {
+  "dir": "cards/cat",
+  "arts": 8
+ },
+ "Fruit": {
+  "dir": "cards/fruit",
+  "arts": 7
+ },
+ "Pizza": {
+  "dir": "cards/pizza",
+  "arts": 12
+ },
+ "Ball": {
+  "dir": "cards/ball",
+  "arts": 12
+ },
+ "Dog": {
+  "dir": "cards/dog",
+  "arts": 7
+ },
+ "Noodle": {
+  "dir": "cards/noodle",
+  "arts": 9
+ },
+ "Phone": {
+  "dir": "cards/phone",
+  "arts": 7
+ },
+ "Bird": {
+  "dir": "cards/bird",
+  "arts": 24
+ },
+ "Car": {
+  "dir": "cards/car",
+  "arts": 9
+ },
+ "Hoofed": {
+  "dir": "cards/hoofed",
+  "arts": 15
+ },
+ "Ship": {
+  "dir": "cards/ship",
+  "arts": 8
+ },
+ "Candy": {
+  "dir": "cards/candy",
+  "arts": 7
+ },
+ "Balloon": {
+  "dir": "cards/balloon",
+  "arts": 6
+ },
+ "Time": {
+  "dir": "cards/time",
+  "arts": 7
+ },
+ "Hat": {
+  "dir": "cards/hat",
+  "arts": 15
+ },
+ "Glasses": {
+  "dir": "cards/glasses",
+  "arts": 11
+ },
+ "Pets": {
+  "dir": "cards/pets",
+  "arts": 10
+ },
+ "Dinosaur": {
+  "dir": "cards/dinosaur",
+  "arts": 9
+ },
+ "Fast food": {
+  "dir": "cards/fast_food",
+  "arts": 9
+ },
+ "Chess": {
+  "dir": "cards/chess",
+  "arts": 7
+ },
+ "Flower": {
+  "dir": "cards/flower",
+  "arts": 13
+ },
+ "Leaf": {
+  "dir": "cards/leaf",
+  "arts": 14
+ },
+ "Train": {
+  "dir": "cards/train",
+  "arts": 8
+ },
+ "Tree": {
+  "dir": "cards/tree",
+  "arts": 7
+ },
+ "Soda": {
+  "dir": "cards/soda",
+  "arts": 8
+ },
+ "Ice cream": {
+  "dir": "cards/ice_cream",
+  "arts": 8
+ },
+ "Truck": {
+  "dir": "cards/truck",
+  "arts": 7
+ },
+ "Kite": {
+  "dir": "cards/kite",
+  "arts": 7
+ },
+ "Soft drink": {
+  "dir": "cards/soft_drink",
+  "arts": 8
+ },
+ "Planet": {
+  "dir": "cards/planet",
+  "arts": 7
+ },
+ "Beast": {
+  "dir": "cards/beast",
+  "arts": 27
+ },
+ "Notes": {
+  "dir": "cards/notes",
+  "arts": 13
+ },
+ "Sauce": {
+  "dir": "cards/sauce",
+  "arts": 9
+ },
+ "Vegetable": {
+  "dir": "cards/vegetable",
+  "arts": 7
+ },
+ "Insect": {
+  "dir": "cards/insect",
+  "arts": 7
+ },
+ "Sea life": {
+  "dir": "cards/sea_life",
+  "arts": 7
+ },
+ "Float": {
+  "dir": "cards/float",
+  "arts": 11
+ },
+ "Tea": {
+  "dir": "cards/tea",
+  "arts": 8
+ },
+ "Zoo": {
+  "dir": "cards/zoo",
+  "arts": 8
+ },
+ "Footwear": {
+  "dir": "cards/footwear",
+  "arts": 9
+ },
+ "Raw meat": {
+  "dir": "cards/raw_meat",
+  "arts": 8
+ },
+ "Outerwear": {
+  "dir": "cards/outerwear",
+  "arts": 8
+ },
+ "Cocktail": {
+  "dir": "cards/cocktail",
+  "arts": 7
+ },
+ "Desserts": {
+  "dir": "cards/desserts",
+  "arts": 13
+ },
+ "Grilled": {
+  "dir": "cards/grilled",
+  "arts": 16
+ },
+ "Bouquet": {
+  "dir": "cards/bouquet",
+  "arts": 8
+ },
+ "Sculpture": {
+  "dir": "cards/sculpture",
+  "arts": 7
+ },
+ "Sashimi": {
+  "dir": "cards/sashimi",
+  "arts": 8
+ },
+ "Pet Care": {
+  "dir": "cards/pet_care",
+  "arts": 16
+ },
+ "Water Plants": {
+  "dir": "cards/water_plants",
+  "arts": 8
+ },
+ "Gardening": {
+  "dir": "cards/gardening",
+  "arts": 9
+ },
+ "Coffee": {
+  "dir": "cards/coffee",
+  "arts": 9
+ },
+ "Music Inst": {
+  "dir": "cards/music_inst",
+  "arts": 8
+ },
+ "Cake": {
+  "dir": "cards/cake",
+  "arts": 8
+ },
+ "Aircraft": {
+  "dir": "cards/aircraft",
+  "arts": 9
+ },
+ "Mushroom": {
+  "dir": "cards/mushroom",
+  "arts": 14
+ },
+ "Gems": {
+  "dir": "cards/gems",
+  "arts": 8
+ },
+ "Sushi": {
+  "dir": "cards/sushi",
+  "arts": 8
+ },
+ "Tool": {
+  "dir": "cards/tool",
+  "arts": 7
+ }
+}
