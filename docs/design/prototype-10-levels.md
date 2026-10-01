@@ -58,12 +58,12 @@ Level 1-9 dựng lại từ video (thông số đọc bằng OCR 3124 frame vớ
 | 2 | teach | 3 | 3-4-5 | 6 | 30 | 18 | 48 | 66 | 66 | 1.38 | 1 | Mở Hint |
 | 3 | teach | 4 | 2-3-4-5 | 6 | 35 | 21 | 56 | 75 | 75 | 1.34 | 0.95 | 4 ô |
 | 4 | normal | 4 | 3-4-5-6 | 8 | 43 | 24 | 66 | 82 | 82 | 1.24 | 0.95 | Mở Pack (ô Dinosaur mở sẵn) |
-| 5 | normal | 4 | 3-4-5-6 | 8 | 52 | 34 | 87 | 96 | 96 | 1.1 | 0.84 | Deck 34 |
+| 5 | **HARD** | 4 | 3-4-5-6 | 8 | 52 | 34 | 88 | 96 | 96 | 1.09 | 0.93 | Mốc UA 1, không thể thua (Overtime) |
 | 6 | normal | 4 | 3-4-5-6 | 7 | 40 | 22 | 62 | 76 | 76 | 1.23 | 0.91 |  |
 | 7 | normal | 4 | 3-4-5-6 | 7 | 45 | 26 | 70 | 80 | 80 | 1.14 | 0.81 | Mở Stamper (ô Sea life mở sẵn) |
 | 8 | normal | 4 | 3-4-5-7 | 7 | 41 | 22 | 64 | 75 | 75 | 1.17 | 0.82 |  |
 | 9 | wall | 4 | 3-4-5-6 | 8 | 48 | 30 | 79 | 110 | 110 | 1.39 | 0.53 | Mở Joker, dùng ngay |
-| 10 | finale | 5 | 3-4-5-6-7 | 9 | 60 | 35 | 96 | 125 | - | 1.3 | 0.93 | Finale riêng, 5 ô |
+| 10 | **SUPER HARD** | 5 | 3-4-5-6-7 | 9 | 60 | 35 | 97 | 100 | - | 1.03 | 0.3 | Mốc UA 2, không thể thua (Overtime) |
 
 Moves của game gốc chặt: solver full-info cần 72-91% số moves. Người chơi thật không thấy lá úp nên sẽ cần nhiều nước hơn, đây là chỗ Joker, Pack, Stamper và +5 moves kiếm tiền. Nếu playtest thấy quá khó, tăng moves trong `DESIGN` của generator rồi chạy lại.
 
@@ -132,6 +132,8 @@ Hai lớp, dựng lại theo video.
 | Ô bận | 3-4 | Mọi ô đều đang mở |
 
 Kéo sai hiện toast giải thích ("Only the same topic can stack", "Start a pile with a topic stamp"), tương đương các câu nhắc trong video L2, L3. Level 1-3 có gợi ý miễn phí khi đứng im 7 giây.
+
+Level khó, mốc UA, sự kiện analytics và bảng độ khó chi tiết: `difficulty-and-ua-milestones.md`.
 
 ## 7. Kiểm thử
 

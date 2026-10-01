@@ -26,8 +26,11 @@ const DESIGN = [
     topics: { Dinosaur: 4, Glasses: 5, Pets: 5, 'Fast food': 5, Chess: 4, Car: 4, Flower: 5, Leaf: 3 },
     script: [{ text: 'New booster! Tap <em>Pack</em>: 2 hidden Dinosaur stamps jump into the pile.', booster: 'pack', slot: 0 }],
     note: 'Video L4: ô Dinosaur mở sẵn để dạy Pack.' },
-  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 96, target: 0.8, unlock: null,
-    topics: { Dog: 6, Train: 6, Tree: 5, Soda: 6, 'Ice cream': 6, Fruit: 6, Truck: 4, Kite: 5 }, note: 'Video L5: deck 34, thanh combo.' },
+  // Mốc UA 1: level khó "không thể thua" (Overtime). Video: người chơi giỏi chỉ còn 6 moves khi thắng L5 -> nhiều khả năng
+  // game gốc cũng dùng L5 làm mốc khó [GIẢ THUYẾT]. target thấp = đa số người chơi sẽ hết moves và vào Overtime.
+  { role: 'hard', special: 'hard', F: 4, cols: [3, 4, 5, 6], moves: 96, target: 0.35, unlock: null,
+    topics: { Dog: 6, Train: 6, Tree: 5, Soda: 6, 'Ice cream': 6, Fruit: 6, Truck: 4, Kite: 5 },
+    note: 'Video L5 (moves 96). MỐC UA 1: level khó, hết moves vào Overtime, không thể thua.' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 76, target: 0.8, unlock: null,
     topics: { 'Soft drink': 6, Planet: 5, Beast: 4, Notes: 5, Sauce: 3, Vegetable: 6, Insect: 4 }, note: 'Video L6.' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 80, target: 0.75, unlock: 'stamper', preplace: 'Sea life',
@@ -40,9 +43,10 @@ const DESIGN = [
     topics: { Zoo: 5, Sculpture: 5, Pizza: 5, Sashimi: 5, Balloon: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 },
     script: [{ text: 'New booster! Tap <em>Joker</em>, then tap a column. <b>Any</b> stamp can go on the Golden Stamp!', booster: 'joker', col: 1 }],
     note: 'Video L9: mở Joker, dùng ngay đầu level.' },
-  { role: 'finale', F: 5, cols: [3, 4, 5, 6, 7], moves: null, target: 0.6, unlock: null,
+  // Mốc UA 2: level siêu khó cuối chương, cũng không thể thua.
+  { role: 'superhard', special: 'superhard', F: 5, cols: [3, 4, 5, 6, 7], moves: null, target: 0.25, unlock: null,
     topics: { Cat: 6, Coffee: 6, 'Music Inst': 6, Cake: 6, Aircraft: 6, Mushroom: 6, Gems: 5, Sushi: 5, Tool: 5 },
-    note: 'Finale riêng (video dừng ở L9): 5 ô, 9 chủ đề. Moves theo tỉ lệ moves/lá của video.' },
+    note: 'Finale riêng (video dừng ở L9). MỐC UA 2: siêu khó, hết moves vào Overtime, không thể thua.' },
 ];
 
 // Level 1 theo video (art index xem prototype/stamp/assets/cards/<topic>/): đáy -> đỉnh; deck theo thứ tự rút.
@@ -113,16 +117,28 @@ function fair(d, lv) {
 }
 
 // Mức sàn moves = solver x slack (người thật cần nhiều nước hơn solver full-info).
-const SLACK = { teach: 2.0, breather: 1.8, normal: 1.5, bump: 1.45, wall: 1.3, finale: 1.3 };
+const SLACK = { teach: 2.0, breather: 1.8, normal: 1.5, bump: 1.45, wall: 1.3, finale: 1.3, hard: 1.0, superhard: 1.03 };
 // Tỉ lệ kẹt tối đa của người chơi mô phỏng khi chọn seed (layout dễ deadlock = bất công với người thật).
-const MAX_FAIL = { tutorial: 0, teach: 0.03, breather: 0.03, normal: 0.1, bump: 0.2, wall: 0.4, finale: 0.25 };
+const MAX_FAIL = { tutorial: 0, teach: 0.03, breather: 0.03, normal: 0.1, bump: 0.2, wall: 0.4, finale: 0.25, hard: 0.3, superhard: 0.35 };
 
+// --only=5,10 : chỉ sinh lại các level này, giữ nguyên level khác từ levels.js / levels-report.json hiện có
+const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean).map(Number);
+let OLD = null, OLD_REPORT = null;
+if (ONLY.length) {
+  OLD = (await import(ROOT + 'prototype/stamp/src/levels.js?' + Date.now())).LEVELS;
+  OLD_REPORT = JSON.parse(readFileSync(ROOT + 'prototype/stamp/levels-report.json', 'utf8'));
+}
 const out = [];
 const report = [];
 const SIM = { runs: 30, width: 5, noise: 1.5 };
 const winAt = (dist, m) => dist.filter(x => x <= m).length / dist.length;
 for (let li = 0; li < DESIGN.length; li++) {
   const d = DESIGN[li];
+  if (ONLY.length && !ONLY.includes(li + 1)) {
+    out.push(OLD[li]);
+    report.push(OLD_REPORT[li]);
+    continue;
+  }
   if (d.fixed === 'L1') {
     const lv = buildL1();
     const res = solve(createState(lv), { width: 800 });
@@ -133,9 +149,10 @@ for (let li = 0; li < DESIGN.length; li++) {
   }
   const tries = [];
   // Moves của video chặt: ưu tiên seed có solver <= 85% moves; nếu hiếm thì nới dần (ghi lại trong report).
-  let ratio = 0.85;
+  let ratio = d.special ? 1.0 : 0.85;          // level khó: cho phép seed sát moves
   let checked = 0;
-  for (let seed = 1; tries.length < 10 && seed < 900; seed++) {
+  const wantTries = d.special ? 40 : 10;          // level khó: thử nhiều layout hơn để tìm cái đủ khó
+  for (let seed = 1; tries.length < wantTries && seed < 900; seed++) {
     if (seed % 150 === 0 && tries.length < 3) ratio += 0.05;
     const lv = build(d, li * 1000 + seed);
     if (!fair(d, lv)) continue;
@@ -171,6 +188,7 @@ for (let li = 0; li < DESIGN.length; li++) {
   const lv = { ...pick.lv, moves: budget };
   const cardsN = lv.columns.flat().length + lv.deck.length + lv.preplaced.flat().length;
   out.push({ id: li + 1, role: d.role, unlock: d.unlock, note: d.note, seed: pick.seed, solverMoves, winRateSim: +winSim.toFixed(2),
+    ...(d.special ? { special: d.special, safety: 'overtime' } : {}),
     ...(d.script ? { script: d.script } : {}), ...lv });
   report.push({ L: li + 1, role: d.role, F: d.F, cols: d.cols.join('-'), topics: Object.keys(d.topics).length, cards: cardsN,
     deck: lv.deck.length, solver: solverMoves, moves: budget, video: d.moves ?? '-', movesPerCard: +(budget / cardsN).toFixed(2),

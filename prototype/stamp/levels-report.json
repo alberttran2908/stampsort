@@ -59,18 +59,18 @@
  },
  {
   "L": 5,
-  "role": "normal",
+  "role": "hard",
   "F": 4,
   "cols": "3-4-5-6",
   "topics": 8,
   "cards": 52,
   "deck": 34,
-  "solver": 87,
+  "solver": 88,
   "moves": 96,
   "video": 96,
   "movesPerCard": 1.85,
-  "slack": 1.1,
-  "winSim": 0.84
+  "slack": 1.09,
+  "winSim": 0.93
  },
  {
   "L": 6,
@@ -134,17 +134,17 @@
  },
  {
   "L": 10,
-  "role": "finale",
+  "role": "superhard",
   "F": 5,
   "cols": "3-4-5-6-7",
   "topics": 9,
   "cards": 60,
   "deck": 35,
-  "solver": 96,
-  "moves": 125,
+  "solver": 97,
+  "moves": 100,
   "video": "-",
-  "movesPerCard": 2.08,
-  "slack": 1.3,
-  "winSim": 0.93
+  "movesPerCard": 1.67,
+  "slack": 1.03,
+  "winSim": 0.3
  }
 ]

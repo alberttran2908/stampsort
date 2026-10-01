@@ -17,6 +17,7 @@ Dự án nghiên cứu và thiết kế game puzzle mobile, lấy **Stamp Solita
 - `tools/stamp_levels_decode.py` – giải mã 963 level, 224 topic, booster config của Stamp Solitaire (Unity không typetree) và export asset tham khảo.
 - `research/apk/com.stamp.solit/levels/` – level data đã giải mã (JSON/CSV). Teardown đã xác nhận: `docs/design/teardown-video-apk-0.9.5.md`.
 - `tools/ocr_frames.swift` – OCR hàng loạt frame video bằng macOS Vision (đọc moves, deck, bộ đếm ô) để xác minh luật từ video.
+- `tools/difficulty_report.mjs` – đo độ khó 10 level bằng người chơi mô phỏng không nhìn trộm (giỏi / phí 10% / phí 25%). Mốc UA và level "khó nhưng không thể thua": `docs/design/difficulty-and-ua-milestones.md`.
 - `prototype/stamp/` – prototype 10 level (web, art tạm từ APK). Design: `docs/design/prototype-10-levels.md`. Asset: `tools/build_proto_assets.py`; level: `node tools/gen_proto_levels.mjs`.
 
 ## Quy ước làm việc

@@ -1,0 +1,340 @@
+{
+ "runs": 40,
+ "profiles": {
+  "skilled": {
+   "width": 4,
+   "depth": 22,
+   "noise": 0.8,
+   "mistake": 0
+  },
+  "casual10": {
+   "width": 2,
+   "depth": 6,
+   "noise": 1.6,
+   "mistake": 0.1
+  },
+  "casual25": {
+   "width": 2,
+   "depth": 6,
+   "noise": 1.6,
+   "mistake": 0.25
+  }
+ },
+ "secPerMove": {
+  "skilled": 2.2,
+  "casual10": 3.2,
+  "casual25": 3.8
+ },
+ "rows": [
+  {
+   "level": 1,
+   "role": "tutorial",
+   "special": "",
+   "budget": "inf",
+   "solverMin": 23,
+   "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 23,
+    "attempts": 1,
+    "minutes": 0.8
+   },
+   "casual10": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 24,
+    "attempts": 1,
+    "minutes": 1.3
+   },
+   "casual25": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 25,
+    "attempts": 1,
+    "minutes": 1.6
+   }
+  },
+  {
+   "level": 2,
+   "role": "teach",
+   "special": "",
+   "budget": 66,
+   "solverMin": 48,
+   "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 50,
+    "attempts": 1,
+    "minutes": 1.8
+   },
+   "casual10": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 52,
+    "attempts": 1,
+    "minutes": 2.8
+   },
+   "casual25": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 54,
+    "attempts": 1,
+    "minutes": 3.4
+   }
+  },
+  {
+   "level": 3,
+   "role": "teach",
+   "special": "",
+   "budget": 75,
+   "solverMin": 56,
+   "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 59,
+    "attempts": 1,
+    "minutes": 2.2
+   },
+   "casual10": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 62,
+    "attempts": 1,
+    "minutes": 3.3
+   },
+   "casual25": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 65,
+    "attempts": 1,
+    "minutes": 4.1
+   }
+  },
+  {
+   "level": 4,
+   "role": "normal",
+   "special": "",
+   "budget": 82,
+   "solverMin": 66,
+   "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 68,
+    "attempts": 1,
+    "minutes": 2.5
+   },
+   "casual10": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 71,
+    "attempts": 1,
+    "minutes": 3.8
+   },
+   "casual25": {
+    "win": 0.95,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 73,
+    "attempts": 1.1,
+    "minutes": 4.6
+   }
+  },
+  {
+   "level": 5,
+   "role": "hard",
+   "special": "hard",
+   "budget": 96,
+   "solverMin": 88,
+   "skilled": {
+    "win": 0.23,
+    "winPlus5": 0.23,
+    "deadlock": 0.65,
+    "medianMoves": 89,
+    "attempts": 4.4,
+    "minutes": 3.3
+   },
+   "casual10": {
+    "win": 0.13,
+    "winPlus5": 0.15,
+    "deadlock": 0.8,
+    "medianMoves": 93,
+    "attempts": 8,
+    "minutes": 5
+   },
+   "casual25": {
+    "win": 0.07,
+    "winPlus5": 0.1,
+    "deadlock": 0.78,
+    "medianMoves": 103,
+    "attempts": 13.3,
+    "minutes": 6.5
+   }
+  },
+  {
+   "level": 6,
+   "role": "normal",
+   "special": "",
+   "budget": 76,
+   "solverMin": 62,
+   "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 63,
+    "attempts": 1,
+    "minutes": 2.3
+   },
+   "casual10": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 65,
+    "attempts": 1,
+    "minutes": 3.5
+   },
+   "casual25": {
+    "win": 0.9,
+    "winPlus5": 0.95,
+    "deadlock": 0,
+    "medianMoves": 68,
+    "attempts": 1.1,
+    "minutes": 4.3
+   }
+  },
+  {
+   "level": 7,
+   "role": "normal",
+   "special": "",
+   "budget": 80,
+   "solverMin": 71,
+   "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 72,
+    "attempts": 1,
+    "minutes": 2.6
+   },
+   "casual10": {
+    "win": 0.95,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 77,
+    "attempts": 1.1,
+    "minutes": 4.1
+   },
+   "casual25": {
+    "win": 0.55,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 80,
+    "attempts": 1.8,
+    "minutes": 5.1
+   }
+  },
+  {
+   "level": 8,
+   "role": "normal",
+   "special": "",
+   "budget": 75,
+   "solverMin": 64,
+   "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 67,
+    "attempts": 1,
+    "minutes": 2.5
+   },
+   "casual10": {
+    "win": 0.93,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 71,
+    "attempts": 1.1,
+    "minutes": 3.8
+   },
+   "casual25": {
+    "win": 0.85,
+    "winPlus5": 0.97,
+    "deadlock": 0,
+    "medianMoves": 73,
+    "attempts": 1.2,
+    "minutes": 4.6
+   }
+  },
+  {
+   "level": 9,
+   "role": "wall",
+   "special": "",
+   "budget": 110,
+   "solverMin": 80,
+   "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 82,
+    "attempts": 1,
+    "minutes": 3
+   },
+   "casual10": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 84,
+    "attempts": 1,
+    "minutes": 4.5
+   },
+   "casual25": {
+    "win": 0.95,
+    "winPlus5": 0.97,
+    "deadlock": 0.03,
+    "medianMoves": 88,
+    "attempts": 1.1,
+    "minutes": 5.6
+   }
+  },
+  {
+   "level": 10,
+   "role": "superhard",
+   "special": "superhard",
+   "budget": 100,
+   "solverMin": 98,
+   "skilled": {
+    "win": 0.47,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 101,
+    "attempts": 2.1,
+    "minutes": 3.7
+   },
+   "casual10": {
+    "win": 0.13,
+    "winPlus5": 0.6,
+    "deadlock": 0,
+    "medianMoves": 104,
+    "attempts": 8,
+    "minutes": 5.5
+   },
+   "casual25": {
+    "win": 0,
+    "winPlus5": 0.23,
+    "deadlock": 0,
+    "medianMoves": 108,
+    "attempts": 20,
+    "minutes": 6.8
+   }
+  }
+ ]
+}
