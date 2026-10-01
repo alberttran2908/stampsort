@@ -1,9 +1,10 @@
-import { LEVELS } from './levels.js?v=bad3bdd-1790818735';
-import * as E from './engine.js?v=bad3bdd-1790818735';
-import { hint as solverHint, solve } from './solver.js?v=bad3bdd-1790818735';
-import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=bad3bdd-1790818735';
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=bad3bdd-1790818735';
-import { candidateActions } from './solver.js?v=bad3bdd-1790818735';
+import { LEVELS } from './levels.js?v=1e4df5e-1790822074';
+import * as E from './engine.js?v=1e4df5e-1790822074';
+import { hint as solverHint, solve } from './solver.js?v=1e4df5e-1790822074';
+import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=1e4df5e-1790822074';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=1e4df5e-1790822074';
+import { candidateActions, isDeadlocked } from './solver.js?v=1e4df5e-1790822074';
+import { track, events as allEvents, funnelSummary, clearEvents } from './analytics.js?v=1e4df5e-1790822074';
 
 // ============================================================ constants
 const CW = 165, CH = 214;
@@ -17,6 +18,15 @@ const COSTS = { undo: 50, hint: 300, pack: 500, stamper: 500, joker: 1200, slot:
 // Lịch mở theo video: Hint L2, Pack L4, Stamper L7, Joker L9; hộc phụ mua được từ L2.
 const UNLOCK_AT = { hint: 2, pack: 4, stamper: 7, joker: 9, slot: 2 };
 const GIFTS = { hint: 3, pack: 2, stamper: 2, joker: 2 };
+// Mốc UA: level "khó nhưng không thể thua". Mặc định theo levels.js (special/safety); ghi đè để A/B test:
+//   ?hard=5,10      danh sách level khó      ?safety=overtime | retry | none
+const AB = (() => {
+  const h = location.search.match(/hard=([\d,]*)/);
+  const sf = location.search.match(/safety=(overtime|retry|none)/);
+  return { hard: h ? h[1].split(',').filter(Boolean).map(Number) : null, safety: sf ? sf[1] : null };
+})();
+const specialOf = lv => ((AB.hard ? AB.hard.includes(lv.id) : !!lv.special) ? (lv.special || 'hard') : null);
+const safetyOf = lv => (specialOf(lv) ? (AB.safety || lv.safety || 'overtime') : 'none');
 const BOOSTERS = [
   { id: 'hint', name: 'Hint', icon: 'assets/ui/ic_hint.png' },
   { id: 'pack', name: 'Pack', icon: 'assets/ui/ic_pack.png' },
@@ -47,7 +57,7 @@ document.body.classList.toggle('lite', LITE);
 
 // ============================================================ save
 const SAVE_KEY = 'stampsort_proto_v1';
-const defaultSave = () => ({ unlocked: 1, coins: 500, stars: {}, hint: 0, pack: 0, stamper: 0, joker: 0, slot: 0, seen: {} });
+const defaultSave = () => ({ unlocked: 1, coins: 500, stars: {}, hint: 0, pack: 0, stamper: 0, joker: 0, slot: 0, seen: {}, attempts: {} });
 let save = defaultSave();
 try { save = { ...defaultSave(), ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') }; } catch (e) { /* ignore */ }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
@@ -115,6 +125,10 @@ let tutorial = null;
 let script = null;         // tutorial ép bước: { steps, i }
 let lastMovesShown = null;
 let lowWarned = false;
+let overtime = false;          // đã vào Overtime (level khó, hết moves vẫn chơi tiếp)
+let jokerFree = false;         // Joker cứu trợ miễn phí khi kẹt (level khó)
+let play = { start: 0, attempt: 0, boosters: 0, undo: 0, rescues: 0, continues: 0 };   // số liệu ván hiện tại cho analytics
+let levelActive = false;
 let extraKept = -1;          // level đã mua Ô phụ (giữ khi Retry cùng level)
 let levelToken = 0;
 const completing = new Set();   // slot đang chạy animation phong bì
@@ -437,16 +451,21 @@ function renderBoosters() {
 }
 function spend(kind) {
   const have = kind === 'undo' ? undoLeft : save[kind];
+  const used = paid => {
+    if (kind === 'undo') play.undo++; else play.boosters++;
+    track('booster_use', { level: levelIdx + 1, type: kind, paid, special: specialOf(L) || '' });
+    return true;
+  };
   if (have > 0) {
     if (kind === 'undo') undoLeft--; else save[kind]--;
     persist();
-    return true;
+    return used(false);
   }
   if (save.coins >= COSTS[kind]) {
     save.coins -= COSTS[kind];
     persist();
     bumpCoins();
-    return true;
+    return used(true);
   }
   toast('Not enough coins');
   sfx('close');
@@ -545,7 +564,7 @@ function toggleJoker() {
     if (scriptStep()) return;
     jokerMode = false; clearHint(); tut(null); updateDeckUI(); renderBoosters(); return;
   }
-  if (save.joker <= 0 && save.coins < COSTS.joker) { toast('Not enough coins'); sfx('close'); return; }
+  if (!jokerFree && save.joker <= 0 && save.coins < COSTS.joker) { toast('Not enough coins'); sfx('close'); return; }
   jokerMode = true;
   sfx('joker');
   colZones.forEach((z, i) => { z.style.opacity = 1; z.classList.add('target'); });
@@ -555,7 +574,8 @@ function toggleJoker() {
 }
 function placeJokerAt(j) {
   jokerMode = false;
-  if (!spend('joker')) { clearHint(); updateDeckUI(); return; }
+  if (jokerFree) jokerFree = false;
+  else if (!spend('joker')) { clearHint(); updateDeckUI(); return; }
   pushUndo();
   const id = 'J' + (++jokerSeq);
   const res = E.placeJoker(S, j, id);
@@ -746,6 +766,7 @@ function runScript() {
   if (!step) {
     save.seen['script_' + L.id] = 1;
     persist();
+    if (L.id === 1) { track('tutorial_complete', { level: 1 }); track('af_tutorial_completion', { af_success: true, af_content_id: 'level1' }); }
     script = null;
     tut(null);
     clearHint();
@@ -847,8 +868,8 @@ function tutorialCheck(events = []) {
 }
 function resetIdleHint() {
   clearTimeout(idleTimer);
-  if (levelIdx + 1 > 3 || ended || script) return;
-  idleTimer = setTimeout(() => {           // level đầu: đứng im 7s thì gợi ý miễn phí
+  if ((levelIdx + 1 > 3 && !specialOf(L)) || ended || script) return;
+  idleTimer = setTimeout(() => {           // level đầu và level khó: đứng im thì gợi ý miễn phí
     if (ended || tutorial || jokerMode) return;
     const a = computeHint();
     showAction(a);
@@ -1352,14 +1373,40 @@ function afterAction() {
     return;
   }
   if (S.moves <= 0) {
+    if (safetyOf(L) === 'overtime') { startOvertime(); return; }
     ended = true;
     Promise.all(pending).then(() => wait(450)).then(same(outOfMoves));
     return;
   }
   if (canAutoFinish() && autoFinish(token)) return;
   if (isStuck()) {
-    Promise.all(pending).then(() => wait(500)).then(same(() => { if (isStuck() && !ended) stuckPanel(); }));
+    Promise.all(pending).then(() => wait(500)).then(same(() => {
+      if (!isStuck() || ended || jokerMode) return;
+      if (safetyOf(L) !== 'none') rescueJoker(); else stuckPanel();
+    }));
   }
+}
+// Overtime: level khó hết moves thì không thua, chơi tiếp với moves vô hạn (chỉ còn 1 sao).
+function startOvertime() {
+  overtime = true;
+  S.moves = Infinity;
+  movesEl.classList.add('overtime');
+  updateHUD();
+  sfx('feature');
+  haptic([20, 40, 20]);
+  floatText('OVERTIME!', 540, 420, '#ff7a59');
+  toast('Out of moves, but the post office stays open: <em style="color:#ffcf3f;font-style:normal">keep going for free!</em>', 2800);
+  const tp = topicProgress();
+  track('overtime_start', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total, topics_left: tp.total - tp.done, special: specialOf(L) || '' });
+}
+// Kẹt cứng ở level khó: tặng Joker miễn phí để luôn đi tiếp được.
+function rescueJoker() {
+  play.rescues++;
+  jokerFree = true;
+  track('rescue_joker', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total });
+  toast('Stuck? The Postmaster lends you a <em style="color:#ffcf3f;font-style:normal">free Golden Stamp</em>!', 2600);
+  sfx('feature');
+  toggleJoker();
 }
 // Deck hết và không còn lá úp: tự dọn bàn nếu solver chắc chắn thắng trong số moves còn lại.
 let autoFinishing = false;
@@ -1391,16 +1438,25 @@ async function runAutoFinish(token, r) {
     if (token === levelToken) busyInput = false;
   }
 }
-function isStuck() {
-  return !S.deck.length && !S.waste.length && !E.isWon(S) &&
-    !candidateActions(S).some(a => !a.draw && (a.dst.to === 'found' || a.src.from === 'waste' || (a.src.idx > 0 && !S.cols[a.src.i][a.src.idx - 1].up)));
-}
+// Kẹt cứng: không còn nước có ích, kể cả khi deck còn bài (rút vòng vòng cũng vô ích).
+function isStuck() { return isDeadlocked(S); }
 function stars() {
+  if (overtime) return 1;
   if (L.moves == null) return 3;
   const r = S.moves / L.moves;
   return r >= 0.25 ? 3 : r >= 0.1 ? 2 : 1;
 }
 async function winSequence() {
+  levelActive = false;
+  const lvNum = levelIdx + 1;
+  const done = {
+    level: lvNum, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? 0 : S.moves,
+    time_s: Math.round((Date.now() - play.start) / 1000), stars: stars(), overtime, boosters: play.boosters, undo: play.undo,
+    rescues: play.rescues, continues: play.continues, special: specialOf(L) || '', safety: safetyOf(L),
+  };
+  track('level_complete', done);
+  track('af_level_achieved', { af_level: lvNum, af_score: done.stars });      // sự kiện chuẩn AppsFlyer
+  if (specialOf(L)) track(`milestone_level_${lvNum}`, done);                  // mốc UA (L5, L10)
   sfx('win');
   confetti(170);
   haptic([20, 60, 20, 60, 40]);
@@ -1441,18 +1497,28 @@ function outOfMoves() {
   ended = true;
   sfx('lose');
   haptic([30, 50, 30]);
+  track('level_fail', { level: levelIdx + 1, attempt: play.attempt, reason: 'out_of_moves', delivered: S.delivered, total: S.total, special: specialOf(L) || '' });
+  if (safetyOf(L) === 'retry') {
+    // Level khó kiểu "chơi lại miễn phí": không phạt, giữ Ô phụ, vào lại ngay
+    panel({ title: 'So Close!', body: '<p>This is a hard level. Try again: it is <b>free</b>, no penalty.</p>', buttons: [
+      { label: 'Try again', act: () => startLevel(levelIdx) },
+      { label: '+5 moves <small>(free ad)</small>', cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) },
+    ] });
+    return;
+  }
   const canFree = !freeMovesUsed;
   const buttons = [];
-  if (canFree) buttons.push({ label: '+5 moves <small>(free ad)</small>', cls: 'orange', act: () => fakeAd(() => addMoves(5, true)) });
+  if (canFree) buttons.push({ label: '+5 moves <small>(free ad)</small>', cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) });
   buttons.push({ label: `+5 moves <small>${COSTS.moves} coins</small>`, act: () => {
     if (save.coins < COSTS.moves) { toast('Not enough coins'); outOfMoves(); return; }
-    save.coins -= COSTS.moves; persist(); bumpCoins(); addMoves(5);
+    save.coins -= COSTS.moves; persist(); bumpCoins(); addMoves(5, false, 'coins');
   } });
   buttons.push({ label: 'Retry', cls: 'brown', act: () => startLevel(levelIdx) });
   const tp = topicProgress();
   panel({ title: 'Out of Moves', body: `<p>You ran out of moves with <b>${tp.total - tp.done} topics</b> (${S.total - S.delivered} stamps) still to clear.</p><p>Get extra moves to keep going, or retry the level.</p>`, buttons });
 }
 function stuckPanel() {
+  track('level_stuck', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total, moves_left: S.moves });
   const buttons = [];
   if (levelIdx + 1 >= UNLOCK_AT.joker) buttons.push({ label: 'Use a Joker', cls: 'orange', act: () => { toggleJoker(); } });
   if (levelIdx + 1 >= UNLOCK_AT.pack && S.found.some((_, k) => pullable(k))) buttons.push({ label: 'Use a Pack', cls: 'orange', act: () => startPick('pack') });
@@ -1461,8 +1527,10 @@ function stuckPanel() {
   buttons.push({ label: 'Retry', cls: 'brown', act: () => startLevel(levelIdx) });
   panel({ title: 'No Moves Left', body: '<p>No stamp can move anymore.</p>', buttons });
 }
-function addMoves(n, free = false) {
+function addMoves(n, free = false, source = 'debug') {
   if (free) freeMovesUsed = true;
+  play.continues++;
+  track('continue_moves', { level: levelIdx + 1, attempt: play.attempt, source, amount: n });
   S.moves += n;
   ended = false;
   sfx('claim');
@@ -1483,6 +1551,7 @@ function fakeAd(done) {
 // ============================================================ level flow
 async function startLevel(i) {
   closePanel(true);
+  if (levelActive && L && S) track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000) });
   const nextIdx = Math.max(0, Math.min(LEVELS.length - 1, i));
   if (nextIdx !== levelIdx) extraKept = -1;
   levelIdx = nextIdx;
@@ -1503,6 +1572,16 @@ async function startLevel(i) {
   pickMode = null;
   lastMovesShown = null;
   lowWarned = false;
+  overtime = false;
+  jokerFree = false;
+  movesEl.classList.remove('overtime');
+  save.attempts = save.attempts || {};
+  save.attempts[levelIdx + 1] = (save.attempts[levelIdx + 1] || 0) + 1;
+  persist();
+  play = { start: Date.now(), attempt: save.attempts[levelIdx + 1], boosters: 0, undo: 0, rescues: 0, continues: 0 };
+  levelActive = true;
+  document.body.classList.toggle('hard', !!specialOf(L));
+  track('level_start', { level: levelIdx + 1, attempt: play.attempt, moves: L.moves ?? -1, special: specialOf(L) || '', safety: safetyOf(L) });
   clearHint();
   tut(null);
   $('home').classList.add('off');
@@ -1566,7 +1645,8 @@ function levelBanner() {
   const tp = topicProgress();
   const el = document.createElement('div');
   bannerEl = el;
-  el.innerHTML = `<div style="font-size:110px;line-height:1">Level ${levelIdx + 1}</div>
+  const sp = specialOf(L);
+  el.innerHTML = (sp ? `<div class="hard-pill">${sp === 'superhard' ? 'SUPER HARD LEVEL' : 'HARD LEVEL'}</div>` : '') + `<div style="font-size:110px;line-height:1">Level ${levelIdx + 1}</div>
     <div style="margin-top:22px;display:inline-block;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.35);font-size:44px">
       Clear <span style="color:#ffcf3f">${tp.total - tp.done} topics</span> · ${L.moves == null ? 'unlimited moves' : `<span style="color:#ffcf3f">${L.moves} moves</span>`}</div>`;
   el.style.cssText = 'position:absolute;left:0;right:0;top:700px;text-align:center;color:#fff;text-shadow:0 6px 0 rgba(0,0,0,.25);z-index:4000;pointer-events:none';
@@ -1574,8 +1654,9 @@ function levelBanner() {
   const o = { y: -60, a: 0, s: 0.6 };
   const draw = () => { el.style.transform = `translateY(${o.y}px) scale(${o.s})`; el.style.opacity = o.a; };
   draw();
+  if (sp) { sfx('boom', { vol: 0.5 }); shake(8); }
   return tween(o, { y: 0, a: 1, s: 1 }, { dur: 380, easing: ease.outBack, onUpdate: draw })
-    .then(() => wait(1300))
+    .then(() => wait(sp ? 1900 : 1300))
     .then(() => tween(o, { y: -40, a: 0 }, { dur: 260, onUpdate: draw }))
     .then(() => { el.remove(); if (bannerEl === el) bannerEl = null; });
 }
@@ -1625,6 +1706,9 @@ function featureIntro() {
 
 // ============================================================ home / pause
 function goHome() {
+  if (levelActive && S) track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000) });
+  levelActive = false;
+  document.body.classList.remove('hard');
   levelToken++;
   removeBanner();
   closePanel(true);
@@ -1677,7 +1761,14 @@ function buildDebug() {
   btn('Win now', () => { S.delivered = S.total; afterAction(); });
   btn('Reveal', () => { for (const col of S.cols) for (const c of col) c.up = true; relayout(); });
   btn('Next lv', () => startLevel(levelIdx + 1));
-  btn('Reset save', () => { save = defaultSave(); persist(); location.reload(); });
+  btn('Reset save', () => { save = defaultSave(); persist(); clearEvents(); location.reload(); });
+  btn('Events', () => {
+    const f = funnelSummary();
+    const rows = Object.keys(f).sort((a, b) => a - b).map(k => `<tr><td>${k}</td><td>${f[k].start}</td><td>${f[k].complete}</td><td>${f[k].fail}</td><td>${f[k].overtime}</td></tr>`).join('');
+    const last = allEvents().slice(-12).reverse().map(e => `<div>${e.name} ${e.level ? 'L' + e.level : ''}</div>`).join('');
+    panel({ title: 'Events', body: `<table style="width:100%;font-size:26px;color:#5a3a26"><tr><th>Lv</th><th>start</th><th>win</th><th>fail</th><th>OT</th></tr>${rows}</table><div style="text-align:left;font-size:22px;color:#7a5238;margin-top:16px">${last}</div>`,
+      buttons: [{ label: 'Copy JSON', act: () => { try { navigator.clipboard.writeText(JSON.stringify(allEvents())); toast('Copied'); } catch (e) { toast('Copy failed'); } } }, { label: 'Close', cls: 'brown', act: () => {} }] });
+  });
   // đồng hồ FPS (chỉ debug)
   const fps = document.createElement('div');
   fps.style.cssText = 'font:22px monospace;color:#fff;background:#0008;padding:6px 8px;border-radius:10px';
@@ -1711,6 +1802,7 @@ window.__game = { get S() { return S; }, get level() { return levelIdx + 1; }, s
   await preload(['back', 'topic_frame', 'crown', 'slot_empty', 'moves_box', 'booster_btn', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'star', 'lock', 'plus', 'recycle', 'radial', 'header_win', 'logo',
     'face_1', 'face_2', 'face_3', 'face_4', 'face_5', 'face_6', 'ic_hint', 'ic_joker', 'ic_undo'].map(n => `assets/ui/${n}.png`));
   initAudio();
+  track('app_open', { lite: LITE, ab_hard: AB.hard ? AB.hard.join('-') : 'default', ab_safety: AB.safety || 'default' });
   goHome();
   const m = location.search.match(/level=(\d+)/);
   if (m) startLevel(+m[1] - 1);
