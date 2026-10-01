@@ -1,5 +1,5 @@
 // Solver (beam search, full information) + người chơi mô phỏng (chỉ thấy lá ngửa).
-import { clone, applyMove, draw, isWon, maxRunStart, checkMove, stateKey, JOKER } from './engine.js';
+import { clone, applyMove, draw, isWon, maxRunStart, checkMove, stateKey, JOKER } from './engine.js?v=bad3bdd-1790818735';
 
 /** Nước đi "có ý nghĩa" để giảm nhánh: luôn nhấc cả chồng dài nhất. */
 export function candidateActions(s) {
@@ -8,7 +8,10 @@ export function candidateActions(s) {
   if (s.waste.length) srcs.push({ from: 'waste' });
   s.cols.forEach((col, i) => {
     const idx = maxRunStart(s, i);
-    if (idx >= 0) srcs.push({ from: 'col', i, idx });
+    if (idx < 0) return;
+    srcs.push({ from: 'col', i, idx });
+    // chồng dài nhất bắt đầu bằng Joker thì không vào ô được: xét thêm chồng ngay phía trên Joker
+    if (col[idx].k === JOKER && idx + 1 < col.length) srcs.push({ from: 'col', i, idx: idx + 1 });
   });
   for (const src of srcs) {
     // foundation

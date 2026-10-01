@@ -1,9 +1,9 @@
-import { LEVELS } from './levels.js';
-import * as E from './engine.js';
-import { hint as solverHint, solve } from './solver.js';
-import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js';
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey } from './fx.js';
-import { candidateActions } from './solver.js';
+import { LEVELS } from './levels.js?v=bad3bdd-1790818735';
+import * as E from './engine.js?v=bad3bdd-1790818735';
+import { hint as solverHint, solve } from './solver.js?v=bad3bdd-1790818735';
+import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=bad3bdd-1790818735';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=bad3bdd-1790818735';
+import { candidateActions } from './solver.js?v=bad3bdd-1790818735';
 
 // ============================================================ constants
 const CW = 165, CH = 214;
@@ -27,6 +27,23 @@ const BOOSTERS = [
 const $ = id => document.getElementById(id);
 const stage = $('stage'), board = $('board'), overlay = $('overlay');
 const DEBUG = /debug/.test(location.search);
+
+// Máy yếu (skill weak-gpu-perf): RAM <= 2GB, <= 4 nhân, hoặc GPU Mali/Adreno đời thấp/PowerVR. ?lite=1 / ?lite=0 để ép.
+const LITE = (() => {
+  const q = location.search.match(/lite=(\d)/);
+  if (q) return q[1] === '1';
+  const mem = navigator.deviceMemory || 8;
+  const cores = navigator.hardwareConcurrency || 8;
+  let gpu = '';
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+    gpu = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+  } catch (e) { /* không có WebGL */ }
+  const weakGpu = /Mali-(4|T\d|G(31|51|52|57))|Adreno \(TM\) ([1-5]\d\d|60\d|61\d)|PowerVR|Vivante/i.test(gpu);
+  return mem <= 2 || cores <= 4 || weakGpu;
+})();
+document.body.classList.toggle('lite', LITE);
 
 // ============================================================ save
 const SAVE_KEY = 'stampsort_proto_v1';
@@ -54,8 +71,23 @@ let manifest = {};
 const slug = t => t.toLowerCase().replace(/ /g, '_').replace(/&/g, 'and');
 const artUrl = c => `assets/cards/${slug(c.t)}/${c.art}.png`;
 const iconUrl = t => `assets/cards/${slug(t)}/icon.png`;
+const decoded = new Map();     // giữ tham chiếu để trình duyệt không bỏ bitmap đã giải mã
 function preload(urls) {
-  return Promise.all(urls.map(u => new Promise(r => { const i = new Image(); i.onload = i.onerror = r; i.src = u; })));
+  return Promise.all(urls.map(u => {
+    if (decoded.has(u)) return decoded.get(u);
+    const i = new Image();
+    // tải xong thì giải mã trước (tránh khựng lần đầu hiện lá); decode() có thể treo ở trang ẩn nên luôn có hạn chót
+    const p = new Promise(res => {
+      let done = false;
+      const fin = () => { if (!done) { done = true; res(i); } };
+      i.onload = () => { if (i.decode) i.decode().then(fin, fin); else fin(); setTimeout(fin, 400); };
+      i.onerror = fin;
+      setTimeout(fin, 4000);
+    });
+    i.src = u;
+    decoded.set(u, p);
+    return p;
+  }));
 }
 
 // ============================================================ game state
@@ -82,6 +114,8 @@ let idleTimer = null;
 let tutorial = null;
 let script = null;         // tutorial ép bước: { steps, i }
 let lastMovesShown = null;
+let lowWarned = false;
+let extraKept = -1;          // level đã mua Ô phụ (giữ khi Retry cùng level)
 let levelToken = 0;
 const completing = new Set();   // slot đang chạy animation phong bì
 
@@ -118,19 +152,19 @@ function computeLayout() {
   const nd = S.deck.length;
   S.deck.forEach((c, i) => {
     const d = Math.min(3, nd - 1 - i);            // 3 lá trên cùng tạo độ dày
-    T.set(c.id, { x: DECK_X - d * 0, y: ROW_A - (nd > 1 ? Math.max(0, 3 - d) * 4 : 0), z: 100 + i, up: false });
+    T.set(c.id, { x: DECK_X, y: ROW_A - (nd > 1 ? Math.max(0, 3 - d) * 4 : 0), z: 100 + i, up: false, hide: i < nd - 3 });
   });
   const nw = S.waste.length;
   S.waste.forEach((c, i) => {
     const vis = i - (nw - 3);                      // vị trí trong quạt 3 lá
-    const x = WASTE_X + Math.max(0, vis) * 50;
-    T.set(c.id, { x, y: ROW_A, z: 200 + i, up: true });
+    const x = WASTE_X + Math.max(0, vis) * 66;
+    T.set(c.id, { x, y: ROW_A, z: 200 + i, up: true, hide: vis < -1 });
   });
   S.found.forEach((f, k) => {
     if (!f) return;
     const p = slotPos(k);
     const all = [f.topic, ...f.cards];
-    all.forEach((c, j) => T.set(c.id, { x: p.x, y: p.y - Math.min(j, 6) * 2.5, z: 300 + j, up: true }));
+    all.forEach((c, j) => T.set(c.id, { x: p.x, y: p.y - Math.min(j, 6) * 2.5, z: 300 + j, up: true, hide: j < all.length - 2 }));
   });
   S.cols.forEach((col, i) => {
     const ys = colOffsets(col);
@@ -169,6 +203,8 @@ function makeView(card) {
   views.set(card.id, v);
   return v;
 }
+function animOn(v) { v.ac = (v.ac || 0) + 1; if (v.ac === 1) v.el.classList.add('anim'); }
+function animOff(v) { v.ac = Math.max(0, (v.ac || 0) - 1); if (!v.ac) v.el.classList.remove('anim'); }
 function applyTransform(v) {
   v.el.style.transform = `translate3d(${v.x + v.ox}px,${v.y}px,0) rotate(${v.r}deg) scale(${v.s})`;
 }
@@ -176,8 +212,14 @@ function setZ(v, z) { if (v.z !== z) { v.z = z; v.el.style.zIndex = z; } }
 function setUp(v, up, { animate = true, delay = 0 } = {}) {
   if (v.up === up) return;
   v.up = up;
-  v.inner.style.transition = animate ? `transform .34s cubic-bezier(.3,1.35,.5,1) ${delay}ms` : 'none';
-  v.el.classList.toggle('down', !up);
+  if (!animate) { killKey('flip-' + v.id); v.inner.style.transform = ''; v.el.classList.toggle('down', !up); return; }
+  // lật 2D: thu scaleX về 0, đổi mặt, mở ra lại (không cần preserve-3d / perspective)
+  const o = { k: 0 };
+  animOn(v);
+  tween(o, { k: 1 }, { dur: 300, delay, easing: ease.inOutCubic, key: 'flip-' + v.id, onUpdate: () => {
+    if (o.k >= 0.5) v.el.classList.toggle('down', !v.up);
+    v.inner.style.transform = `scaleX(${Math.max(0.03, Math.abs(Math.cos(o.k * Math.PI)))})`;
+  } }).then(() => { v.inner.style.transform = ''; v.el.classList.toggle('down', !v.up); animOff(v); });
 }
 function moveView(v, t, { dur = 240, easing = ease.outCubic, delay = 0, arc = 0, lift = false } = {}) {
   const sx = v.x, sy = v.y;
@@ -185,6 +227,7 @@ function moveView(v, t, { dur = 240, easing = ease.outCubic, delay = 0, arc = 0,
   if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && v.r === 0 && v.s === 1) { v.x = t.x; v.y = t.y; applyTransform(v); return Promise.resolve(); }
   const o = { p: 0 };
   const r0 = v.r, s0 = v.s;
+  animOn(v);
   return tween(o, { p: 1 }, {
     dur, easing, delay, key: 'pos-' + v.id,
     onUpdate: () => {
@@ -195,15 +238,16 @@ function moveView(v, t, { dur = 240, easing = ease.outCubic, delay = 0, arc = 0,
       v.s = s0 + (1 - s0) * Math.min(1, p) + (lift ? 0.08 * Math.sin(Math.PI * Math.min(1, p)) : 0);
       applyTransform(v);
     },
-  });
+  }).then(() => animOff(v));
 }
 
 /** Đưa mọi view về vị trí theo state. except: bỏ qua các id đang được animate riêng. */
 function relayout({ dur = 220, except = new Set(), flipDelay = 90 } = {}) {
   const T = computeLayout();
   for (const [id, v] of views) {
-    if (except.has(id) || v.lifted || v.gone) continue;
     const t = T.get(id);
+    if (t && !v.gone) setHidden(v, t.hide, dur + 60);
+    if (except.has(id) || v.lifted || v.gone) continue;
     if (!t) continue;
     setZ(v, t.z);
     moveView(v, t, { dur });
@@ -213,6 +257,12 @@ function relayout({ dur = 220, except = new Set(), flipDelay = 90 } = {}) {
   updateTopicCounts();
 }
 
+// Lá bị che hoàn toàn (đáy deck, waste cũ, giữa ô): ẩn để trình duyệt khỏi paint/composite.
+function setHidden(v, hide, delay = 0) {
+  clearTimeout(v.hideT);
+  if (!hide) { v.el.style.visibility = ''; return; }
+  v.hideT = setTimeout(() => { v.el.style.visibility = 'hidden'; }, delay);   // chờ lá khác bay tới che
+}
 function updateTopicCounts() {
   for (const v of views.values()) {
     if (v.card.k !== 'topic') continue;
@@ -312,9 +362,19 @@ function updateHUD(bump = false) {
   $('coins').querySelector('span').textContent = save.coins;
   $('title').textContent = `Level ${levelIdx + 1}`;
   const fill = $('combo').querySelector('.fill');
-  fill.style.width = (Math.min(combo, COMBO_MAX) / COMBO_MAX) * 100 + '%';
-  $('combo').querySelector('.txt').textContent = combo >= 2 ? `Combo x${combo}` : '';
+  fill.style.transform = `scaleX(${Math.min(combo, COMBO_MAX) / COMBO_MAX})`;
+  const tp = topicProgress();
+  $('combo').querySelector('.txt').textContent = combo >= 2 ? `Combo x${combo}` : `Topics ${tp.done}/${tp.total}`;
+  if (S.moves === 5 && !lowWarned && L.moves != null) { lowWarned = true; toast('Only <em style="color:#ffcf3f;font-style:normal">5 moves</em> left!', 1600); }
   renderBoosters();
+}
+/** Số chủ đề đã giao xong / tổng: mục tiêu thắng là giao hết. */
+function topicProgress() {
+  const total = L.columns.flat().concat(L.deck, (L.preplaced || []).flat()).filter(c => c.k === 'topic').length;
+  let left = S.found.filter(Boolean).length;
+  for (const col of S.cols) for (const c of col) if (c.k === 'topic') left++;
+  for (const c of S.deck.concat(S.waste)) if (c.k === 'topic') left++;
+  return { done: total - left, total };
 }
 function bumpCoins() {
   const el = $('coins');
@@ -396,7 +456,7 @@ function onBooster(id) {
   if (ended || busyInput) return;
   const lv = levelIdx + 1;
   if (id !== 'undo' && lv < UNLOCK_AT[id]) { toast(`Unlocks at level ${UNLOCK_AT[id]}`); sfx('close'); return; }
-  if (scriptStep() && scriptStep().booster !== id) { toast('Follow the hand first!'); return; }
+  if (scriptStep() && scriptStep().booster !== id) { toast('Follow the hand!', 1000); return; }
   sfx('click', { vol: 0.6 });
   if (id !== 'joker' && jokerMode) toggleJoker();
   if (id !== 'pack' && id !== 'stamper' && pickMode) cancelPick();
@@ -463,9 +523,10 @@ function showAction(a, { loopHand = true } = {}) {
   return true;
 }
 function doHint() {
+  const a = computeHint();
+  if (!a) { toast('No useful move found. Try Undo or a booster.'); sfx('close'); return; }
   if (!spend('hint')) return;
   sfx('hint');
-  const a = computeHint();
   if (!showAction(a)) toast('Try drawing from the deck');
   hintTimer = setTimeout(clearHint, 4000);
   updateHUD();
@@ -591,6 +652,7 @@ function onExtraSlot(e) {
   e && e.stopPropagation();
   if (ended || S.extraSlot) return;
   unlockAudio();
+  if (scriptStep()) { toast('Follow the hand!', 1000); return; }
   if (levelIdx + 1 < UNLOCK_AT.slot) { toast(`Unlocks at level ${UNLOCK_AT.slot}`); sfx('close'); return; }
   panel({
     title: 'Extra Slot',
@@ -598,7 +660,7 @@ function onExtraSlot(e) {
     buttons: [
       { label: 'Free <small>(ad)</small>', cls: 'orange', act: () => fakeAd(unlockExtra) },
       { label: `${COSTS.slot} coins`, act: () => {
-        if (save.coins < COSTS.slot) { toast('Not enough coins'); return; }
+        if (save.coins < COSTS.slot) { toast('Not enough coins'); setTimeout(() => onExtraSlot(), 300); return; }
         save.coins -= COSTS.slot; persist(); bumpCoins(); unlockExtra();
       } },
       { label: 'Close', cls: 'brown', act: () => {} },
@@ -607,6 +669,7 @@ function onExtraSlot(e) {
 }
 function unlockExtra() {
   E.addExtraSlot(S);
+  extraKept = levelIdx;
   undoStack = [];
   sfx('slot');
   haptic([10, 30, 10]);
@@ -882,7 +945,7 @@ function onDown(e) {
   const loc = locate(v.id);
   if (!loc || (loc.from === 'col' && !E.runAt(S, loc.i, loc.idx))) {
     // lá úp hoặc không nhấc được: rung nhẹ
-    if (loc && loc.from === 'col') nudge([v]);
+    if (loc && loc.from === 'col') { nudge([v]); if (!v.card.up && !S.cols[loc.i][loc.idx].up) toast('Face-down stamp: move the stamps on top first', 1300); }
     return;
   }
   clearHint();
@@ -903,6 +966,8 @@ function onMove(e) {
     drag.vs.forEach((v, k) => {
       killTweens(v);
       killKey('pos-' + v.id);
+      animOn(v);
+      v.dragAnim = true;
       v.lifted = true;
       v.el.classList.add('lift');
       setZ(v, 5000 + k);
@@ -930,6 +995,7 @@ function onUp(e) {
   const d = drag;
   drag = null;
   unhighlight();
+  d.vs.forEach(v => { if (v.dragAnim) { v.dragAnim = false; animOff(v); } });
   if (!d.moved) {
     // chạm: tự tìm đích
     if (scriptStep()) {
@@ -947,7 +1013,7 @@ function onUp(e) {
   d.vs.forEach(v => { v.lifted = false; v.el.classList.remove('lift'); });
   if (dst) doMove(d.src, dst, true);
   else {
-    const why = dropReason(d.src, p);
+    const why = scriptStep() ? 'Follow the hand!' : dropReason(d.src, p);
     if (why) toast(why);
     sfx('close', { vol: 0.5 });
     const T = computeLayout();
@@ -1049,6 +1115,7 @@ function doMove(src, dst, fromDrag) {
 }
 function onDeck() {
   if (ended || busyInput || panelOpen || jokerMode) return;
+  if (pickMode) { if (!(scriptStep() && scriptStep().booster)) cancelPick(); return; }
   if (!S.deck.length && !S.waste.length) return;
   if (scriptStep() && !scriptStep().draw) { scriptReject(); return; }
   const before = E.clone(S);
@@ -1207,7 +1274,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   const p = slotPos(slot);
   const cx = p.x + CW / 2, cy = p.y + CH / 2;
   const vs = ids.map(id => views.get(id)).filter(Boolean);
-  vs.forEach(v => { v.gone = true; });
+  vs.forEach(v => { v.gone = true; clearTimeout(v.hideT); v.el.style.visibility = ''; });
   await wait(delay);
   if (token !== levelToken) return;
   // gom
@@ -1219,7 +1286,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   await wait(170);
   // phong bì
   const env = document.createElement('div');
-  env.style.cssText = `position:absolute;left:0;top:0;width:230px;height:193px;background:url(assets/ui/envelope_closed.png) center/contain no-repeat;z-index:3600;pointer-events:none;filter:drop-shadow(0 10px 10px rgba(0,0,0,.3))`;
+  env.style.cssText = `position:absolute;left:0;top:0;width:230px;height:193px;background:url(assets/ui/envelope_closed.png) center/contain no-repeat;z-index:3600;pointer-events:none`;
   board.append(env);
   const e = { x: cx - 115, y: cy - 96, s: 0.1, r: -8, a: 1 };
   const drawEnv = () => { env.style.transform = `translate(${e.x}px,${e.y}px) rotate(${e.r}deg) scale(${e.s})`; env.style.opacity = e.a; };
@@ -1289,7 +1356,7 @@ function afterAction() {
     Promise.all(pending).then(() => wait(450)).then(same(outOfMoves));
     return;
   }
-  if (canAutoFinish()) { autoFinish(token); return; }
+  if (canAutoFinish() && autoFinish(token)) return;
   if (isStuck()) {
     Promise.all(pending).then(() => wait(500)).then(same(() => { if (isStuck() && !ended) stuckPanel(); }));
   }
@@ -1300,9 +1367,14 @@ function canAutoFinish() {
   if (autoFinishing || S.deck.length || S.waste.length) return false;
   return S.cols.every(col => col.every(c => c.up));
 }
-async function autoFinish(token) {
+/** Trả về true nếu bắt đầu tự dọn bàn; false nếu không chắc thắng (để afterAction kiểm tra kẹt). */
+function autoFinish(token) {
   const r = solve(S, { width: 200, timeLimitMs: 250 });
-  if (!r || r.moves - S.used > S.moves) return;
+  if (!r || r.moves - S.used > S.moves) return false;
+  runAutoFinish(token, r);
+  return true;
+}
+async function runAutoFinish(token, r) {
   autoFinishing = true;
   busyInput = true;
   toast('Auto finish!', 1200);
@@ -1337,6 +1409,7 @@ async function winSequence() {
   const lv = levelIdx + 1;
   save.stars[lv] = Math.max(save.stars[lv] || 0, st);
   save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, lv + 1));
+  extraKept = -1;
   persist();
   const token = levelToken;
   await wait(700);
@@ -1346,13 +1419,14 @@ async function winSequence() {
     title: last ? 'All Delivered!' : 'Perfect!',
     radial: true,
     body: `<div class="stars"><i></i><i></i><i></i></div>
-      <h3>Level ${lv} complete</h3>
+      <h3>All topics cleared!</h3><p>Level ${lv} complete · ${S.moves === Infinity ? '' : `${S.moves} moves left`}</p>
       ${last ? '<p>That was the last level of the prototype. Thanks for playing!</p>' : ''}
       <div class="coins-line"><i></i><span>+${reward}</span></div>`,
     buttons: [
       { label: `Claim x2 <small>(ad)</small>`, cls: 'orange', act: () => fakeAd(() => {
         coinsTo(reward, 540, 900);
-        setTimeout(() => (last ? goHome() : startLevel(levelIdx + 1)), 1300);
+        const tk = levelToken;
+        setTimeout(() => { if (tk === levelToken) (last ? goHome() : startLevel(levelIdx + 1)); }, 1300);
       }) },
       { label: last ? 'Home' : 'Continue', act: () => (last ? goHome() : startLevel(levelIdx + 1)) },
     ],
@@ -1375,7 +1449,8 @@ function outOfMoves() {
     save.coins -= COSTS.moves; persist(); bumpCoins(); addMoves(5);
   } });
   buttons.push({ label: 'Retry', cls: 'brown', act: () => startLevel(levelIdx) });
-  panel({ title: 'Out of Moves', body: `<p>So close! ${S.total - S.delivered} stamps left.</p>`, buttons });
+  const tp = topicProgress();
+  panel({ title: 'Out of Moves', body: `<p>You ran out of moves with <b>${tp.total - tp.done} topics</b> (${S.total - S.delivered} stamps) still to clear.</p><p>Get extra moves to keep going, or retry the level.</p>`, buttons });
 }
 function stuckPanel() {
   const buttons = [];
@@ -1408,8 +1483,11 @@ function fakeAd(done) {
 // ============================================================ level flow
 async function startLevel(i) {
   closePanel(true);
-  levelIdx = Math.max(0, Math.min(LEVELS.length - 1, i));
+  const nextIdx = Math.max(0, Math.min(LEVELS.length - 1, i));
+  if (nextIdx !== levelIdx) extraKept = -1;
+  levelIdx = nextIdx;
   levelToken++;
+  clearParticles();
   completing.clear();
   L = LEVELS[levelIdx];
   S = E.createState(L);
@@ -1424,14 +1502,22 @@ async function startLevel(i) {
   script = null;
   pickMode = null;
   lastMovesShown = null;
+  lowWarned = false;
   clearHint();
   tut(null);
   $('home').classList.add('off');
-  const topics = [...new Set([...L.columns.flat(), ...L.deck].map(c => c.t))];
-  await preload([...L.columns.flat(), ...L.deck].filter(c => c.k === 'stamp').map(artUrl).concat(topics.map(iconUrl)));
+  const token = levelToken;
+  const pre = (L.preplaced || []).flat();
+  const allCards = [...L.columns.flat(), ...L.deck, ...pre];
+  const topics = [...new Set(allCards.map(c => c.t))];
+  await preload(allCards.filter(c => c.k === 'stamp').map(artUrl).concat(topics.map(iconUrl)));
+  if (token !== levelToken) return;
   buildChrome();
-  const all = [...L.deck, ...L.columns.flat()];
-  for (const c of all) makeView(c);
+  for (const c of [...L.deck, ...L.columns.flat()]) makeView(c);
+  // lá trong ô mở sẵn: hiện ngay tại ô
+  const T0 = computeLayout();
+  for (const c of pre) { const v = makeView(c); const t = T0.get(c.id); v.x = t.x; v.y = t.y; setZ(v, t.z); setUp(v, true, { animate: false }); applyTransform(v); }
+  if (extraKept === levelIdx) E.addExtraSlot(S);        // Ô phụ đã mua ở lượt trước của level này vẫn giữ khi Retry
   updateHUD();
   updateSlotLabels();
   updateDeckUI();
@@ -1443,7 +1529,7 @@ async function startLevel(i) {
   const maxLen = Math.max(...S.cols.map(c => c.length));
   for (let j = 0; j < maxLen; j++) S.cols.forEach(col => { if (col[j]) order.push(col[j]); });
   for (const c of order) { const v = views.get(c.id); v.x = DECK_X; v.y = ROW_A; setZ(v, 1000); applyTransform(v); }
-  levelBanner();
+  const bannerDone = levelBanner();
   await wait(350);
   order.forEach((c, k) => {
     const v = views.get(c.id);
@@ -1456,25 +1542,53 @@ async function startLevel(i) {
     }, k * 38);
   });
   await wait(order.length * 38 + 420);
+  if (token !== levelToken) return;
   busyInput = false;
   relayout({ dur: 120 });
+  if (L.moves != null && !save.seen.rules) {
+    save.seen.rules = 1;
+    persist();
+    await bannerDone;
+    if (token !== levelToken) return;
+    await new Promise(res => showRules(res));
+  }
+  if (token !== levelToken) return;
   await featureIntro();
+  if (token !== levelToken) return;
   if (L.script && !save.seen['script_' + L.id]) { script = { steps: L.script, i: 0 }; runScript(); return; }
   tutorialCheck();
   resetIdleHint();
 }
+let bannerEl = null;
+function removeBanner() { if (bannerEl) { bannerEl.remove(); bannerEl = null; } }
 function levelBanner() {
+  removeBanner();
+  const tp = topicProgress();
   const el = document.createElement('div');
-  el.textContent = `Level ${levelIdx + 1}`;
-  el.style.cssText = 'position:absolute;left:0;right:0;top:760px;text-align:center;font-size:120px;color:#fff;text-shadow:0 8px 0 rgba(0,0,0,.25);z-index:4000;pointer-events:none';
+  bannerEl = el;
+  el.innerHTML = `<div style="font-size:110px;line-height:1">Level ${levelIdx + 1}</div>
+    <div style="margin-top:22px;display:inline-block;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.35);font-size:44px">
+      Clear <span style="color:#ffcf3f">${tp.total - tp.done} topics</span> · ${L.moves == null ? 'unlimited moves' : `<span style="color:#ffcf3f">${L.moves} moves</span>`}</div>`;
+  el.style.cssText = 'position:absolute;left:0;right:0;top:700px;text-align:center;color:#fff;text-shadow:0 6px 0 rgba(0,0,0,.25);z-index:4000;pointer-events:none';
   overlay.append(el);
   const o = { y: -60, a: 0, s: 0.6 };
   const draw = () => { el.style.transform = `translateY(${o.y}px) scale(${o.s})`; el.style.opacity = o.a; };
   draw();
-  tween(o, { y: 0, a: 1, s: 1 }, { dur: 380, easing: ease.outBack, onUpdate: draw })
-    .then(() => wait(650))
+  return tween(o, { y: 0, a: 1, s: 1 }, { dur: 380, easing: ease.outBack, onUpdate: draw })
+    .then(() => wait(1300))
     .then(() => tween(o, { y: -40, a: 0 }, { dur: 260, onUpdate: draw }))
-    .then(() => el.remove());
+    .then(() => { el.remove(); if (bannerEl === el) bannerEl = null; });
+}
+// Luật thắng/thua (game gốc chỉ có vài câu ở level 1; mình làm rõ hơn): hiện ở level đầu có moves và trong Pause.
+const RULES_HTML = `
+  <div style="text-align:left;font-size:32px;line-height:1.35;color:#5a3a26">
+    <p style="margin:0 0 18px"><b style="color:#2f8a3a">WIN:</b> put every stamp into its topic pile. When all topics are cleared, you win!</p>
+    <p style="margin:0 0 18px"><b style="color:#c9493b">LOSE:</b> every drag and every deck tap uses 1 move. Run out of moves before clearing all topics and the level fails (get +5 moves or retry).</p>
+    <p style="margin:0 0 18px"><b>Piles:</b> only a golden <b>topic stamp</b> can open an empty slot. A pile is sent away when full (count x/n), freeing the slot.</p>
+    <p style="margin:0"><b>Table:</b> stack stamps only on the same topic. An empty column takes any stack. Wrong moves are free.</p>
+  </div>`;
+function showRules(onClose) {
+  panel({ title: 'How to Play', body: RULES_HTML, buttons: [{ label: 'Got it', act: () => onClose && onClose() }] });
 }
 function featureIntro() {
   const u = L.unlock;
@@ -1488,6 +1602,7 @@ function featureIntro() {
   }[u];
   save[u] = (save[u] || 0) + GIFTS[u];
   persist();
+  renderBoosters();
   sfx('feature');
   return new Promise(res => {
     panel({
@@ -1502,8 +1617,7 @@ function featureIntro() {
         const x = 540 + (idx - (n - 1) / 2) * (168 + 34);
         tut(`Tap <em>${info.title.split(': ')[1]}</em> any time you need it.`);
         handTap(x, 1790);
-        setTimeout(() => { hideHand(); if (!tutorial && !scriptStep()) tut(null); }, 2800);
-        res();
+        setTimeout(() => { hideHand(); if (!tutorial && !scriptStep()) tut(null); res(); }, 2400);
       } }],
     });
   });
@@ -1511,8 +1625,12 @@ function featureIntro() {
 
 // ============================================================ home / pause
 function goHome() {
+  levelToken++;
+  removeBanner();
   closePanel(true);
   ended = true;
+  busyInput = false;
+  script = null;
   clearTimeout(idleTimer);
   tut(null);
   clearHint();
@@ -1540,6 +1658,7 @@ $('pauseBtn').addEventListener('pointerup', () => {
     body: `<p>Level ${levelIdx + 1}</p>`,
     buttons: [
       { label: 'Resume', act: () => {} },
+      { label: 'How to Play', cls: 'brown', act: () => showRules() },
       { label: 'Restart', cls: 'orange', act: () => startLevel(levelIdx) },
       { label: isMuted() ? 'Sound: Off' : 'Sound: On', cls: 'brown', act: () => { setMuted(!isMuted()); } },
       { label: 'Home', cls: 'brown', act: goHome },
@@ -1559,6 +1678,17 @@ function buildDebug() {
   btn('Reveal', () => { for (const col of S.cols) for (const c of col) c.up = true; relayout(); });
   btn('Next lv', () => startLevel(levelIdx + 1));
   btn('Reset save', () => { save = defaultSave(); persist(); location.reload(); });
+  // đồng hồ FPS (chỉ debug)
+  const fps = document.createElement('div');
+  fps.style.cssText = 'font:22px monospace;color:#fff;background:#0008;padding:6px 8px;border-radius:10px';
+  d.prepend(fps);
+  let n = 0, t0 = performance.now(), worst = 0, last = t0;
+  const tick = now => {
+    n++; worst = Math.max(worst, now - last); last = now;
+    if (now - t0 > 1000) { fps.textContent = `${Math.round(n * 1000 / (now - t0))}fps ${Math.round(worst)}ms${LITE ? ' LITE' : ''}`; n = 0; worst = 0; t0 = now; }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 async function autoplay(stepMs = 380) {
   const r = solve(S, { width: 800 });
@@ -1575,6 +1705,7 @@ window.__game = { get S() { return S; }, get level() { return levelIdx + 1; }, s
 // ============================================================ boot
 (async function boot() {
   initFx($('fx'));
+  setLite(LITE);
   buildDebug();
   try { manifest = await (await fetch('assets/manifest.json')).json(); } catch (e) { manifest = {}; }
   await preload(['back', 'topic_frame', 'crown', 'slot_empty', 'moves_box', 'booster_btn', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'star', 'lock', 'plus', 'recycle', 'radial', 'header_win', 'logo',

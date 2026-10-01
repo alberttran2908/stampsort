@@ -9,8 +9,8 @@ export function createState(level) {
   const cols = level.columns.map(col => col.map((c, i) => ({ ...c, up: i === col.length - 1 })));
   const found = Array.from({ length: level.foundations }, () => null);
   (level.preplaced || []).forEach((stack, i) => {
-    const [topic, ...rest] = stack;
-    found[i] = { t: topic.t, n: topic.n, topic, cards: rest.slice() };
+    const [topic, ...rest] = stack.map(c => ({ ...c, up: true }));
+    found[i] = { t: topic.t, n: topic.n, topic, cards: rest };
   });
   let total = 0;
   for (const col of level.columns) total += col.length;
@@ -20,7 +20,7 @@ export function createState(level) {
   for (const s of level.preplaced || []) delivered += s.length;
   return {
     cols,
-    deck: level.deck.slice().reverse(),   // phần tử cuối = lá trên cùng của deck
+    deck: level.deck.slice().reverse().map(c => ({ ...c, up: false })),   // phần tử cuối = lá trên cùng của deck
     waste: [],
     found,
     extraSlot: false,
@@ -35,9 +35,9 @@ export function createState(level) {
 export function clone(s) {
   return {
     cols: s.cols.map(c => c.map(x => ({ ...x }))),
-    deck: s.deck.slice(),
-    waste: s.waste.slice(),
-    found: s.found.map(f => (f ? { ...f, cards: f.cards.slice() } : null)),
+    deck: s.deck.map(c => ({ ...c })),
+    waste: s.waste.map(c => ({ ...c })),
+    found: s.found.map(f => (f ? { ...f, topic: { ...f.topic }, cards: f.cards.map(c => ({ ...c })) } : null)),
     extraSlot: s.extraSlot,
     moves: s.moves,
     used: s.used,
@@ -53,13 +53,19 @@ export const isLost = s => !isWon(s) && s.moves <= 0;
 /** Chồng bài có thể nhấc từ cột i bắt đầu ở vị trí idx (idx..cuối). null nếu không hợp lệ. */
 export function runAt(s, i, idx) {
   const col = s.cols[i];
-  if (idx < 0 || idx >= col.length) return null;
+  if (!col || idx < 0 || idx >= col.length) return null;
   const run = col.slice(idx);
-  if (run.some(c => !c.up || c.k === JOKER)) return null;
-  const t = run[0].t;
-  for (let j = 0; j < run.length; j++) {
-    if (run[j].t !== t) return null;
-    if (j > 0 && run[j].k === 'topic') return null;   // topic stamp chỉ được nằm ở đáy chồng
+  if (run.some(c => !c.up)) return null;
+  // Joker ("Play on any card"): chỉ được nằm ở đáy chồng; phía trên là một chồng cùng topic hợp lệ (có thể rỗng)
+  let k = 0;
+  if (run[0].k === JOKER) k = 1;
+  if (run.slice(k).some(c => c.k === JOKER)) return null;
+  const rest = run.slice(k);
+  if (!rest.length) return run;
+  const t = rest[0].t;
+  for (let j = 0; j < rest.length; j++) {
+    if (rest[j].t !== t) return null;
+    if (j > 0 && rest[j].k === 'topic') return null;   // topic stamp chỉ được nằm ở đáy chồng (hoặc ngay trên Joker)
   }
   return run;
 }
@@ -81,10 +87,17 @@ export function sourceCards(s, src) {
 
 /** Kiểm tra nước đi. Trả về null nếu hợp lệ, hoặc mã lý do. */
 export function checkMove(s, src, dst) {
+  if (isWon(s)) return 'won';
   if (s.moves <= 0) return 'no_moves';
   const run = sourceCards(s, src);
   if (!run) return 'bad_source';
   const base = run[0];
+  if (base.k === JOKER) {
+    // Joker đi cùng chồng trên nó, đặt được lên bất kỳ lá nào hoặc cột trống; không vào ô
+    if (dst.to !== 'col' || !s.cols[dst.j]) return 'bad_target';
+    if (src.from === 'col' && src.i === dst.j) return 'same';
+    return null;
+  }
   if (dst.to === 'found') {
     const f = s.found[dst.i];
     if (f === undefined) return 'bad_target';
@@ -116,6 +129,8 @@ export function applyMove(s, src, dst) {
   let run;
   if (src.from === 'waste') run = [s.waste.pop()];
   else run = s.cols[src.i].splice(src.idx);
+  // Lá từ deck/waste chưa từng có cờ up: phải ghi rõ là ngửa, nếu không layout và runAt coi nó là lá úp.
+  for (const c of run) c.up = true;
   s.moves -= 1;
   s.used += 1;
   events.push({ type: 'move', cards: run.map(c => c.id), src, dst });
@@ -153,6 +168,7 @@ export function draw(s) {
   if (s.deck.length) {
     if (s.moves <= 0) return { ok: false, why: 'no_moves' };
     const c = s.deck.pop();
+    c.up = true;
     s.waste.push(c);
     s.moves -= 1;
     s.used += 1;
@@ -160,6 +176,7 @@ export function draw(s) {
   }
   if (s.waste.length) {
     s.deck = s.waste.reverse();
+    for (const c of s.deck) c.up = false;
     s.waste = [];
     return { ok: true, events: [{ type: 'recycle' }] };
   }
@@ -207,8 +224,18 @@ export function legalMoves(s) {
 
 /** Đích tốt nhất cho một nguồn khi người chơi chạm (tap-to-move). */
 export function bestTargetFor(s, src) {
+  if (s.moves <= 0) return null;
   const run = sourceCards(s, src);
   if (!run) return null;
+  if (run[0].k === JOKER) {
+    // chạm Joker: chuyển sang cột trống, nếu không có thì cột ngắn nhất (để mở lá bên dưới)
+    let best = null;
+    s.cols.forEach((col, j) => {
+      if (src.from === 'col' && j === src.i) return;
+      if (best === null || col.length < s.cols[best].length) best = j;
+    });
+    return best === null ? null : { to: 'col', j: best };
+  }
   // 1) foundation cùng topic
   for (let k = 0; k < s.found.length; k++) {
     const f = s.found[k];

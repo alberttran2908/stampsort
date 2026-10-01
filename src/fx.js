@@ -28,6 +28,8 @@ export function tween(obj, to, { dur = 300, easing = ease.outCubic, delay = 0, o
 export function killKey(prefix) {
   for (const t of tweens) if (t.key && t.key.startsWith(prefix)) { tweens.delete(t); t.resolve(); }
 }
+/** Xoá mọi hạt (khi đổi level giữa chừng). */
+export function clearParticles() { parts.length = 0; if (cx) cx.clearRect(0, 0, 1080, 1920); }
 export function killTweens(obj) {
   for (const t of tweens) if (t.obj === obj) { tweens.delete(t); t.resolve(); }
 }
@@ -60,7 +62,18 @@ let cx = null;
 const parts = [];
 const imgCache = {};
 let lastT = 0;
+let LITE = false;
+let PSCALE = 1;          // hệ số số hạt
 export function initFx(canvas) { cv = canvas; cx = canvas.getContext('2d'); }
+/** Máy yếu: canvas hiệu ứng nửa độ phân giải (ít pixel/frame 4 lần), ít hạt hơn, hạt vẽ fillRect không xoay. */
+export function setLite(on) {
+  LITE = !!on;
+  PSCALE = LITE ? 0.4 : 1;
+  if (!cv) return;
+  const k = LITE ? 0.5 : 1;
+  cv.width = 1080 * k; cv.height = 1920 * k;
+  cx.setTransform(k, 0, 0, k, 0, 0);
+}
 function img(src) {
   if (!imgCache[src]) { const i = new Image(); i.src = src; imgCache[src] = i; }
   return imgCache[src];
@@ -69,6 +82,7 @@ function img(src) {
 const COLORS = ['#ffd84a', '#ff7a59', '#5fd3ff', '#8cff7a', '#ff9de2', '#ffffff'];
 /** Tia sáng nhỏ khi đặt tem. */
 export function sparkle(x, y, n = 10, { spread = 1, colors = ['#fff7b0', '#ffe36b', '#ffffff'], size = 9 } = {}) {
+  n = Math.max(1, Math.round(n * PSCALE));
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
     const v = (160 + Math.random() * 380) * spread;
@@ -80,6 +94,7 @@ export function sparkle(x, y, n = 10, { spread = 1, colors = ['#fff7b0', '#ffe36
 }
 /** Confetti khi thắng. */
 export function confetti(n = 160) {
+  n = Math.round(n * PSCALE);
   for (let i = 0; i < n; i++) {
     parts.push({ kind: 'rect', x: 540 + (Math.random() - 0.5) * 300, y: 700, vx: (Math.random() - 0.5) * 1700,
       vy: -900 - Math.random() * 1100, g: 1500, drag: 1.6, life: 2.4 + Math.random(), t: 0, w: 16 + Math.random() * 14,
@@ -106,7 +121,7 @@ function particlesStep(now) {
   if (!cx) return;
   const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016);
   lastT = now;
-  cx.clearRect(0, 0, cv.width, cv.height);
+  cx.clearRect(0, 0, 1080, 1920);
   const coin = img('assets/ui/coin.png');
   for (let i = parts.length - 1; i >= 0; i--) {
     const p = parts[i];
@@ -142,6 +157,7 @@ function particlesStep(now) {
     p.rot += p.vr * dt;
     cx.globalAlpha = Math.min(1, a * 1.6);
     cx.fillStyle = p.color;
+    if (LITE) { const s = p.kind === 'rect' ? p.w : p.size; cx.fillRect(p.x - s / 2, p.y - s / 2, s, p.kind === 'rect' ? p.h : s); continue; }
     cx.save();
     cx.translate(p.x, p.y);
     cx.rotate(p.rot);
