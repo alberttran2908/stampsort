@@ -42,7 +42,7 @@ Bốn booster, giá và lịch mở theo game gốc (`research/apk/com.stamp.sol
 | Hint | 2 | 3 | 300 coin | Solver tìm nước tiếp theo, tô sáng lá và đích | APK giá 300, video mở L2 |
 | Pack | 4 | 2 | 500 coin | 2 lá ẩn (úp hoặc trong deck) của một ô đang mở bay vào ô, 0 move. Một ô mở thì tự áp dụng, nhiều ô thì chạm chọn | APK "Add 2 random hidden cards to a Topic", video L4 |
 | Stamper | 7 | 2 | 500 coin | Chọn một ô, 1 lá của chủ đề đó được "đóng dấu" vào, 0 move | APK "Choose a Topic to add one card", video L7 |
-| Joker | 9 | 2 | 1200 coin | Golden Stamp đặt lên cột chọn, 0 move, mọi tem xếp lên được đến hết level | APK, video L9 |
+| Joker | 9 | 2 | 1200 coin | Golden Stamp đặt lên cột chọn, 0 move, mọi tem xếp lên được đến hết level. Joker kéo được (kèm chồng trên nó) sang cột khác, 1 move, không vào ô | APK, video L9 (Joker đổi cột ở 16:56-17:16) |
 | Ô phụ | 2 | – | 1000 coin hoặc 1 ad (giả lập) | Thêm 1 ô ở góc trái hàng deck cho level hiện tại | APK `GameSetting` 1000, video L2 |
 | Undo | 1 | 3 mỗi level | 50 coin | Hoàn tác, trả lại move. Không hoàn tác sau khi phong bì đã gửi hoặc sau booster | Riêng của mình |
 
@@ -91,6 +91,22 @@ Moves của game gốc chặt: solver full-info cần 72-91% số moves. Ngườ
 
 Mọi chuyển động chỉ dùng transform và opacity. Particle vẽ trên một canvas duy nhất.
 
+### Tối ưu máy yếu (theo skill `weak-gpu-perf`)
+
+| Vấn đề | Cách xử lý |
+|---|---|
+| `filter: drop-shadow` trên mọi lá (Chrome raster bằng CPU mỗi lần repaint) | Bóng vẽ sẵn thành PNG lúc build (`shadow.png`, `shadow_lift.png`), mọi lá dùng chung |
+| `will-change` trên cả 60 lá (bung hàng chục lớp GPU) | Chỉ bật class `.anim` khi lá đang bay, đang lật hoặc đang kéo |
+| Lật 3D `preserve-3d` + `perspective` trên từng lá | Lật 2D bằng `scaleX`, đổi mặt ở giữa |
+| Viền sáng Hint animate `filter` (repaint mỗi frame) | Ảnh `glow.png` vẽ sẵn, chỉ animate `opacity` |
+| Lá bị che hoàn toàn (đáy deck, waste cũ, giữa ô) vẫn paint | Ẩn bằng `visibility: hidden` |
+| Thanh combo animate `width` (layout + paint) | Animate `transform: scaleX` |
+| Ảnh giải mã lần đầu khi hiện lá (khựng) | Giải mã trước bằng `img.decode()` lúc tải level, có hạn chót để không treo |
+
+**Chế độ nhẹ** tự bật khi RAM ≤ 2GB, ≤ 4 nhân CPU, hoặc GPU đời thấp (Mali-4xx/T/G31-G57, Adreno ≤ 61x, PowerVR); ép bằng `?lite=1` hoặc `?lite=0`. Chế độ nhẹ: canvas hiệu ứng nửa độ phân giải (ít pixel 4 lần), số hạt còn 40%, hạt vẽ `fillRect` không xoay, viền sáng đứng yên, bỏ lớp nhiễu nền, tia sáng popup đứng yên. Chế độ debug (`?debug`) có đồng hồ FPS và frame chậm nhất.
+
+Đo thật vẫn phải làm trên máy Android rẻ qua `chrome://inspect` (Paint flashing, Frame Rendering Stats) hoặc `adb shell dumpsys gfxinfo`, vì GPU yếu không giả lập được trên máy tính.
+
 ## 6. Tutorial
 
 Hai lớp, dựng lại theo video.
@@ -117,7 +133,11 @@ Hai lớp, dựng lại theo video.
 
 Kéo sai hiện toast giải thích ("Only the same topic can stack", "Start a pile with a topic stamp"), tương đương các câu nhắc trong video L2, L3. Level 1-3 có gợi ý miễn phí khi đứng im 7 giây.
 
-## 7. Câu hỏi cho playtest
+## 7. Kiểm thử
+
+`node prototype/stamp/tests/fuzz.test.mjs` (70 test, 4400 ván fuzz kiểm tra invariant sau mỗi nước: bảo toàn lá, moves, lá đỉnh luôn ngửa, ô đúng topic, legalMoves khớp brute-force, mọi level giải được trong moves, script tutorial chạy được). Thêm `--quick` để chạy nhanh.
+
+## 8. Câu hỏi cho playtest
 
 1. Hệ số moves có đủ rộng cho người mới ở level 2-5 không? Đo moves còn lại khi thắng.
 2. Chạm để tự đi có làm người chơi bỏ qua kéo thả và mất cảm giác "solitaire" không?

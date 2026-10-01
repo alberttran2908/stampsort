@@ -133,7 +133,7 @@ Người chơi trong video dùng 74-94% moves, trung bình khoảng 83%. Bản m
 | Indicate / Stamper (con dấu) | "Choose a Topic to add one card" | 500 | 7 / 7 | 2 |
 | Joker (Golden Stamp) | "Play on any card. Any card can be placed on it until the level ends!" | 1200 | 9 / 9 | 2 |
 
-Joker không phải lá tự bay lên foundation như teardown cũ đoán. Nó là một lá vàng đặt lên đầu bất kỳ cột nào, sau đó nhận mọi stamp, thành chỗ đỗ tạm vô hạn đến hết level `[VIDEO 14:36]`.
+Joker không phải lá tự bay lên foundation như teardown cũ đoán. Nó là một lá vàng đặt lên đầu bất kỳ cột nào, sau đó nhận mọi stamp, thành chỗ đỗ tạm vô hạn đến hết level `[VIDEO 14:36]`. Joker **di chuyển được** cùng chồng trên nó: đặt ban đầu ở cột 2, cuối level nó nằm một mình ở cột 1 đã trống `[VIDEO 16:56-17:16]`, nhờ vậy lá bị Joker đè lên không bị chôn vĩnh viễn.
 
 ### Economy và meta
 

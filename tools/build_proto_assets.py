@@ -67,6 +67,32 @@ def slug(s: str) -> str:
     return s.lower().replace(" ", "_").replace("&", "and")
 
 
+def bake_effects(ui: Path) -> None:
+    """Vẽ sẵn bóng đổ và viền sáng thành PNG (thay cho CSS filter: drop-shadow, vốn bị raster bằng CPU
+    mỗi lần repaint, rất nặng trên GPU Mali). Mỗi file dùng chung cho mọi lá."""
+    from PIL import ImageFilter
+    W, H = 165, 214                       # kích thước lá trong game
+    mask = Image.open(ui / "face_1.png").convert("RGBA").resize((W, H)).split()[-1]
+
+    def shadow(name, pad, dy, blur, alpha):
+        im = Image.new("L", (W + 2 * pad, H + 2 * pad), 0)
+        im.paste(mask.point(lambda v: int(v * alpha)), (pad, pad + dy))
+        im = im.filter(ImageFilter.GaussianBlur(blur))
+        out = Image.new("RGBA", im.size, (0, 0, 0, 0))
+        out.putalpha(im)
+        out.save(ui / name, optimize=True)
+
+    shadow("shadow.png", 12, 3, 2.5, 0.30)       # bóng thường
+    shadow("shadow_lift.png", 30, 16, 9, 0.38)   # bóng khi nhấc lá
+    pad = 26                                      # viền sáng vàng cho hint / đích hợp lệ
+    g = Image.new("L", (W + 2 * pad, H + 2 * pad), 0)
+    g.paste(mask, (pad, pad))
+    g = g.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(9))
+    glow = Image.new("RGBA", g.size, (255, 236, 120, 0))
+    glow.putalpha(g.point(lambda v: min(255, int(v * 1.6))))
+    glow.save(ui / "glow.png", optimize=True)
+
+
 def main() -> None:
     if DEST.exists():
         shutil.rmtree(DEST)
@@ -99,6 +125,8 @@ def main() -> None:
         Image.open(icon).convert("RGBA").save(d / "icon.png", optimize=True)
         manifest[name] = {"dir": f"cards/{slug(name)}", "arts": len(arts)}
     (DEST / "manifest.json").write_text(json.dumps(manifest, indent=1))
+
+    bake_effects(DEST / "ui")
 
     (DEST / "audio").mkdir()
     for a in AUDIO:

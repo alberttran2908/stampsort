@@ -8,7 +8,10 @@ export function candidateActions(s) {
   if (s.waste.length) srcs.push({ from: 'waste' });
   s.cols.forEach((col, i) => {
     const idx = maxRunStart(s, i);
-    if (idx >= 0) srcs.push({ from: 'col', i, idx });
+    if (idx < 0) return;
+    srcs.push({ from: 'col', i, idx });
+    // chồng dài nhất bắt đầu bằng Joker thì không vào ô được: xét thêm chồng ngay phía trên Joker
+    if (col[idx].k === JOKER && idx + 1 < col.length) srcs.push({ from: 'col', i, idx: idx + 1 });
   });
   for (const src of srcs) {
     // foundation

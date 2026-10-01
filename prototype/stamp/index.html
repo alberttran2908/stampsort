@@ -21,7 +21,7 @@ body{background:radial-gradient(120% 80% at 50% 40%, #2a9447 0%, #1f7a3c 55%, #1
 #stage{position:absolute;left:0;top:0;width:1080px;height:1920px;transform-origin:0 0;overflow:hidden}
 #board,#ui,#fx,#overlay{position:absolute;inset:0}
 #board{z-index:1}
-#fx{z-index:5;pointer-events:none}
+#fx{z-index:5;pointer-events:none;width:1080px;height:1920px}
 #ui{z-index:6;pointer-events:none}
 #ui > *{pointer-events:auto}
 #overlay{z-index:10;pointer-events:none}
@@ -29,27 +29,36 @@ body{background:radial-gradient(120% 80% at 50% 40%, #2a9447 0%, #1f7a3c 55%, #1
   background-image:repeating-radial-gradient(circle at 17% 32%, #000 0 1px, transparent 1px 4px),
   repeating-radial-gradient(circle at 71% 64%, #fff 0 1px, transparent 1px 5px)}
 
-/* ---------- cards ---------- */
-.card{position:absolute;left:0;top:0;width:165px;height:214px;will-change:transform;perspective:900px;
-  transform-origin:50% 50%}
-.card .inner{position:absolute;inset:0;transform-style:preserve-3d;transition:none}
-.card .side{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  background-size:100% 100%;filter:drop-shadow(0 3px 2px var(--shadow))}
-.card .back{background-image:url(assets/ui/back.png);transform:rotateY(180deg)}
-.card.down .inner{transform:rotateY(180deg)}
+/* ---------- cards ----------
+   Tối ưu GPU yếu (skill weak-gpu-perf): không filter/drop-shadow (Chrome raster bằng CPU), bóng là ảnh vẽ sẵn;
+   will-change chỉ bật khi lá đang chuyển động (.anim); lật lá bằng scaleX 2D, không preserve-3d/perspective. */
+.card{position:absolute;left:0;top:0;width:165px;height:214px;transform-origin:50% 50%}
+.card.anim{will-change:transform}
+.card::before{content:'';position:absolute;left:-12px;top:-12px;right:-12px;bottom:-12px;
+  background:url(assets/ui/shadow.png) center/100% 100% no-repeat;pointer-events:none}
+.card.lift::before{left:-30px;top:-30px;right:-30px;bottom:-30px;background-image:url(assets/ui/shadow_lift.png)}
+.card .inner{position:absolute;inset:0;transform-origin:50% 50%}
+.card .side{position:absolute;inset:0;background-size:100% 100%}
+.card .back{background-image:url(assets/ui/back.png);display:none}
+.card.down .back{display:block}
+.card.down .front{display:none}
 .card .front .art{position:absolute;left:20px;top:27px;width:125px;height:125px;object-fit:contain;pointer-events:none}
 .card.topic .front{background-image:url(assets/ui/topic_frame.png)}
-.card.topic .front .art{left:33px;top:51px;width:99px;height:99px;filter:drop-shadow(0 3px 0 rgba(150,80,0,.45))}
+.card.topic .front .art{left:33px;top:51px;width:99px;height:99px}
 .card .crown{position:absolute;left:58px;top:-20px;width:50px;height:48px;background:url(assets/ui/crown.png) center/contain no-repeat}
 .card .tag{position:absolute;left:8px;right:8px;bottom:16px;text-align:center;font-size:23px;color:#8a4b12;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px}
 .card .cnt{position:absolute;left:12px;top:13px;font-size:24px;color:#8a4b12}
 .card.infound .crown,.card.infound .cnt{display:none}
 .card.joker .front{background-image:url(assets/ui/joker_card.png)}
-.card.lift .side{filter:drop-shadow(0 16px 14px rgba(0,0,0,.35))}
-.card.hintglow .side{animation:hintglow .9s ease-in-out infinite}
-@keyframes hintglow{0%,100%{filter:drop-shadow(0 0 0 #fff4a0)}50%{filter:drop-shadow(0 0 18px #fff4a0) drop-shadow(0 0 6px #ffe36b)}}
-.card.dim .side{filter:brightness(.72) drop-shadow(0 3px 2px var(--shadow))}
+/* viền sáng: ảnh vẽ sẵn, chỉ animate opacity (compositor), không animate filter */
+.card.hintglow::after,.slot.target::after{content:'';position:absolute;left:-26px;top:-26px;right:-26px;bottom:-26px;
+  background:url(assets/ui/glow.png) center/100% 100% no-repeat;pointer-events:none;animation:glowpulse .9s ease-in-out infinite}
+.card.hintglow::after{z-index:-1}
+@keyframes glowpulse{0%,100%{opacity:.35}50%{opacity:1}}
+.lite .card.hintglow::after,.lite .slot.target::after{animation:none;opacity:.85}
+.lite .felt-noise{display:none}
+.lite .radial{animation:none}
 
 /* ---------- slots / zones ---------- */
 .slot{position:absolute;width:165px;height:214px;background:url(assets/ui/slot_empty.png) center/100% 100% no-repeat;opacity:.9}
@@ -61,7 +70,6 @@ body{background:radial-gradient(120% 80% at 50% 40%, #2a9447 0%, #1f7a3c 55%, #1
 .slot .count{position:absolute;right:-10px;top:-58px;min-width:54px;height:40px;border-radius:20px;background:#fff6e6;
   color:#8a4b12;font-size:24px;line-height:40px;text-align:center;box-shadow:0 3px 0 #c9a77a;opacity:0}
 .slot.open .count{opacity:1}
-.slot.target{filter:drop-shadow(0 0 16px #fff38a)}
 .slot.locked{background-image:url(assets/ui/slot_empty.png);opacity:.8}
 .slot .lockicon{position:absolute;left:50px;top:60px;width:64px;height:78px;background:url(assets/ui/lock.png) center/contain no-repeat}
 .slot .plus{position:absolute;right:-18px;top:-18px;width:56px;height:56px;background:url(assets/ui/plus.png) center/contain no-repeat}
@@ -84,7 +92,7 @@ body{background:radial-gradient(120% 80% at 50% 40%, #2a9447 0%, #1f7a3c 55%, #1
 .hud-title{position:absolute;left:260px;right:260px;top:30px;text-align:center;font-size:54px;text-shadow:0 4px 0 rgba(0,0,0,.25)}
 .combo{position:absolute;left:350px;width:380px;top:104px;height:44px;border-radius:22px;background:rgba(0,0,0,.25);
   box-shadow:inset 0 2px 0 rgba(0,0,0,.2);overflow:hidden}
-.combo .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#ffb53b,#ffe66b);transition:width .25s}
+.combo .fill{position:absolute;left:0;top:0;bottom:0;width:100%;background:linear-gradient(90deg,#ffb53b,#ffe66b);transform-origin:0 50%;transform:scaleX(0);transition:transform .25s}
 .combo .txt{position:absolute;inset:0;text-align:center;font-size:26px;line-height:44px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.3)}
 .hud-coins{position:absolute;right:150px;top:44px;height:56px;padding:0 18px 0 62px;border-radius:28px;background:rgba(0,0,0,.25);
   font-size:34px;line-height:56px}

@@ -13,6 +13,10 @@ rm -rf "$OUT" && mkdir -p "$OUT"
 cp prototype/stamp/index.html "$OUT/"
 cp -R prototype/stamp/src prototype/stamp/assets "$OUT/"
 touch "$OUT/.nojekyll"
+# Chống cache JS cũ (GitHub Pages cache 10 phút): gắn ?v=<phiên bản> vào script và mọi import nội bộ
+VER="$(git rev-parse --short HEAD)-$(date +%s)"
+sed -i '' "s#src/main.js\"#src/main.js?v=$VER\"#" "$OUT/index.html"
+for f in "$OUT"/src/*.js; do sed -i '' -E "s#from '\./([a-z]+)\.js'#from './\1.js?v=$VER'#g" "$f"; done
 echo "build: $(du -sh "$OUT" | cut -f1) -> $OUT"
 [ "${1:-}" = "--build-only" ] && exit 0
 
