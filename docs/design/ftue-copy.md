@@ -67,6 +67,7 @@ Tên chủ đề cũng đổi sang tên dễ hiểu: EN "Hoofed" thành "Hoofed 
 | `err_crown_on_stamp` | Đặt tem vương miện lên tem | Crown stamps go to **empty slots**. | Tem vương miện vào **ô trống**. |
 | `err_no_pile` | Chạm tem chưa có ô mở | Find its **crown stamp** first. | Tìm **tem vương miện** của nó trước. |
 | `err_slots_busy` | Chạm tem vương miện khi hết ô | No empty slot. **Fill a slot** first. | Hết ô trống. **Lấp đầy một ô**. |
+| `err_mixed` | Cầm lá ngửa bị tem khác loại đè lên | Only **same-kind** stacks move together. | Chỉ xấp tem **cùng loại** mới nhấc cùng nhau. |
 | `err_facedown` | Chạm tem úp | Hidden stamp. Clear the ones **on top**. | Tem úp. Dọn tem **phía trên** trước. |
 
 Bảng đầy đủ, gồm panel, booster, và level khó, nằm trong `prototype/stamp/src/copy.js`. Chọn ngôn ngữ bằng `?lang=vi` hoặc `?lang=en`, tự theo ngôn ngữ máy, hoặc đổi trong Pause. Tên chủ đề có bản EN và VI riêng.
@@ -104,3 +105,25 @@ Chạy lại kịch bản L1 sau khi sửa phát hiện thêm: câu "No match? T
 - Icon chủ đề (trên lá vương miện) nên là vật tiêu biểu nhất của nhóm, không phải biểu tượng trừu tượng (đồng hồ cát cho "Time").
 - Icon Undo và icon nạp bài phải khác dáng hẳn nhau.
 - Tên booster phải khớp icon.
+
+## 7. Kéo thả kiểu người chưa hiểu luật (2026-10-03)
+
+**Vấn đề:** test trước đi đúng thứ tự bàn tay chỉ nên không lộ lỗi kéo thả. Người mới cầm lá bất kỳ trong xấp, kéo qua kéo lại, thả lệch.
+
+**Công cụ** (chạy trong trình duyệt, bằng PointerEvent thật, trên khung điện thoại 375×812):
+- `prototype/stamp/tests/drag-scenarios.browser.js`: 13 kịch bản cố định. Dựng bàn riêng cho từng tình huống, kéo, so với ý định. Chạy: `(await import('/tests/drag-scenarios.browser.js')).runAll()`.
+- `prototype/stamp/tests/naive-drag.browser.js`: người chơi ngẫu nhiên. Cầm một điểm bất kỳ trên phần đang lộ của lá, thả chỗ bất kỳ. Báo `REJECT_LEGAL` (có cách hiểu hợp luật mà game từ chối), `WRONG_DEST` (lá không tới chỗ ngón tay thả), `SPLIT`, `HIT_MISS`, `STRAY` (lá lạc vị trí). Có chế độ `hasty`: kéo tiếp khi animation chưa xong.
+
+**Lỗi tìm ra và cách sửa** (`src/main.js`, `onDown` / `onUp` / `dropTarget`):
+
+| Tình huống người chơi | Trước | Sau |
+|---|---|---|
+| Xấp [tem vương miện, tem, tem]: cầm tem phía trên, thả lên tem cùng loại ở cột khác | Từ chối, báo "Tem vương miện vào ô trống" (cả xấp bị nhấc kèm vương miện) | 2 tem đi, vương miện ở lại. Cú cầm có nhiều cách hiểu, từ xấp lớn nhất tới lá đang cầm; khi thả chọn cách lớn nhất hợp lệ |
+| Chạm xấp đó khi hết ô trống | Báo "Hết ô trống" | 2 tem tự sang tem cùng loại |
+| Cầm lá bị tem khác loại đè | Chỉ rung, không nói gì: người chơi tưởng "kéo không được" | Rung cả phần phía trên và báo "Chỉ xấp tem cùng loại mới nhấc cùng nhau" |
+| Thả xấp khi ngón tay ở ô này nhưng lá đáy của xấp lệch sang ô bên | Xấp có thể vào ô bên cạnh (đích tính theo lá đáy) | Đích tính theo ngón tay trước, lá đáy chỉ là dự phòng |
+| Cầm lá trên cùng của xấp dài rồi kéo nhanh | Lá dưới ngón tay trễ nhiều nhất (trễ theo thứ tự trong xấp), trông như lá tuột khỏi tay | Lá đang cầm bám sát ngón tay, lá càng xa càng trễ |
+
+Kịch bản đã đúng từ trước và vẫn đúng: cầm lá trên/giữa/dưới của xấp thường đều nhấc cả xấp; chạm xấp tự đi; xấp vào ô đúng loại; kéo xấp qua lại 4 lần liên tiếp thật nhanh không mất lá, không lá lạc.
+
+Bản trên web **trước ngày 2026-10-02** chưa có "cầm lá nào cũng nhấc cả xấp": cầm lá trên cùng thì chỉ lá đó đi. Đây có thể là lỗi "cứ bị kéo từng lá" mà người thử đã gặp.
