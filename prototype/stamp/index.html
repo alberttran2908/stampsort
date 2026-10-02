@@ -71,6 +71,9 @@ body{background:radial-gradient(120% 80% at 50% 40%, #2a9447 0%, #1f7a3c 55%, #1
   color:#8a4b12;font-size:24px;line-height:40px;text-align:center;box-shadow:0 3px 0 #c9a77a;opacity:0}
 .slot.open .count{opacity:1}
 .slot.locked{background-image:url(assets/ui/slot_empty.png);opacity:.8}
+/* ô trống: vương miện mờ = "ô này dành cho tem vương miện" (affordance, không cần chữ) */
+.slot:not(.open):not(.locked)::before{content:'';position:absolute;left:38px;top:58px;width:90px;height:86px;
+  background:url(assets/ui/crown.png) center/contain no-repeat;opacity:.3;pointer-events:none}
 .slot .lockicon{position:absolute;left:50px;top:60px;width:64px;height:78px;background:url(assets/ui/lock.png) center/contain no-repeat}
 .slot .plus{position:absolute;right:-18px;top:-18px;width:56px;height:56px;background:url(assets/ui/plus.png) center/contain no-repeat}
 .slot .lv{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:22px;color:#e8ffe8;opacity:.9}
@@ -134,13 +137,14 @@ body.hard{background:radial-gradient(120% 80% at 50% 40%, #8a3a52 0%, #5e2440 55
 .toast{position:absolute;left:140px;right:140px;top:1560px;padding:18px 24px;border-radius:22px;background:rgba(18,64,32,.92);
   text-align:center;font-size:32px;line-height:1.25;opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none;z-index:20}
 .toast.on{opacity:1;transform:none}
+.toast em{font-style:normal;color:var(--gold)}
 .tut{position:absolute;left:90px;right:90px;top:1520px;padding:24px 30px;border-radius:26px;background:#155f2b;
   border:4px solid rgba(255,255,255,.12);text-align:center;font-size:34px;line-height:1.3;opacity:0;transform:scale(.9);
-  transition:.25s cubic-bezier(.3,1.5,.5,1);pointer-events:none;z-index:21}
+  transition:.25s cubic-bezier(.3,1.5,.5,1);pointer-events:none;z-index:9}
 .tut.on{opacity:1;transform:none}
 .tut em{font-style:normal;color:var(--gold)}
 .hand{position:absolute;left:0;top:0;width:150px;height:170px;background:url(assets/ui/hand.png) center/contain no-repeat;
-  z-index:22;pointer-events:none;opacity:0;transform-origin:20% 10%}
+  z-index:9;pointer-events:none;opacity:0;transform-origin:20% 10%}
 
 /* ---------- panels ---------- */
 .scrim{position:absolute;inset:-1200px;background:rgba(6,30,14,.55);opacity:0;transition:opacity .25s;pointer-events:auto;z-index:30}

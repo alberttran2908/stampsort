@@ -5,6 +5,7 @@ import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from
 import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js';
 import { candidateActions, isDeadlocked } from './solver.js';
 import { track, events as allEvents, funnelSummary, clearEvents } from './analytics.js';
+import { t, getLang, setLang } from './copy.js';
 
 // ============================================================ constants
 const CW = 165, CH = 214;
@@ -378,8 +379,9 @@ function updateHUD(bump = false) {
   const fill = $('combo').querySelector('.fill');
   fill.style.transform = `scaleX(${Math.min(combo, COMBO_MAX) / COMBO_MAX})`;
   const tp = topicProgress();
-  $('combo').querySelector('.txt').textContent = combo >= 2 ? `Combo x${combo}` : `Topics ${tp.done}/${tp.total}`;
-  if (S.moves === 5 && !lowWarned && L.moves != null) { lowWarned = true; toast('Only <em style="color:#ffcf3f;font-style:normal">5 moves</em> left!', 1600); }
+  $('combo').querySelector('.txt').textContent = combo >= 2 ? t('combo', { n: combo }) : t('piles', { done: tp.done, total: tp.total });
+  if (S.moves === 5 && !lowWarned && L.moves != null) { lowWarned = true; toast(t('tip_low', { n: 5 }), 1600); }
+  if (S.moves === 10 && L.moves != null && L.moves > 20) onceTip('low', { n: 10 });
   renderBoosters();
 }
 /** Số chủ đề đã giao xong / tổng: mục tiêu thắng là giao hết. */
@@ -439,11 +441,12 @@ function renderBoosters() {
     b.querySelector('.lockbig').style.display = locked ? '' : 'none';
     if (locked) { badge.style.display = 'none'; b.querySelector('.name').textContent = `Lv ${UNLOCK_AT[d.id]}`; continue; }
     badge.style.display = '';
-    b.querySelector('.name').textContent = d.name;
+    b.querySelector('.name').textContent = t('b_' + d.id);
     if (count > 0) { badge.className = 'badge'; badge.textContent = count; }
     else { badge.className = 'badge coin'; badge.textContent = COSTS[d.id]; }
   }
   const u = $('undoBtn');
+  u.querySelector('.lbl').textContent = t('b_undo');
   const ub = u.querySelector('.badge');
   if (undoLeft > 0) { ub.className = 'badge'; ub.textContent = undoLeft; }
   else { ub.className = 'badge coin'; ub.textContent = COSTS.undo; }
@@ -467,15 +470,15 @@ function spend(kind) {
     bumpCoins();
     return used(true);
   }
-  toast('Not enough coins');
+  toast(t('coins_short'));
   sfx('close');
   return false;
 }
 function onBooster(id) {
   if (ended || busyInput) return;
   const lv = levelIdx + 1;
-  if (id !== 'undo' && lv < UNLOCK_AT[id]) { toast(`Unlocks at level ${UNLOCK_AT[id]}`); sfx('close'); return; }
-  if (scriptStep() && scriptStep().booster !== id) { toast('Follow the hand!', 1000); return; }
+  if (id !== 'undo' && lv < UNLOCK_AT[id]) { toast(t('unlocks', { n: UNLOCK_AT[id] })); sfx('close'); return; }
+  if (scriptStep() && scriptStep().booster !== id) { toast(t('follow'), 1000); return; }
   sfx('click', { vol: 0.6 });
   if (id !== 'joker' && jokerMode) toggleJoker();
   if (id !== 'pack' && id !== 'stamper' && pickMode) cancelPick();
@@ -492,7 +495,7 @@ function pushUndo() {
   if (undoStack.length > 60) undoStack.shift();
 }
 function doUndo() {
-  if (!undoStack.length) { toast('Nothing to undo'); sfx('close'); return; }
+  if (!undoStack.length) { toast(t('nothing_undo')); sfx('close'); return; }
   if (!spend('undo')) return;
   const snap = undoStack.pop();
   S = snap.s;
@@ -543,10 +546,10 @@ function showAction(a, { loopHand = true } = {}) {
 }
 function doHint() {
   const a = computeHint();
-  if (!a) { toast('No useful move found. Try Undo or a booster.'); sfx('close'); return; }
+  if (!a) { toast(t('no_hint')); sfx('close'); return; }
   if (!spend('hint')) return;
   sfx('hint');
-  if (!showAction(a)) toast('Try drawing from the deck');
+  if (!showAction(a)) toast(t('try_deck'));
   hintTimer = setTimeout(clearHint, 4000);
   updateHUD();
 }
@@ -564,12 +567,12 @@ function toggleJoker() {
     if (scriptStep()) return;
     jokerMode = false; clearHint(); tut(null); updateDeckUI(); renderBoosters(); return;
   }
-  if (!jokerFree && save.joker <= 0 && save.coins < COSTS.joker) { toast('Not enough coins'); sfx('close'); return; }
+  if (!jokerFree && save.joker <= 0 && save.coins < COSTS.joker) { toast(t('coins_short')); sfx('close'); return; }
   jokerMode = true;
   sfx('joker');
   colZones.forEach((z, i) => { z.style.opacity = 1; z.classList.add('target'); });
   S.cols.forEach(col => { if (col.length) views.get(col[col.length - 1].id).el.classList.add('hintglow'); });
-  if (!scriptStep()) tut('Tap a column to place the <em>Golden Stamp</em>. Any stamp can go on it!');
+  if (!scriptStep()) tut(t('joker_place'));
   renderBoosters();
 }
 function placeJokerAt(j) {
@@ -615,13 +618,13 @@ function pullable(k) {
 function startPick(kind) {
   if (pickMode === kind) { cancelPick(); return; }
   const piles = S.found.map((_, k) => k).filter(pullable);
-  if (!piles.length) { toast('Open a topic pile first'); sfx('close'); return; }
-  if (save[kind] <= 0 && save.coins < COSTS[kind]) { toast('Not enough coins'); sfx('close'); return; }
+  if (!piles.length) { toast(t('open_pile_first')); sfx('close'); return; }
+  if (save[kind] <= 0 && save.coins < COSTS[kind]) { toast(t('coins_short')); sfx('close'); return; }
   if (kind === 'pack' && piles.length === 1) { applyPull(piles[0], kind); return; }
   pickMode = kind;
   sfx('joker');
   piles.forEach(k => slotEl(k).classList.add('target'));
-  if (!scriptStep()) tut(kind === 'pack' ? 'Tap a pile: <em>2 hidden stamps</em> of that topic jump in!' : 'Tap a pile to <em>stamp in 1 card</em> of that topic.');
+  if (!scriptStep()) tut(t(kind === 'pack' ? 'pick_pack' : 'pick_stamper'));
   renderBoosters();
 }
 function cancelPick(force = false) {
@@ -630,6 +633,19 @@ function cancelPick(force = false) {
   slotEls.concat([extraEl]).forEach(e => e && e.classList.remove('target'));
   tut(null);
   renderBoosters();
+}
+// Chạm một chồng: tem cùng loại đang lộ sáng lên + còn thiếu bao nhiêu (giúp nhận ra "loại" của tem).
+function peekPile(k) {
+  const f = S.found[k];
+  clearHint();
+  let shown = 0;
+  for (const col of S.cols) { const top = col[col.length - 1]; for (const c of col) if (c.up && c.t === f.t && c.k === 'stamp') { views.get(c.id).el.classList.add('hintglow'); shown++; } void top; }
+  const w = S.waste[S.waste.length - 1];
+  if (w && w.t === f.t) { views.get(w.id).el.classList.add('hintglow'); shown++; }
+  slotEl(k).classList.add('target');
+  toast(t('peek', { topic: f.t, n: f.n - f.cards.length }), 1500);
+  sfx('click', { vol: 0.5 });
+  hintTimer = setTimeout(clearHint, 1600);
 }
 function slotAt(p) {
   for (let k = 0; k < S.found.length; k++) {
@@ -640,7 +656,7 @@ function slotAt(p) {
 }
 function applyPull(k, kind) {
   cancelPick(true);
-  if (!pullable(k)) { toast('No stamps of that topic left'); sfx('close'); return; }
+  if (!pullable(k)) { toast(t('none_left')); sfx('close'); return; }
   if (!spend(kind)) return;
   const res = E.pullToFoundation(S, k, kind === 'pack' ? 2 : 1);
   if (!res.ok) return;
@@ -672,18 +688,18 @@ function onExtraSlot(e) {
   e && e.stopPropagation();
   if (ended || S.extraSlot) return;
   unlockAudio();
-  if (scriptStep()) { toast('Follow the hand!', 1000); return; }
-  if (levelIdx + 1 < UNLOCK_AT.slot) { toast(`Unlocks at level ${UNLOCK_AT.slot}`); sfx('close'); return; }
+  if (scriptStep()) { toast(t('follow'), 1000); return; }
+  if (levelIdx + 1 < UNLOCK_AT.slot) { toast(t('unlocks', { n: UNLOCK_AT.slot })); sfx('close'); return; }
   panel({
-    title: 'Extra Slot',
-    body: `<div class="feature-icon" style="background-image:url(assets/ui/slot_empty.png);width:180px;height:230px"></div><p>Unlock one more pile for this level.</p>`,
+    title: t('extra_title'),
+    body: `<div class="feature-icon" style="background-image:url(assets/ui/slot_empty.png);width:180px;height:230px"></div><p>${t('extra_body')}</p>`,
     buttons: [
-      { label: 'Free <small>(ad)</small>', cls: 'orange', act: () => fakeAd(unlockExtra) },
-      { label: `${COSTS.slot} coins`, act: () => {
-        if (save.coins < COSTS.slot) { toast('Not enough coins'); setTimeout(() => onExtraSlot(), 300); return; }
+      { label: t('free_ad'), cls: 'orange', act: () => fakeAd(unlockExtra) },
+      { label: t('coins', { n: COSTS.slot }), act: () => {
+        if (save.coins < COSTS.slot) { toast(t('coins_short')); setTimeout(() => onExtraSlot(), 300); return; }
         save.coins -= COSTS.slot; persist(); bumpCoins(); unlockExtra();
       } },
-      { label: 'Close', cls: 'brown', act: () => {} },
+      { label: t('close'), cls: 'brown', act: () => {} },
     ],
   });
 }
@@ -774,7 +790,7 @@ function runScript() {
     resetIdleHint();
     return;
   }
-  tut(step.text);
+  tut(t(step.booster ? 'script_' + step.booster : `script_${L.id}_${script.i}`) || step.text);
   if (step.info) {
     clearHint();
     setTimeout(() => { if (scriptStep() === step) { script.i++; runScript(); } }, step.ms || 2600);
@@ -806,7 +822,7 @@ function scriptAllows(src, dst) {
 function scriptReject(vs) {
   if (vs) nudge(vs);
   sfx('close', { vol: 0.5 });
-  toast('Follow the hand!', 1000);
+  toast(t('follow'), 1000);
   const T = computeLayout();
   for (const v of views.values()) if (T.get(v.id) && !v.gone) moveView(v, T.get(v.id), { dur: 220, easing: ease.outBackSoft });
   showAction(scriptAction(scriptStep()));
@@ -814,27 +830,25 @@ function scriptReject(vs) {
 
 // Tutorial theo ngữ cảnh: mỗi bước hiện khi điều kiện đúng lần đầu, ẩn khi người chơi làm đúng loại nước đó.
 const TUTS = [
-  { id: 'moves', lv: [2], info: true, text: 'Every drag or draw uses <em>1 move</em>. Finish all piles before moves run out!',
-    when: () => S.used === 0 },
-  { id: 'open', lv: [], text: 'Drag a <em>golden topic stamp</em> to an empty slot to start a pile.',
+  { id: 'moves', lv: [2], info: true, text: () => t('tip_moves'), when: () => S.used === 0 },
+  { id: 'open', lv: [], text: () => t('script_1_0'),
     when: () => !S.found.some(Boolean) && findAction(a => a.dst && a.dst.to === 'found' && !S.found[a.dst.i]),
     done: ev => ev.some(e => e.type === 'open') },
-  { id: 'deliver', lv: [], text: 'Now add stamps of the <em>same topic</em> to the pile.',
-    when: () => findAction(a => a.dst && a.dst.to === 'found' && S.found[a.dst.i]),
-    done: ev => ev.some(e => e.type === 'deliver' && e.count > 0) },
-  { id: 'draw', lv: [2], text: 'Need more stamps? Tap the <em>deck</em> to draw one.',
+  { id: 'crown', lv: [2, 3, 4], text: () => t('tip_crown'),
+    when: () => S.found.some(f => !f) && findAction(a => a.dst && a.dst.to === 'found' && !S.found[a.dst.i]),
+    done: ev => ev.some(e => e.type === 'open') },
+  { id: 'draw', lv: [2, 3], text: () => t('tip_draw'),
     when: () => S.deck.length && !findAction(a => a.dst && a.dst.to === 'found'),
     action: () => ({ draw: true }), done: ev => ev.some(e => e.type === 'draw') },
-  { id: 'stack', lv: [2, 3], text: 'Stamps of the same topic can be <em>stacked</em> on the table.',
+  { id: 'stack', lv: [3, 4], text: () => t('tip_stack'),
     when: () => findAction(a => a.dst && a.dst.to === 'col' && S.cols[a.dst.j].length && a.src.from === 'col'),
     done: ev => ev.some(e => e.type === 'move' && e.dst.to === 'col') },
-  { id: 'pile', lv: [3], info: true, text: 'A pile always starts with its <em>topic stamp</em>. Only matching stamps go on it.',
-    when: () => S.used === 0 },
-  { id: 'empty', lv: [3], text: 'An <em>empty column</em> takes any stack. Use it to dig out buried stamps!',
+  { id: 'peek', lv: [3, 4], info: true, text: () => t('tip_peek'), when: () => S.found.some(Boolean) && S.used > 3 },
+  { id: 'empty', lv: [3, 4, 5], text: () => t('tip_empty'),
     when: () => findAction(a => a.dst && a.dst.to === 'col' && !S.cols[a.dst.j].length),
     done: ev => ev.some(e => e.type === 'move' && e.dst.to === 'col') },
-  { id: 'full', lv: [3, 4], info: true, text: 'All slots busy? <em>Finish a pile</em> to free its slot.',
-    when: () => S.found.every(Boolean) },
+  { id: 'full', lv: [3, 4, 5, 6, 7, 8, 9, 10], info: true, text: () => t('tip_full'),
+    when: () => S.found.every(Boolean) && [...S.cols.map(c => c[c.length - 1]), S.waste[S.waste.length - 1]].some(c => c && c.k === 'topic') },
 ];
 function findAction(pred) {
   const acts = E.legalMoves(S);
@@ -855,12 +869,15 @@ function tutorialCheck(events = []) {
   }
   for (const step of TUTS) {
     if (!step.lv.includes(levelIdx + 1) || save.seen[step.id]) continue;
+    if (!canTip()) return;
     const a = step.when();
     if (!a) continue;
+    markTip();
     save.seen[step.id] = 1;
     persist();
     tutorial = { id: step.id };
-    tut(step.text);
+    track('tip_shown', { level: levelIdx + 1, key: step.id });
+    tut(typeof step.text === 'function' ? step.text() : step.text);
     if (!step.info) showAction(step.action ? step.action() : a);
     else setTimeout(() => { if (tutorial && tutorial.id === step.id) { tutorial = null; tut(null); } }, 3800);
     return;
@@ -901,6 +918,7 @@ function panel({ title, body = '', buttons = [], radial = false, onOpen }) {
     btns.append(el);
   }
   overlay.style.pointerEvents = 'auto';
+  handEl.style.visibility = 'hidden';
   if (radial) { const r = document.createElement('div'); r.className = 'radial'; scrim.append(r); }
   overlay.append(scrim, p);
   requestAnimationFrame(() => { scrim.classList.add('on'); p.classList.add('on'); });
@@ -918,6 +936,7 @@ function closePanel(instant = false) {
     setTimeout(() => { scrim.remove(); p.remove(); }, 250);
   }
   overlay.style.pointerEvents = 'none';
+  handEl.style.visibility = '';
 }
 
 // ============================================================ input
@@ -946,17 +965,21 @@ function onDown(e) {
   unlockAudio();
   if (ended || busyInput || panelOpen || drag) return;
   const p = toStage(e);
+  if (!pickMode && !jokerMode && !script) {
+    const k0 = slotAt(p);
+    if (k0 >= 0 && S.found[k0] && !e.target.closest('.card[data-x]')) { peekPile(k0); }
+  }
   if (pickMode) {
     const k = slotAt(p);
     const st = scriptStep();
-    if (st && st.booster && k !== st.slot) { toast('Tap the glowing pile'); sfx('close', { vol: 0.5 }); return; }
+    if (st && st.booster && k !== st.slot) { toast(t('tap_pile')); sfx('close', { vol: 0.5 }); return; }
     if (k >= 0 && S.found[k] && pullable(k)) applyPull(k, pickMode); else cancelPick();
     return;
   }
   if (jokerMode) {
     const i = colAt(p);
     const st = scriptStep();
-    if (st && st.booster && i !== st.col) { toast('Tap the highlighted column'); sfx('close', { vol: 0.5 }); return; }
+    if (st && st.booster && i !== st.col) { toast(t('tap_column')); sfx('close', { vol: 0.5 }); return; }
     if (i >= 0) placeJokerAt(i); else toggleJoker();
     return;
   }
@@ -966,7 +989,7 @@ function onDown(e) {
   const loc = locate(v.id);
   if (!loc || (loc.from === 'col' && !E.runAt(S, loc.i, loc.idx))) {
     // lá úp hoặc không nhấc được: rung nhẹ
-    if (loc && loc.from === 'col') { nudge([v]); if (!v.card.up && !S.cols[loc.i][loc.idx].up) toast('Face-down stamp: move the stamps on top first', 1300); }
+    if (loc && loc.from === 'col') { nudge([v]); if (!S.cols[loc.i][loc.idx].up) { toast(t('err_facedown'), 1400); teachOnError('facedown'); } }
     return;
   }
   clearHint();
@@ -1034,8 +1057,8 @@ function onUp(e) {
   d.vs.forEach(v => { v.lifted = false; v.el.classList.remove('lift'); });
   if (dst) doMove(d.src, dst, true);
   else {
-    const why = scriptStep() ? 'Follow the hand!' : dropReason(d.src, p);
-    if (why) toast(why);
+    const why = scriptStep() ? t('follow') : dropReason(d.src, p);
+    if (why) { toast(why, 1600); if (!scriptStep()) teachOnError('drop'); }
     sfx('close', { vol: 0.5 });
     const T = computeLayout();
     d.vs.forEach(v => { moveView(v, T.get(v.id), { dur: 260, easing: ease.outBackSoft }).then(() => setZ(v, T.get(v.id).z)); });
@@ -1073,15 +1096,15 @@ function dropReason(src, p) {
     const r = targetRect({ to: 'found', i: k });
     if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) {
       const why = E.checkMove(S, src, { to: 'found', i: k });
-      if (why === 'need_topic') return 'Start a pile with a <em style="color:#ffcf3f;font-style:normal">topic stamp</em>';
-      if (why === 'wrong_topic') return 'That pile is for a different topic';
+      if (why === 'need_topic') return t('err_need_crown');
+      if (why === 'wrong_topic') return t('err_wrong_pile', { topic: S.found[k] ? S.found[k].t : '' });
     }
   }
   const i = colAt(p);
   if (i >= 0) {
     const why = E.checkMove(S, src, { to: 'col', j: i });
-    if (why === 'wrong_topic') return 'Only the same topic can stack';
-    if (why === 'topic_on_card') return 'Topic stamps go to a slot or an empty column';
+    if (why === 'wrong_topic') return t('err_wrong_stack');
+    if (why === 'topic_on_card') return t('err_crown_on_stamp');
   }
   return null;
 }
@@ -1091,9 +1114,46 @@ function rejectTap(src, vs) {
   sfx('close', { vol: 0.5 });
   haptic(4);
   if (!run) return;
-  if (run[0].k === 'topic') toast(S.found.every(Boolean) ? 'All slots are busy. Finish a pile first!' : 'No place for it yet');
-  else if (!S.found.some(f => f && f.t === run[0].t)) toast('Its pile isn\'t open yet. Find the <em style="color:#ffcf3f;font-style:normal">topic stamp</em>!');
-  else toast('No place for it yet');
+  let msg;
+  if (run[0].k === 'topic') msg = S.found.every(Boolean) ? t('err_slots_busy') : t('err_no_place');
+  else if (!S.found.some(f => f && f.t === run[0].t)) msg = t('err_no_pile');
+  else msg = t('err_no_place');
+  toast(msg, 1600);
+  teachOnError(run[0].k === 'topic' ? 'crown_no_slot' : !S.found.some(f => f && f.t === run[0].t) ? 'no_pile' : 'no_place');
+}
+// Thang hỗ trợ khi lúng túng (research: 2 lần sai trong ~6 giây -> chỉ cách làm đúng). Level đầu và level khó.
+let invalidTimes = [];
+function teachOnError(reason = 'other') {
+  track('invalid_move', { level: levelIdx + 1, attempt: play.attempt, reason });
+  const now = Date.now();
+  invalidTimes = invalidTimes.filter(x => now - x < 6000).concat(now);
+  if (invalidTimes.length < 2 || script || ended) return;
+  if (levelIdx + 1 > 5 && !specialOf(L)) return;
+  invalidTimes = [];
+  setTimeout(() => {
+    if (ended || script || jokerMode || pickMode) return;
+    const a = computeHint();
+    if (a) { showAction(a); hintTimer = setTimeout(clearHint, 3500); }
+  }, 700);
+}
+// Nhịp gợi ý: mỗi lần một khái niệm, cách nhau >= 4 nước và 7 giây, tối đa 3 gợi ý mỗi level (chống quá tải).
+let tipGate = { used: -99, t: 0, count: 0 };
+function canTip() {
+  if (script || tutorial || !S) return false;
+  return S.used - tipGate.used >= 4 && Date.now() - tipGate.t >= 7000 && tipGate.count < 3;
+}
+function markTip() { tipGate = { used: S.used, t: Date.now(), count: tipGate.count + 1 }; }
+// Gợi ý một lần cho mỗi khái niệm, đúng lúc nó xảy ra (just-in-time).
+function onceTip(key, vars = {}, ms = 3200) {
+  if (save.seen['tip_' + key] || !canTip()) return false;
+  markTip();
+  save.seen['tip_' + key] = 1;
+  persist();
+  track('tip_shown', { level: levelIdx + 1, key });
+  tut(t('tip_' + key, vars));
+  const mine = $('tut').innerHTML;
+  setTimeout(() => { if ($('tut').innerHTML === mine && !script && !tutorial) tut(null); }, ms);
+  return true;
 }
 function nudge(vs) {
   vs.forEach(v => {
@@ -1223,9 +1283,11 @@ function playEvents(events, fromDrag) {
         tween(o, { s: 1 }, { dur: 300, easing: ease.outBack, key: 'cnt' + ev.slot, onUpdate: () => { c.style.transform = `scale(${o.s})`; } });
         sparkle(p.x + CW / 2, p.y + 20, 6 + Math.min(12, step * 2));
         if (step >= 3) floatText(`x${step}`, p.x + CW / 2, p.y - 60, step >= 5 ? '#ff9d3b' : '#ffe36b');
+        if (step === 3 && levelIdx + 1 >= 3) onceTip('combo');
         if (step > 0 && step % COMBO_MAX === 0) comboReward(p.x + CW / 2, p.y);
       }, late || (fromDrag ? 110 : 200));
     } else if (ev.type === 'complete') {
+      if (levelIdx + 1 >= 2) setTimeout(() => onceTip('complete'), 1500);
       const pr = completeAnim(ev.slot, ev.cards, ev.t, late ? late + 150 : fromDrag ? 260 : 380);
       pending.push(pr);
       pr.then(() => { pending = pending.filter(x => x !== pr); });
@@ -1245,6 +1307,7 @@ function playEvents(events, fromDrag) {
       setUp(v, true, { delay: 30 });
     } else if (ev.type === 'recycle') {
       sfx('whoosh');
+      onceTip('recycle');
       [...S.deck].reverse().forEach((c, k) => {
         const v = views.get(c.id);
         special.add(c.id);
@@ -1394,8 +1457,8 @@ function startOvertime() {
   updateHUD();
   sfx('feature');
   haptic([20, 40, 20]);
-  floatText('OVERTIME!', 540, 420, '#ff7a59');
-  toast('Out of moves, but the post office stays open: <em style="color:#ffcf3f;font-style:normal">keep going for free!</em>', 2800);
+  floatText(t('overtime_big'), 540, 420, '#ff7a59');
+  toast(t('overtime'), 2800);
   const tp = topicProgress();
   track('overtime_start', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total, topics_left: tp.total - tp.done, special: specialOf(L) || '' });
 }
@@ -1404,7 +1467,7 @@ function rescueJoker() {
   play.rescues++;
   jokerFree = true;
   track('rescue_joker', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total });
-  toast('Stuck? The Postmaster lends you a <em style="color:#ffcf3f;font-style:normal">free Golden Stamp</em>!', 2600);
+  toast(t('rescue'), 2600);
   sfx('feature');
   toggleJoker();
 }
@@ -1424,7 +1487,7 @@ function autoFinish(token) {
 async function runAutoFinish(token, r) {
   autoFinishing = true;
   busyInput = true;
-  toast('Auto finish!', 1200);
+  toast(t('autofinish'), 1200);
   await wait(350);
   try {
     for (const a of r.path) {
@@ -1472,19 +1535,19 @@ async function winSequence() {
   if (token !== levelToken) return;
   const last = lv === LEVELS.length;
   panel({
-    title: last ? 'All Delivered!' : 'Perfect!',
+    title: last ? t('win_last') : t('win_title'),
     radial: true,
     body: `<div class="stars"><i></i><i></i><i></i></div>
-      <h3>All topics cleared!</h3><p>Level ${lv} complete · ${S.moves === Infinity ? '' : `${S.moves} moves left`}</p>
-      ${last ? '<p>That was the last level of the prototype. Thanks for playing!</p>' : ''}
+      <h3>${t('win_sub')}</h3><p>${t('level', { n: lv })}${S.moves === Infinity ? '' : ' · ' + t('moves_left', { n: S.moves })}</p>
+      ${last ? `<p>${t('win_end')}</p>` : ''}
       <div class="coins-line"><i></i><span>+${reward}</span></div>`,
     buttons: [
-      { label: `Claim x2 <small>(ad)</small>`, cls: 'orange', act: () => fakeAd(() => {
+      { label: t('claim2'), cls: 'orange', act: () => fakeAd(() => {
         coinsTo(reward, 540, 900);
         const tk = levelToken;
         setTimeout(() => { if (tk === levelToken) (last ? goHome() : startLevel(levelIdx + 1)); }, 1300);
       }) },
-      { label: last ? 'Home' : 'Continue', act: () => (last ? goHome() : startLevel(levelIdx + 1)) },
+      { label: last ? t('home') : t('cont'), act: () => (last ? goHome() : startLevel(levelIdx + 1)) },
     ],
     onOpen: pEl => {
       const ss = pEl.querySelectorAll('.stars i');
@@ -1500,32 +1563,32 @@ function outOfMoves() {
   track('level_fail', { level: levelIdx + 1, attempt: play.attempt, reason: 'out_of_moves', delivered: S.delivered, total: S.total, special: specialOf(L) || '' });
   if (safetyOf(L) === 'retry') {
     // Level khó kiểu "chơi lại miễn phí": không phạt, giữ Ô phụ, vào lại ngay
-    panel({ title: 'So Close!', body: '<p>This is a hard level. Try again: it is <b>free</b>, no penalty.</p>', buttons: [
-      { label: 'Try again', act: () => startLevel(levelIdx) },
-      { label: '+5 moves <small>(free ad)</small>', cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) },
+    panel({ title: t('soclose'), body: `<p>${t('soclose_body')}</p>`, buttons: [
+      { label: t('try_again'), act: () => startLevel(levelIdx) },
+      { label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) },
     ] });
     return;
   }
   const canFree = !freeMovesUsed;
   const buttons = [];
-  if (canFree) buttons.push({ label: '+5 moves <small>(free ad)</small>', cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) });
-  buttons.push({ label: `+5 moves <small>${COSTS.moves} coins</small>`, act: () => {
-    if (save.coins < COSTS.moves) { toast('Not enough coins'); outOfMoves(); return; }
+  if (canFree) buttons.push({ label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) });
+  buttons.push({ label: t('more_coins', { n: COSTS.moves }), act: () => {
+    if (save.coins < COSTS.moves) { toast(t('coins_short')); outOfMoves(); return; }
     save.coins -= COSTS.moves; persist(); bumpCoins(); addMoves(5, false, 'coins');
   } });
-  buttons.push({ label: 'Retry', cls: 'brown', act: () => startLevel(levelIdx) });
+  buttons.push({ label: t('retry'), cls: 'brown', act: () => startLevel(levelIdx) });
   const tp = topicProgress();
-  panel({ title: 'Out of Moves', body: `<p>You ran out of moves with <b>${tp.total - tp.done} topics</b> (${S.total - S.delivered} stamps) still to clear.</p><p>Get extra moves to keep going, or retry the level.</p>`, buttons });
+  panel({ title: t('oom_title'), body: `<p>${t('oom_body', { n: tp.total - tp.done })}</p><p>${t('oom_body2')}</p>`, buttons });
 }
 function stuckPanel() {
   track('level_stuck', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total, moves_left: S.moves });
   const buttons = [];
-  if (levelIdx + 1 >= UNLOCK_AT.joker) buttons.push({ label: 'Use a Joker', cls: 'orange', act: () => { toggleJoker(); } });
-  if (levelIdx + 1 >= UNLOCK_AT.pack && S.found.some((_, k) => pullable(k))) buttons.push({ label: 'Use a Pack', cls: 'orange', act: () => startPick('pack') });
-  if (levelIdx + 1 >= UNLOCK_AT.slot && !S.extraSlot) buttons.push({ label: 'Extra slot', cls: 'orange', act: () => onExtraSlot() });
-  if (undoStack.length) buttons.push({ label: 'Undo', act: () => doUndo() });
-  buttons.push({ label: 'Retry', cls: 'brown', act: () => startLevel(levelIdx) });
-  panel({ title: 'No Moves Left', body: '<p>No stamp can move anymore.</p>', buttons });
+  if (levelIdx + 1 >= UNLOCK_AT.joker) buttons.push({ label: t('use_joker'), cls: 'orange', act: () => { toggleJoker(); } });
+  if (levelIdx + 1 >= UNLOCK_AT.pack && S.found.some((_, k) => pullable(k))) buttons.push({ label: t('use_pack'), cls: 'orange', act: () => startPick('pack') });
+  if (levelIdx + 1 >= UNLOCK_AT.slot && !S.extraSlot) buttons.push({ label: t('extra_slot'), cls: 'orange', act: () => onExtraSlot() });
+  if (undoStack.length) buttons.push({ label: t('undo'), act: () => doUndo() });
+  buttons.push({ label: t('retry'), cls: 'brown', act: () => startLevel(levelIdx) });
+  panel({ title: t('stuck_title'), body: `<p>${t('stuck_body')}</p>`, buttons });
 }
 function addMoves(n, free = false, source = 'debug') {
   if (free) freeMovesUsed = true;
@@ -1538,7 +1601,7 @@ function addMoves(n, free = false, source = 'debug') {
   updateHUD(true);
 }
 function fakeAd(done) {
-  const p = panel({ title: 'Ad Break', body: '<p>(Mock rewarded ad)</p><p id="adc">2</p>', buttons: [] });
+  const p = panel({ title: t('ad_break'), body: '<p>(Mock rewarded ad)</p><p id="adc">2</p>', buttons: [] });
   let n = 2;
   const t = setInterval(() => {
     n--;
@@ -1572,6 +1635,7 @@ async function startLevel(i) {
   pickMode = null;
   lastMovesShown = null;
   lowWarned = false;
+  tipGate = { used: -99, t: 0, count: 0 };
   overtime = false;
   jokerFree = false;
   movesEl.classList.remove('overtime');
@@ -1646,9 +1710,9 @@ function levelBanner() {
   const el = document.createElement('div');
   bannerEl = el;
   const sp = specialOf(L);
-  el.innerHTML = (sp ? `<div class="hard-pill">${sp === 'superhard' ? 'SUPER HARD LEVEL' : 'HARD LEVEL'}</div>` : '') + `<div style="font-size:110px;line-height:1">Level ${levelIdx + 1}</div>
+  el.innerHTML = (sp ? `<div class="hard-pill">${t(sp === 'superhard' ? 'superhard' : 'hard')}</div>` : '') + `<div style="font-size:110px;line-height:1">${t('level', { n: levelIdx + 1 })}</div>
     <div style="margin-top:22px;display:inline-block;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.35);font-size:44px">
-      Clear <span style="color:#ffcf3f">${tp.total - tp.done} topics</span> · ${L.moves == null ? 'unlimited moves' : `<span style="color:#ffcf3f">${L.moves} moves</span>`}</div>`;
+      ${t('goal', { n: tp.total - tp.done, moves: L.moves == null ? t('goalInf') : t('goalMoves', { n: L.moves }) })}</div>`;
   el.style.cssText = 'position:absolute;left:0;right:0;top:700px;text-align:center;color:#fff;text-shadow:0 6px 0 rgba(0,0,0,.25);z-index:4000;pointer-events:none';
   overlay.append(el);
   const o = { y: -60, a: 0, s: 0.6 };
@@ -1661,26 +1725,33 @@ function levelBanner() {
     .then(() => { el.remove(); if (bannerEl === el) bannerEl = null; });
 }
 // Luật thắng/thua (game gốc chỉ có vài câu ở level 1; mình làm rõ hơn): hiện ở level đầu có moves và trong Pause.
-const RULES_HTML = `
-  <div style="text-align:left;font-size:32px;line-height:1.35;color:#5a3a26">
-    <p style="margin:0 0 18px"><b style="color:#2f8a3a">WIN:</b> put every stamp into its topic pile. When all topics are cleared, you win!</p>
-    <p style="margin:0 0 18px"><b style="color:#c9493b">LOSE:</b> every drag and every deck tap uses 1 move. Run out of moves before clearing all topics and the level fails (get +5 moves or retry).</p>
-    <p style="margin:0 0 18px"><b>Piles:</b> only a golden <b>topic stamp</b> can open an empty slot. A pile is sent away when full (count x/n), freeing the slot.</p>
-    <p style="margin:0"><b>Table:</b> stack stamps only on the same topic. An empty column takes any stack. Wrong moves are free.</p>
-  </div>`;
+// Bảng luật bằng hình: 4 dòng, mỗi dòng <= 7 từ, kèm hình lá bài thật (show, don't tell).
+function rulesHtml() {
+  // hình minh hoạ ghép từ chính sprite trong game (lá vương miện Cat, tem mèo, phong bì, ô MOVES)
+  const box = inner => `<div style="position:relative;flex:0 0 96px;height:124px">${inner}</div>`;
+  const crownCard = box(`<div style="position:absolute;inset:0;background:url(assets/ui/topic_frame.png) center/100% 100%"></div>
+    <img src="${iconUrl('Cat')}" style="position:absolute;left:20px;top:30px;width:56px;height:56px">
+    <div style="position:absolute;left:30px;top:-12px;width:36px;height:34px;background:url(assets/ui/crown.png) center/contain no-repeat"></div>`);
+  const stampCard = box(`<div style="position:absolute;inset:0;background:url(assets/ui/face_3.png) center/100% 100%"></div>
+    <img src="assets/cards/cat/5.png" style="position:absolute;left:12px;top:16px;width:72px;height:72px">`);
+  const env = box(`<div style="position:absolute;inset:8px -6px;background:url(assets/ui/envelope_closed.png) center/contain no-repeat"></div>
+    <div style="position:absolute;left:30px;top:40px;width:36px;height:42px;background:url(assets/ui/wax.png) center/contain no-repeat"></div>`);
+  const moves = box(`<div style="position:absolute;inset:0;background:url(assets/ui/moves_box.png) center/100% 100%"></div>
+    <div style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:44px;color:#4a2a1a">12</div>`);
+  const row = (fig, txt) => `<div style="display:flex;align-items:center;gap:24px;margin:0 0 18px;text-align:left">${fig}
+    <div style="font-size:34px;line-height:1.25;color:#5a3a26">${txt}</div></div>`;
+  return `<div>${row(crownCard, t('r1'))}${row(stampCard, t('r2'))}${row(env, t('r3'))}${row(moves, t('r4'))}
+    <p style="font-size:28px;margin:6px 0 0">${t('r5')} ${t('r6')}</p></div>`;
+}
 function showRules(onClose) {
-  panel({ title: 'How to Play', body: RULES_HTML, buttons: [{ label: 'Got it', act: () => onClose && onClose() }] });
+  panel({ title: t('howto'), body: rulesHtml(), buttons: [{ label: t('got_it'), act: () => onClose && onClose() }] });
 }
 function featureIntro() {
   const u = L.unlock;
   if (!u || save.seen['unlock_' + u]) return Promise.resolve();
   save.seen['unlock_' + u] = 1;
-  const info = {
-    hint: { title: 'Booster: Hint', icon: 'assets/ui/ic_hint.png', text: 'Stuck? The magnifier shows a good next move.' },
-    pack: { title: 'Booster: Pack', icon: 'assets/ui/ic_pack_big.png', text: 'Pulls <b>2 hidden stamps</b> of a topic straight into its pile.' },
-    stamper: { title: 'Booster: Stamper', icon: 'assets/ui/ic_stamper.png', text: 'Choose a pile and <b>stamp in 1 card</b> of that topic.' },
-    joker: { title: 'Booster: Joker', icon: 'assets/ui/joker_card.png', text: 'Play the Golden Stamp on any column. <b>Any stamp</b> can go on it until the level ends!' },
-  }[u];
+  const icons = { hint: 'assets/ui/ic_hint.png', pack: 'assets/ui/ic_pack_big.png', stamper: 'assets/ui/ic_stamper.png', joker: 'assets/ui/joker_card.png' };
+  const info = { title: t('booster', { name: t('b_' + u) }), icon: icons[u], text: t('bi_' + u), name: t('b_' + u) };
   save[u] = (save[u] || 0) + GIFTS[u];
   persist();
   renderBoosters();
@@ -1688,17 +1759,17 @@ function featureIntro() {
   return new Promise(res => {
     panel({
       title: info.title, radial: true,
-      body: `<div class="feature-icon" style="background-image:url(${info.icon})"></div><p>${info.text}</p><h3>+${GIFTS[u]} free</h3>`,
-      buttons: [{ label: 'Claim', act: () => {
+      body: `<div class="feature-icon" style="background-image:url(${info.icon})"></div><p>${info.text}</p><h3>${t('free_n', { n: GIFTS[u] })}</h3>`,
+      buttons: [{ label: t('claim'), act: () => {
         updateHUD();
         if (L.script) { res(); return; }          // kịch bản ép bước sẽ tự chỉ tay
         const b = $('boosters').querySelector(`[data-id=${u}]`);
         const idx = [...b.parentNode.children].indexOf(b);
         const n = b.parentNode.children.length;
         const x = 540 + (idx - (n - 1) / 2) * (168 + 34);
-        tut(`Tap <em>${info.title.split(': ')[1]}</em> any time you need it.`);
+        // chỉ bàn tay, không thêm chữ: popup vừa giải thích rồi, nhường lượt gợi ý cho khái niệm của level
         handTap(x, 1790);
-        setTimeout(() => { hideHand(); if (!tutorial && !scriptStep()) tut(null); res(); }, 2400);
+        setTimeout(() => { hideHand(); res(); }, 1800);
       } }],
     });
   });
@@ -1728,7 +1799,7 @@ function goHome() {
     el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('close'); });
     grid.append(el);
   });
-  $('playBtn').textContent = `Play  Level ${save.unlocked}`;
+  $('playBtn').textContent = t('play', { n: save.unlocked });
   $('home').classList.remove('off');
 }
 $('undoBtn').addEventListener('pointerup', () => { unlockAudio(); onBooster('undo'); });
@@ -1738,14 +1809,15 @@ $('pauseBtn').addEventListener('pointerup', () => {
   unlockAudio();
   sfx('click');
   panel({
-    title: 'Paused',
-    body: `<p>Level ${levelIdx + 1}</p>`,
+    title: t('paused'),
+    body: `<p>${t('level', { n: levelIdx + 1 })}</p>`,
     buttons: [
-      { label: 'Resume', act: () => {} },
-      { label: 'How to Play', cls: 'brown', act: () => showRules() },
-      { label: 'Restart', cls: 'orange', act: () => startLevel(levelIdx) },
-      { label: isMuted() ? 'Sound: Off' : 'Sound: On', cls: 'brown', act: () => { setMuted(!isMuted()); } },
-      { label: 'Home', cls: 'brown', act: goHome },
+      { label: t('resume'), act: () => {} },
+      { label: t('howto'), cls: 'brown', act: () => showRules() },
+      { label: t('restart'), cls: 'orange', act: () => startLevel(levelIdx) },
+      { label: isMuted() ? t('sound_off') : t('sound_on'), cls: 'brown', act: () => { setMuted(!isMuted()); } },
+      { label: t('lang'), cls: 'brown', act: () => { setLang(getLang() === 'vi' ? 'en' : 'vi'); applyStaticCopy(); updateHUD(); startLevel(levelIdx); } },
+      { label: t('home'), cls: 'brown', act: goHome },
     ],
   });
 });
@@ -1794,7 +1866,12 @@ async function autoplay(stepMs = 380) {
 window.__game = { get S() { return S; }, get level() { return levelIdx + 1; }, startLevel, autoplay, doMove, onDeck, E, goHome };
 
 // ============================================================ boot
+function applyStaticCopy() {
+  movesEl.querySelector('.lbl').textContent = t('moves');
+  document.documentElement.lang = getLang();
+}
 (async function boot() {
+  applyStaticCopy();
   initFx($('fx'));
   setLite(LITE);
   buildDebug();

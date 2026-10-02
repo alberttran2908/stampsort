@@ -24,7 +24,7 @@ const DESIGN = [
     topics: { Hoofed: 4, Ship: 6, Candy: 5, Balloon: 5, Time: 5, Hat: 4 }, note: 'Video L3: 4 ô.' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 82, target: 0.85, unlock: 'pack', preplace: 'Dinosaur',
     topics: { Dinosaur: 4, Glasses: 5, Pets: 5, 'Fast food': 5, Chess: 4, Car: 4, Flower: 5, Leaf: 3 },
-    script: [{ text: 'New booster! Tap <em>Pack</em>: 2 hidden Dinosaur stamps jump into the pile.', booster: 'pack', slot: 0 }],
+    script: [{ text: 'Tap <em>Pack</em>: 2 hidden stamps jump in.', booster: 'pack', slot: 0 }],
     note: 'Video L4: ô Dinosaur mở sẵn để dạy Pack.' },
   // Mốc UA 1: level khó "không thể thua" (Overtime). Video: người chơi giỏi chỉ còn 6 moves khi thắng L5 -> nhiều khả năng
   // game gốc cũng dùng L5 làm mốc khó [GIẢ THUYẾT]. target thấp = đa số người chơi sẽ hết moves và vào Overtime.
@@ -35,13 +35,13 @@ const DESIGN = [
     topics: { 'Soft drink': 6, Planet: 5, Beast: 4, Notes: 5, Sauce: 3, Vegetable: 6, Insect: 4 }, note: 'Video L6.' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 80, target: 0.75, unlock: 'stamper', preplace: 'Sea life',
     topics: { 'Sea life': 6, Glasses: 8, Float: 6, Tea: 5, Notes: 3, Car: 5, Zoo: 5 },
-    script: [{ text: 'New booster! Tap <em>Stamper</em>, then tap the pile to stamp in 1 card.', booster: 'stamper', slot: 0 }],
+    script: [{ text: 'Tap <em>Stamper</em>, then tap the pile.', booster: 'stamper', slot: 0 }],
     note: 'Video L7: ô Marine Animal mở sẵn để dạy Stamper.' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: 75, target: 0.75, unlock: null,
     topics: { Footwear: 4, 'Raw meat': 5, Outerwear: 5, Cocktail: 5, Desserts: 5, Grilled: 5, Bouquet: 5 }, note: 'Video L8.' },
   { role: 'wall', F: 4, cols: [3, 4, 5, 6], moves: 110, target: 0.6, unlock: 'joker',
     topics: { Zoo: 5, Sculpture: 5, Pizza: 5, Sashimi: 5, Balloon: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 },
-    script: [{ text: 'New booster! Tap <em>Joker</em>, then tap a column. <b>Any</b> stamp can go on the Golden Stamp!', booster: 'joker', col: 1 }],
+    script: [{ text: 'Tap <em>Joker</em>, then tap a column.', booster: 'joker', col: 1 }],
     note: 'Video L9: mở Joker, dùng ngay đầu level.' },
   // Mốc UA 2: level siêu khó cuối chương, cũng không thể thua.
   { role: 'superhard', special: 'superhard', F: 5, cols: [3, 4, 5, 6, 7], moves: null, target: 0.25, unlock: null,
@@ -62,14 +62,14 @@ function buildL1() {
     columns: [[apple, white], [banana, tabby, cat], [p1, pine, melon, orange]],
     deck: [fruit, straw, pizza, p2, p3, orangeCat, grey],
     script: [
-      { text: 'Bring every stamp to a pile, sorted by topic. Start with the golden <em>topic stamp</em>: drag it to a slot!', src: 0, dst: { found: 1 } },
-      { text: 'Now drag a <em>Cat</em> stamp onto the Cat pile.', src: 1, dst: { found: 1 } },
-      { text: 'Need more stamps? Tap the <em>deck</em>!', draw: true },
-      { text: 'A new topic! Start its pile in an empty slot.', src: 10, dst: { found: 2 } },
-      { text: 'Stamps can slide between columns. <em>Stack</em> them when they share a topic!', src: 12, dst: { onto: 11 } },
-      { text: 'A whole stack moves together. Put it on the <em>watermelon</em>.', src: 11, dst: { onto: 13 } },
-      { text: 'Send the complete stack to its pile in <em>one move</em>!', src: 13, dst: { found: 2 } },
-      { text: 'Clear <em>every topic</em> to win the level!', info: true, ms: 2600 },
+      { text: 'Drag the <em>crown stamp</em> to an empty slot.', src: 0, dst: { found: 1 } },
+      { text: 'Add a <em>matching</em> stamp to its pile.', src: 1, dst: { found: 1 } },
+      { text: 'No match? Tap the <em>deck</em>.', draw: true },
+      { text: 'New crown stamp! Start another pile.', src: 10, dst: { found: 2 } },
+      { text: '<em>Stack</em> stamps of the same kind.', src: 12, dst: { onto: 11 } },
+      { text: 'A whole <em>stack</em> moves together.', src: 11, dst: { onto: 13 } },
+      { text: 'Send the stack in <em>1 move</em>!', src: 13, dst: { found: 2 } },
+      { text: 'Fill every pile to <em>win</em>!', info: true, ms: 2600 },
     ],
   };
 }

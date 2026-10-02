@@ -8,10 +8,10 @@ Mục tiêu của bản này là kiểm chứng **core loop và gamefeel**, chư
 
 ```bash
 .venv/bin/python tools/build_proto_assets.py
-python3 -m http.server 8765 --directory prototype/stamp
+python3 -m http.server 8766 --directory prototype/stamp
 ```
 
-Mở `http://localhost:8765`. Điện thoại cùng wifi mở `http://<IP máy>:8765`. Thêm `?debug` để hiện bảng debug (tự giải, thêm moves, thắng ngay, lật hết lá, qua level, xóa save). Thêm `?level=N` để vào thẳng level N.
+Mở `http://localhost:8766`. Điện thoại cùng wifi mở `http://<IP máy>:8766`. Thêm `?debug` để hiện bảng debug (tự giải, thêm moves, thắng ngay, lật hết lá, qua level, xóa save). Thêm `?level=N` để vào thẳng level N.
 
 Bản web test: https://notbad.games/stampsort/ (nhánh `gh-pages`, deploy lại bằng `tools/deploy_web.sh`). Bản này chứa art APK tạm, chỉ để test nội bộ.
 
