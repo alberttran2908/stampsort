@@ -5,7 +5,7 @@ import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from
 import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js';
 import { candidateActions, isDeadlocked } from './solver.js';
 import { track, events as allEvents, funnelSummary, clearEvents } from './analytics.js';
-import { t, getLang, setLang } from './copy.js';
+import { t, getLang, setLang, topicName } from './copy.js';
 
 // ============================================================ constants
 const CW = 165, CH = 214;
@@ -201,7 +201,7 @@ function makeView(card) {
   back.className = 'side back';
   if (card.k === 'topic') {
     el.classList.add('topic');
-    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${iconUrl(card.t)}" draggable="false"><div class="tag">${card.t}</div>`;
+    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${iconUrl(card.t)}" draggable="false"><div class="tag">${topicName(card.t)}</div>`;
   } else if (card.k === E.JOKER) {
     el.classList.add('joker');
   } else {
@@ -309,7 +309,7 @@ function buildChrome() {
   extraEl.style.left = EXTRA_X + 'px'; extraEl.style.top = ROW_A + 'px';
   const slotUnlocked = levelIdx + 1 >= UNLOCK_AT.slot;
   extraEl.innerHTML = '<div class="ribbon"></div><div class="count"></div><div class="lockicon"></div>' +
-    (slotUnlocked ? '<div class="plus"></div>' : `<div class="lv">Lv ${UNLOCK_AT.slot}</div>`);
+    (slotUnlocked ? `<div class="plus"></div><div class="lv">${t('extra_label')}</div>` : `<div class="lv">Lv ${UNLOCK_AT.slot}</div>`);
   extraEl.addEventListener('pointerup', onExtraSlot);
   board.append(extraEl);
   // vùng cột
@@ -356,7 +356,7 @@ function updateSlotLabels() {
     if (!f && completing.has(k)) return;
     el.classList.toggle('open', !!f);
     if (f) {
-      el.querySelector('.ribbon').textContent = f.t;
+      el.querySelector('.ribbon').textContent = topicName(f.t);
       el.querySelector('.count').textContent = `${f.cards.length}/${f.n}`;
     }
   });
@@ -377,9 +377,9 @@ function updateHUD(bump = false) {
   $('coins').querySelector('span').textContent = save.coins;
   $('title').textContent = `Level ${levelIdx + 1}`;
   const fill = $('combo').querySelector('.fill');
-  fill.style.transform = `scaleX(${Math.min(combo, COMBO_MAX) / COMBO_MAX})`;
+  { const tp0 = topicProgress(); fill.style.transform = `scaleX(${tp0.total ? tp0.done / tp0.total : 0})`; }
   const tp = topicProgress();
-  $('combo').querySelector('.txt').textContent = combo >= 2 ? t('combo', { n: combo }) : t('piles', { done: tp.done, total: tp.total });
+  $('combo').querySelector('.txt').textContent = t('piles', { done: tp.done, total: tp.total });
   if (S.moves === 5 && !lowWarned && L.moves != null) { lowWarned = true; toast(t('tip_low', { n: 5 }), 1600); }
   if (S.moves === 10 && L.moves != null && L.moves > 20) onceTip('low', { n: 10 });
   renderBoosters();
@@ -643,7 +643,7 @@ function peekPile(k) {
   const w = S.waste[S.waste.length - 1];
   if (w && w.t === f.t) { views.get(w.id).el.classList.add('hintglow'); shown++; }
   slotEl(k).classList.add('target');
-  toast(t('peek', { topic: f.t, n: f.n - f.cards.length }), 1500);
+  toast(t('peek', { topic: topicName(f.t), n: f.n - f.cards.length }), 1500);
   sfx('click', { vol: 0.5 });
   hintTimer = setTimeout(clearHint, 1600);
 }
@@ -774,8 +774,13 @@ function scriptAction(step) {
   if (step.draw) return { draw: true };
   const src = locate(step.src);
   if (!src) return null;
-  const dst = step.dst.found != null ? { to: 'found', i: step.dst.found } : { to: 'col', j: colOfCard(step.dst.onto) };
-  return { src, dst };
+  if (step.dst.found != null) {
+    const card = E.sourceCards(S, src)[0];
+    let i = S.found.findIndex(f => f && f.t === card.t);                          // chồng đúng loại đã mở
+    if (i < 0) i = !S.found[step.dst.found] ? step.dst.found : S.found.findIndex(f => !f);   // hoặc ô trống
+    return { src, dst: { to: 'found', i } };
+  }
+  return { src, dst: { to: 'col', j: colOfCard(step.dst.onto) } };
 }
 function runScript() {
   const step = scriptStep();
@@ -817,7 +822,9 @@ function scriptAllows(src, dst) {
   const a = scriptAction(scriptStep());
   if (!a || a.draw) return false;
   const same = (x, y) => x.from === y.from && (x.from === 'waste' || (x.i === y.i && x.idx === y.idx));
-  return same(src, a.src) && dst.to === a.dst.to && (dst.to === 'found' ? dst.i === a.dst.i : dst.j === a.dst.j);
+  if (!same(src, a.src) || dst.to !== a.dst.to) return false;
+  if (dst.to === 'found') return !E.checkMove(S, src, dst);      // ô trống bất kỳ / ô đúng loại đều được
+  return dst.j === a.dst.j;
 }
 function scriptReject(vs) {
   if (vs) nudge(vs);
@@ -845,7 +852,7 @@ const TUTS = [
     done: ev => ev.some(e => e.type === 'move' && e.dst.to === 'col') },
   { id: 'peek', lv: [3, 4], info: true, text: () => t('tip_peek'), when: () => S.found.some(Boolean) && S.used > 3 },
   { id: 'empty', lv: [3, 4, 5], text: () => t('tip_empty'),
-    when: () => findAction(a => a.dst && a.dst.to === 'col' && !S.cols[a.dst.j].length),
+    when: () => findAction(a => a.dst && a.dst.to === 'col' && !S.cols[a.dst.j].length && a.src.from === 'col' && a.src.idx > 0 && !S.cols[a.src.i][a.src.idx - 1].up),
     done: ev => ev.some(e => e.type === 'move' && e.dst.to === 'col') },
   { id: 'full', lv: [3, 4, 5, 6, 7, 8, 9, 10], info: true, text: () => t('tip_full'),
     when: () => S.found.every(Boolean) && [...S.cols.map(c => c[c.length - 1]), S.waste[S.waste.length - 1]].some(c => c && c.k === 'topic') },
@@ -993,6 +1000,13 @@ function onDown(e) {
     return;
   }
   clearHint();
+  if (loc.from === 'col') {
+    // cầm bất kỳ lá nào trong xấp cùng loại: nhấc cả xấp từ lá dưới cùng của xấp (không nhấc Joker trừ khi cầm đúng Joker)
+    const col = S.cols[loc.i];
+    let start = E.maxRunStart(S, loc.i);
+    if (col[start] && col[start].k === E.JOKER && col[loc.idx].k !== E.JOKER) start++;
+    if (start >= 0 && start < loc.idx) loc.idx = start;
+  }
   const run = E.sourceCards(S, loc);
   const vs = run.map(c => views.get(c.id));
   drag = { src: loc, vs, start: p, last: p, t0: performance.now(), moved: false, offs: vs.map(w => ({ x: w.x - p.x, y: w.y - p.y })), vx: 0, pid: e.pointerId };
@@ -1097,7 +1111,7 @@ function dropReason(src, p) {
     if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) {
       const why = E.checkMove(S, src, { to: 'found', i: k });
       if (why === 'need_topic') return t('err_need_crown');
-      if (why === 'wrong_topic') return t('err_wrong_pile', { topic: S.found[k] ? S.found[k].t : '' });
+      if (why === 'wrong_topic') return t('err_wrong_pile', { topic: S.found[k] ? topicName(S.found[k].t) : '' });
     }
   }
   const i = colAt(p);
@@ -1263,7 +1277,7 @@ function playEvents(events, fromDrag) {
       const p = slotPos(ev.slot);
       setTimeout(() => {
         el.classList.add('open');
-        el.querySelector('.ribbon').textContent = ev.t;
+        el.querySelector('.ribbon').textContent = topicName(ev.t);
         sfx('open');
         ring(p.x + CW / 2, p.y + CH / 2, { color: '#ffd84a', r1: 150 });
         sparkle(p.x + CW / 2, p.y + CH / 2, 12, { colors: ['#ffd84a', '#fff4a0'] });
@@ -1282,7 +1296,7 @@ function playEvents(events, fromDrag) {
         const o = { s: 1.5 };
         tween(o, { s: 1 }, { dur: 300, easing: ease.outBack, key: 'cnt' + ev.slot, onUpdate: () => { c.style.transform = `scale(${o.s})`; } });
         sparkle(p.x + CW / 2, p.y + 20, 6 + Math.min(12, step * 2));
-        if (step >= 3) floatText(`x${step}`, p.x + CW / 2, p.y - 60, step >= 5 ? '#ff9d3b' : '#ffe36b');
+        if (step >= 2) floatText(t('combo', { n: step }), p.x + CW / 2, p.y - 60, step >= 5 ? '#ff9d3b' : '#ffe36b');
         if (step === 3 && levelIdx + 1 >= 3) onceTip('combo');
         if (step > 0 && step % COMBO_MAX === 0) comboReward(p.x + CW / 2, p.y);
       }, late || (fromDrag ? 110 : 200));
@@ -1397,7 +1411,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   const sq = { s: 1 };
   tween(sq, { s: 0.92 }, { dur: 70, onUpdate: () => { e.s = 1.08 * sq.s; drawEnv(); } }).then(() =>
     tween(sq, { s: 1 }, { dur: 200, easing: ease.outBack, onUpdate: () => { e.s = 1.08 * sq.s; drawEnv(); } }));
-  floatText(topic, cx, p.y - 30, '#ffffff');
+  floatText(topicName(topic), cx, p.y - 30, '#ffffff');
   await wait(380);
   completing.delete(slot);
   // bay đi
@@ -1441,6 +1455,7 @@ function afterAction() {
     Promise.all(pending).then(() => wait(450)).then(same(outOfMoves));
     return;
   }
+  if (deferredIntro && S.used >= 6 && !panelOpen && !script) { deferredIntro = false; Promise.all(pending).then(() => wait(400)).then(same(() => featureIntro(true))); }
   if (canAutoFinish() && autoFinish(token)) return;
   if (isStuck()) {
     Promise.all(pending).then(() => wait(500)).then(same(() => {
@@ -1535,10 +1550,11 @@ async function winSequence() {
   if (token !== levelToken) return;
   const last = lv === LEVELS.length;
   panel({
-    title: last ? t('win_last') : t('win_title'),
+    title: last ? t('win_last') : st === 3 ? t('win_title') : st === 2 ? t('win_great') : t('win_ok'),
     radial: true,
     body: `<div class="stars"><i></i><i></i><i></i></div>
       <h3>${t('win_sub')}</h3><p>${t('level', { n: lv })}${S.moves === Infinity ? '' : ' · ' + t('moves_left', { n: S.moves })}</p>
+      ${L.moves != null && !overtime ? `<p style="font-size:26px;margin:0">${t('stars_hint')}</p>` : ''}
       ${last ? `<p>${t('win_end')}</p>` : ''}
       <div class="coins-line"><i></i><span>+${reward}</span></div>`,
     buttons: [
@@ -1603,11 +1619,11 @@ function addMoves(n, free = false, source = 'debug') {
 function fakeAd(done) {
   const p = panel({ title: t('ad_break'), body: '<p>(Mock rewarded ad)</p><p id="adc">2</p>', buttons: [] });
   let n = 2;
-  const t = setInterval(() => {
+  const timer = setInterval(() => {
     n--;
     const c = p.querySelector('#adc');
     if (c) c.textContent = n;
-    if (n <= 0) { clearInterval(t); closePanel(); done(); }
+    if (n <= 0) { clearInterval(timer); closePanel(); done(); }
   }, 700);
 }
 
@@ -1636,6 +1652,7 @@ async function startLevel(i) {
   lastMovesShown = null;
   lowWarned = false;
   tipGate = { used: -99, t: 0, count: 0 };
+  deferredIntro = false;
   overtime = false;
   jokerFree = false;
   movesEl.classList.remove('overtime');
@@ -1649,6 +1666,7 @@ async function startLevel(i) {
   clearHint();
   tut(null);
   $('home').classList.add('off');
+  updateHUD();
   const token = levelToken;
   const pre = (L.preplaced || []).flat();
   const allCards = [...L.columns.flat(), ...L.deck, ...pre];
@@ -1746,9 +1764,13 @@ function rulesHtml() {
 function showRules(onClose) {
   panel({ title: t('howto'), body: rulesHtml(), buttons: [{ label: t('got_it'), act: () => onClose && onClose() }] });
 }
-function featureIntro() {
+let deferredIntro = false;
+function featureIntro(force = false) {
   const u = L.unlock;
   if (!u || save.seen['unlock_' + u]) return Promise.resolve();
+  // Hint ở L2: đừng dồn ngay sau bảng luật; giới thiệu sau vài nước, lúc người chơi bắt đầu cần
+  if (u === 'hint' && !force) { deferredIntro = true; return Promise.resolve(); }
+  deferredIntro = false;
   save.seen['unlock_' + u] = 1;
   const icons = { hint: 'assets/ui/ic_hint.png', pack: 'assets/ui/ic_pack_big.png', stamper: 'assets/ui/ic_stamper.png', joker: 'assets/ui/joker_card.png' };
   const info = { title: t('booster', { name: t('b_' + u) }), icon: icons[u], text: t('bi_' + u), name: t('b_' + u) };
