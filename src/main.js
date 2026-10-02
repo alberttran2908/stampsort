@@ -1,11 +1,11 @@
-import { LEVELS } from './levels.js?v=6fdecba-1790964171';
-import * as E from './engine.js?v=6fdecba-1790964171';
-import { hint as solverHint, solve } from './solver.js?v=6fdecba-1790964171';
-import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=6fdecba-1790964171';
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=6fdecba-1790964171';
-import { candidateActions, isDeadlocked } from './solver.js?v=6fdecba-1790964171';
-import { track, events as allEvents, funnelSummary, clearEvents } from './analytics.js?v=6fdecba-1790964171';
-import { t, getLang, setLang, topicName } from './copy.js?v=6fdecba-1790964171';
+import { LEVELS } from './levels.js?v=7a3dbfe-1790966527';
+import * as E from './engine.js?v=7a3dbfe-1790966527';
+import { hint as solverHint, solve } from './solver.js?v=7a3dbfe-1790966527';
+import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=7a3dbfe-1790966527';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=7a3dbfe-1790966527';
+import { candidateActions, isDeadlocked } from './solver.js?v=7a3dbfe-1790966527';
+import { track, events as allEvents, funnelSummary, clearEvents } from './analytics.js?v=7a3dbfe-1790966527';
+import { t, getLang, setLang, topicName } from './copy.js?v=7a3dbfe-1790966527';
 
 // ============================================================ constants
 const CW = 165, CH = 214;
@@ -995,21 +995,30 @@ function onDown(e) {
   const v = cardEl._view;
   const loc = locate(v.id);
   if (!loc || (loc.from === 'col' && !E.runAt(S, loc.i, loc.idx))) {
-    // lá úp hoặc không nhấc được: rung nhẹ
-    if (loc && loc.from === 'col') { nudge([v]); if (!S.cols[loc.i][loc.idx].up) { toast(t('err_facedown'), 1400); teachOnError('facedown'); } }
+    // lá úp, hoặc lá bị tem khác loại đè lên: rung nhẹ và nói lý do
+    if (loc && loc.from === 'col') {
+      const col = S.cols[loc.i];
+      nudge(col.slice(loc.idx).map(c => views.get(c.id)));
+      if (!col[loc.idx].up) { toast(t('err_facedown'), 1400); teachOnError('facedown'); }
+      else { toast(t('err_mixed'), 1700); teachOnError('mixed'); }
+    }
     return;
   }
   clearHint();
+  // Các cách hiểu cú cầm, ưu tiên xấp lớn nhất: cầm lá nào trong xấp cùng loại cũng nhấc cả xấp.
+  // Khi thả/chạm, nếu cả xấp không hợp lệ (vd. đáy là tem vương miện mà thả lên tem) thì thử xấp nhỏ hơn, tới lá đang cầm.
+  const cands = [];
   if (loc.from === 'col') {
-    // cầm bất kỳ lá nào trong xấp cùng loại: nhấc cả xấp từ lá dưới cùng của xấp (không nhấc Joker trừ khi cầm đúng Joker)
     const col = S.cols[loc.i];
     let start = E.maxRunStart(S, loc.i);
     if (col[start] && col[start].k === E.JOKER && col[loc.idx].k !== E.JOKER) start++;
-    if (start >= 0 && start < loc.idx) loc.idx = start;
-  }
-  const run = E.sourceCards(S, loc);
+    for (let s0 = Math.min(start, loc.idx); s0 <= loc.idx; s0++) if (E.runAt(S, loc.i, s0)) cands.push({ from: 'col', i: loc.i, idx: s0 });
+  } else cands.push(loc);
+  const src0 = cands[0];
+  const run = E.sourceCards(S, src0);
   const vs = run.map(c => views.get(c.id));
-  drag = { src: loc, vs, start: p, last: p, t0: performance.now(), moved: false, offs: vs.map(w => ({ x: w.x - p.x, y: w.y - p.y })), vx: 0, pid: e.pointerId };
+  const grabK = Math.max(0, run.findIndex(c => c.id === v.id));
+  drag = { src: src0, cands, vs, grabK, start: p, last: p, t0: performance.now(), moved: false, offs: vs.map(w => ({ x: w.x - p.x, y: w.y - p.y })), vx: 0, pid: e.pointerId };
   try { board.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
 }
 function onMove(e) {
@@ -1031,7 +1040,7 @@ function onMove(e) {
       setZ(v, 5000 + k);
       tween(v, { s: 1.07 }, { dur: 120, key: 'lift-' + v.id, onUpdate: applyTransform });
     });
-    highlightTargets(drag.src);
+    highlightTargets(drag.cands);
   }
   if (!drag.moved) return;
   const vx = p.x - drag.last.x;
@@ -1039,12 +1048,12 @@ function onMove(e) {
   drag.last = p;
   const tilt = Math.max(-10, Math.min(10, drag.vx * 0.6));
   drag.vs.forEach((v, k) => {
-    // lá sau đuổi theo lá trước: cảm giác chồng mềm
-    const lag = k * 0.18;
+    // lá đang cầm bám sát ngón tay, lá càng xa lá đang cầm càng trễ: cảm giác chồng mềm
+    const lag = Math.min(0.5, Math.abs(k - drag.grabK) * 0.12);
     const tx = p.x + drag.offs[k].x, ty = p.y + drag.offs[k].y;
     v.x += (tx - v.x) * (1 - lag);
     v.y += (ty - v.y) * (1 - lag);
-    v.r = tilt * (1 - k * 0.15);
+    v.r = tilt * (1 - Math.abs(k - drag.grabK) * 0.12);
     applyTransform(v);
   });
 }
@@ -1061,22 +1070,39 @@ function onUp(e) {
       if (a && !a.draw && scriptAllows(d.src, a.dst)) doMove(d.src, a.dst, false); else scriptReject(d.vs);
       return;
     }
-    const dst = E.bestTargetFor(S, d.src);
-    if (dst) doMove(d.src, dst, false);
+    const pick = bestTapFor(d.cands);
+    if (pick) doMove(pick.src, pick.dst, false);
     else rejectTap(d.src, d.vs);
     return;
   }
   const p = toStage(e);
-  const dst = dropTarget(d.src, p, d.vs[0]);
+  let pick = null;
+  for (const src of d.cands) {
+    const v0 = views.get(E.sourceCards(S, src)[0].id);
+    const dst = dropTarget(src, p, v0);
+    if (dst) { pick = { src, dst }; break; }
+  }
   d.vs.forEach(v => { v.lifted = false; v.el.classList.remove('lift'); });
-  if (dst) doMove(d.src, dst, true);
+  if (pick) doMove(pick.src, pick.dst, true);
   else {
-    const why = scriptStep() ? t('follow') : dropReason(d.src, p);
+    const why = scriptStep() ? t('follow') : dropReason(d.cands[d.cands.length - 1], p);   // lý do theo lá đang cầm
     if (why) { toast(why, 1600); if (!scriptStep()) teachOnError('drop'); }
     sfx('close', { vol: 0.5 });
     const T = computeLayout();
     d.vs.forEach(v => { moveView(v, T.get(v.id), { dur: 260, easing: ease.outBackSoft }).then(() => setZ(v, T.get(v.id).z)); });
   }
+}
+/** Chạm: thử từ xấp lớn nhất. Ưu tiên đích "có ích" (vào ô, ghép lên tem cùng loại) hơn là dời sang cột trống. */
+function bestTapFor(cands) {
+  let fallback = null;
+  for (const src of cands) {
+    const dst = E.bestTargetFor(S, src);
+    if (!dst) continue;
+    const useful = dst.to === 'found' || (S.cols[dst.j].length && S.cols[dst.j][S.cols[dst.j].length - 1].k !== E.JOKER);
+    if (useful) return { src, dst };
+    if (!fallback) fallback = { src, dst };
+  }
+  return fallback;
 }
 function allTargets(src) {
   const out = [];
@@ -1092,16 +1118,20 @@ function targetRect(dst) {
   return { x: colX(dst.j) - 22, y: TAB_Y - 60, w: CW + 44, h: bottom - TAB_Y + 60 };
 }
 function dropTarget(src, p, v0) {
+  // Người chơi nhắm bằng NGÓN TAY (lá đang cầm). Chỉ khi ngón tay không nằm trên đích nào mới xét tới lá dưới cùng của xấp.
   const c = { x: v0.x + CW / 2, y: v0.y + CH / 2 };
-  let best = null, bd = Infinity;
-  for (const dst of allTargets(src)) {
-    const r = targetRect(dst);
-    const inside = q => q.x >= r.x && q.x <= r.x + r.w && q.y >= r.y && q.y <= r.y + r.h;
-    if (!inside(p) && !inside(c)) continue;
-    const d = Math.hypot(r.x + r.w / 2 - c.x, r.y + Math.min(r.h, CH) / 2 - c.y);
-    if (d < bd) { bd = d; best = dst; }
+  const targets = allTargets(src);
+  for (const q of [p, c]) {
+    let best = null, bd = Infinity;
+    for (const dst of targets) {
+      const r = targetRect(dst);
+      if (q.x < r.x || q.x > r.x + r.w || q.y < r.y || q.y > r.y + r.h) continue;
+      const d = Math.hypot(r.x + r.w / 2 - q.x, r.y + Math.min(r.h, CH) / 2 - q.y);
+      if (d < bd) { bd = d; best = dst; }
+    }
+    if (best) return best;
   }
-  return best;
+  return null;
 }
 function dropReason(src, p) {
   const run = E.sourceCards(S, src);
@@ -1176,8 +1206,8 @@ function nudge(vs) {
       .then(() => { v.ox = 0; applyTransform(v); });
   });
 }
-function highlightTargets(src) {
-  for (const dst of allTargets(src)) {
+function highlightTargets(cands) {
+  for (const dst of cands.flatMap(allTargets)) {
     if (dst.to === 'found') slotEl(dst.i).classList.add('target');
     else {
       const col = S.cols[dst.j];
@@ -1885,7 +1915,13 @@ async function autoplay(stepMs = 380) {
     await wait(stepMs);
   }
 }
-window.__game = { get S() { return S; }, get level() { return levelIdx + 1; }, startLevel, autoplay, doMove, onDeck, E, goHome };
+window.__game = { get S() { return S; }, get level() { return levelIdx + 1; }, startLevel, autoplay, doMove, onDeck, E, goHome,
+  // cho harness test kéo thả (tests/naive-drag.browser.js)
+  geo: () => ({ CW, CH, TAB_Y, scale, stageLeft, stageTop, slots: S.found.map((_, k) => slotPos(k)), cols: S.cols.map((_, i) => colX(i)) }),
+  layout: () => computeLayout(), views: () => views,
+  setState(s2) { S = s2; undoStack = []; clearHint(); tut(null); relayout({ dur: 0 }); updateSlotLabels(); updateHUD(); updateDeckUI(); },
+  get toastText() { const el = $('toast'); return el && el.classList.contains('on') ? el.textContent : ''; },
+  get busy() { return !!(drag || busyInput || panelOpen || ended || completing.size); } };
 
 // ============================================================ boot
 function applyStaticCopy() {
