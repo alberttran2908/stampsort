@@ -193,9 +193,15 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .btn:active{transform:translateY(5px) scale(.98)}
 .btn.off{opacity:.55}
 .btn small{font-size:30px;opacity:.95}
+.btn i{display:inline-block;width:46px;height:46px;vertical-align:-10px;background:url(assets/ui/tem_diem.png) center/contain no-repeat}
 .stars{display:flex;justify-content:center;gap:24px;margin:0 0 20px;height:130px}
-.stars i{width:130px;height:120px;background:url(assets/ui/star.png) center/contain no-repeat;filter:grayscale(1) brightness(.75);opacity:.5;transform:scale(.6)}
-.stars i.on{filter:none;opacity:1;animation:starpop .45s cubic-bezier(.3,1.8,.5,1) forwards}
+.stars i{width:130px;height:130px;background:url(assets/ui/tem_diem.png) center/contain no-repeat;filter:grayscale(1) brightness(1.1);opacity:.28;transform:scale(.8)}
+.stars i.on{filter:none;opacity:1;animation:stampin .32s cubic-bezier(.5,0,.6,1.4) forwards}
+.stars i:nth-child(1).on{--r:-8deg}.stars i:nth-child(3).on{--r:7deg}
+/* Tem Điểm đóng xuống như con dấu: to, nghiêng, rồi đập xuống */
+@keyframes stampin{0%{transform:scale(2.4) rotate(-18deg);opacity:0}70%{transform:scale(.9) rotate(var(--r,0deg));opacity:1}100%{transform:scale(1) rotate(var(--r,0deg));opacity:1}}
+.pts-line{font-size:38px;color:#7a5238;margin:-6px 0 6px}
+.pts-line i{display:inline-block;width:48px;height:48px;vertical-align:-10px;background:url(assets/ui/tem_diem.png) center/contain no-repeat}
 .stars i:nth-child(2){margin-top:-30px}
 @keyframes starpop{0%{transform:scale(2.2) rotate(-25deg);opacity:0}100%{transform:scale(1);opacity:1}}
 .coins-line{font-size:48px;display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
@@ -220,12 +226,28 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .lvl:nth-child(2n){background-image:url(assets/ui/face_5.png)}
 .lvl:nth-child(3n){background-image:url(assets/ui/face_4.png)}
 .lvl.locked{background-image:url(assets/ui/back.png);color:rgba(90,58,38,.55);cursor:default}
-.lvl.done::after{content:'';position:absolute;right:-12px;top:-12px;width:54px;height:50px;background:url(assets/ui/star.png) center/contain no-repeat}
+.lvl .pts{position:absolute;left:0;right:0;bottom:-16px;display:flex;justify-content:center;gap:2px}
+.lvl .pts i{width:42px;height:42px;background:url(assets/ui/tem_diem.png) center/contain no-repeat}
 .lvl.cur{animation:pulse 1.2s ease-in-out infinite}
 .home .play{position:absolute;left:0;right:0;width:440px;margin:0 auto;text-align:center;top:calc(1640px + var(--bot,0px))}  /* nút Play trên kệ, vùng ngón cái */
 .home .foot{position:absolute;bottom:40px;font-size:24px;opacity:.85;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
 /* ---------- album tem ---------- */
-.home .album-btn{position:absolute;left:0;right:0;width:360px;margin:0 auto;text-align:center;font-size:40px;top:calc(1480px + var(--bot,0px))}
+.home .album-btn,.home .decor-btn{position:absolute;min-width:0;width:300px;padding:0 8px;white-space:nowrap;margin:0;text-align:center;font-size:38px;top:calc(1480px + var(--bot,0px))}
+.home .album-btn{left:208px}
+.home .decor-btn{left:528px}
+.home .decor-btn.ready{animation:pulse 1.2s ease-in-out infinite}
+/* ---------- Bưu điện nhỏ: decor đặt trên ảnh nền (nền neo đáy nên neo theo bottom, cờ dây neo theo đỉnh) ---------- */
+.decor{position:absolute;inset:0;pointer-events:none}
+.dc{position:absolute;transition:opacity .3s}
+.dc.ghost{filter:brightness(0);opacity:.1}
+.dc.new{animation:decorin .7s cubic-bezier(.3,1.6,.5,1)}
+@keyframes decorin{0%{transform:scale(.2) translateY(60px);opacity:0}100%{transform:none;opacity:1}}
+.dc-bunting{left:30px;width:1020px;top:calc(var(--hud,0px) + 6px)}
+.dc-frame{left:230px;width:200px;bottom:480px}
+.dc-clock{right:84px;width:176px;bottom:490px}
+.dc-board{left:462px;width:236px;bottom:476px}
+.dc-postbox{left:30px;width:160px;bottom:330px}
+.dc-cat{right:18px;width:200px;bottom:326px}
 .album{position:absolute;left:30px;right:30px;top:calc(40px + var(--hud,0px));bottom:30px;z-index:46;display:flex;flex-direction:column;align-items:center;
   border:60px solid transparent;border-image:url(assets/ui/panel.png) 110 fill / 64px stretch;color:var(--ink);transition:opacity .25s}
 .album.off{opacity:0;pointer-events:none}
@@ -271,10 +293,12 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
     <div class="btn" id="albumClose">Close</div>
   </div>
   <div class="home" id="home">
+    <div class="decor" id="decor"></div>
     <div class="logo"></div>
     <div class="grid" id="grid"></div>
     <div class="btn play" id="playBtn">Play</div>
     <div class="btn orange album-btn" id="albumBtn">Album</div>
+    <div class="btn decor-btn" id="decorBtn">Decorate</div>
     <div class="foot">Prototype</div>
   </div>
 </div>

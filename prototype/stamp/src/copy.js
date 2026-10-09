@@ -80,7 +80,11 @@ const STR = {
     paused: 'Paused', resume: 'Resume', restart: 'Restart', sound_on: 'Sound: On', sound_off: 'Sound: Off', lang: 'Language: English',
     extra_title: 'Extra Slot', extra_body: 'One more slot for this level.', free_ad: 'Free <small>(ad)</small>', coins: '{n} coins', close: 'Close',
     play: 'Play  Level {n}', ad_break: 'Ad Break',
-    win_great: 'Great!', win_ok: 'Well done!', stars_hint: 'More moves left = more ★', extra_label: '+1 slot', b_undo_icon: '↶',
+    win_great: 'Great!', win_ok: 'Well done!', stars_hint: 'More moves left = more Stamp Points',
+    pts_name: 'Stamp Points', pts_gain: '+{n} <i></i> Stamp Points', pts_best: 'Best: {n} <i></i>', pts_have: 'You have {n} <i></i>',
+    pts_need: 'Need {n} more. Replay a level with more moves left.', decorate: 'Decorate', decor_place: 'Place · {n} <i></i>',
+    decor_done: 'Your little post office is all set. More decor in chapter 2!',
+    decor_bunting: 'Bunting', decor_frame: 'Stamp frame', decor_clock: 'Wall clock', decor_postbox: 'Post box', decor_board: 'Notice board', decor_cat: 'Cat basket', extra_label: '+1 slot', b_undo_icon: '↶',
   },
   vi: {
     moves: 'NƯỚC', piles: '{done}/{total}', combo: 'Combo x{n}',
@@ -151,7 +155,11 @@ const STR = {
     paused: 'Tạm dừng', resume: 'Chơi tiếp', restart: 'Chơi lại', sound_on: 'Âm thanh: Bật', sound_off: 'Âm thanh: Tắt', lang: 'Ngôn ngữ: Tiếng Việt',
     extra_title: 'Ô phụ', extra_body: 'Thêm một ô cho level này.', free_ad: 'Miễn phí <small>(quảng cáo)</small>', coins: '{n} xu', close: 'Đóng',
     play: 'Chơi  Level {n}', ad_break: 'Quảng cáo',
-    win_great: 'Rất tốt!', win_ok: 'Hoàn thành!', stars_hint: 'Còn nhiều nước = nhiều ★', extra_label: '+1 ô', b_undo_icon: '↶',
+    win_great: 'Rất tốt!', win_ok: 'Hoàn thành!', stars_hint: 'Còn nhiều nước = nhiều Tem Điểm',
+    pts_name: 'Tem Điểm', pts_gain: '+{n} <i></i> Tem Điểm', pts_best: 'Cao nhất: {n} <i></i>', pts_have: 'Bạn có {n} <i></i>',
+    pts_need: 'Cần thêm {n}. Chơi lại một level, còn nhiều nước hơn.', decorate: 'Trang trí', decor_place: 'Đặt · {n} <i></i>',
+    decor_done: 'Bưu điện nhỏ đã trang trí xong. Chương 2 sẽ có thêm decor!',
+    decor_bunting: 'Cờ dây', decor_frame: 'Khung tem', decor_clock: 'Đồng hồ treo', decor_postbox: 'Hòm thư', decor_board: 'Bảng ghim', decor_cat: 'Giỏ mèo ngủ', extra_label: '+1 ô', b_undo_icon: '↶',
   },
 };
 

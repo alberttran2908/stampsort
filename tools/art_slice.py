@@ -5,6 +5,7 @@ Dùng:
   python3 tools/art_slice.py topic <slug> <grid.png>      # icon + tem của một chủ đề (theo research/art-redo/grid_map.json)
   python3 tools/art_slice.py ui <sheet.png> name1,name2,...   # lưới 3x3 các file UI (bỏ trống bằng "-")
   python3 tools/art_slice.py cards <sheet.png> fruit/0,ball/1,...   # lưới 3x3 tem lẻ của nhiều chủ đề
+  python3 tools/art_slice.py paths <sheet.png> -,decor/bunting,...   # đường dẫn tuỳ ý trong assets (decor cắt sát, cạnh dài 600)
 
 Ghi vào research/art-redo/out/... (bản xem trước) và, với --apply, ghi đè vào prototype/stamp/assets.
 Nền: nếu ảnh không trong suốt, xoá nền bằng flood-fill từ mép (màu gần màu góc).
@@ -144,8 +145,8 @@ def run(targets, grid_path, apply):
             continue
         rel = targets[k]
         old = os.path.join(ASSETS, rel)
-        if rel.startswith('cards/'):
-            out = tight(cell, 256)                    # tem/icon: game vẽ bằng object-fit:contain, chỉ cần cắt sát
+        if rel.startswith('cards/') or rel.startswith('decor/'):
+            out = tight(cell, 600 if rel.startswith('decor/') else 256)   # tem/icon/decor: CSS đặt theo chiều rộng, chỉ cần cắt sát
         else:
             size = Image.open(old).size if os.path.exists(old) else (256, 256)
             name = os.path.basename(rel)[:-4]
@@ -184,6 +185,9 @@ if __name__ == '__main__':
         targets = [f'cards/{slug}/{a}.png' for a in gm]
         if '--no-icon' in sys.argv:
             targets[0] = None                      # icon làm riêng bằng bảng icon
+    elif args[0] == 'paths':                         # paths <sheet.png> decor/clock,ui/tem_diem,...: đường dẫn trong assets (không .png)
+        grid = args[1]
+        targets = [None if n == '-' else f'{n}.png' for n in args[2].split(',')]
     elif args[0] == 'cards':                         # cards <sheet.png> fruit/0,ball/1,...: lưới tem lẻ của nhiều chủ đề
         grid = args[1]
         targets = [None if n == '-' else f'cards/{n}.png' for n in args[2].split(',')]

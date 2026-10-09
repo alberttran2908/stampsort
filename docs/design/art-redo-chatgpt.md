@@ -52,6 +52,8 @@ Cùng chat và style ref với các đợt trước. Ba lưới 3x3 (`research/a
 
 Nền level khó: tải nền ban ngày lên, yêu cầu vẽ lại cùng bố cục lúc buổi tối (`ui2/lpo_bg_evening.png`), rồi xử lý như nền ngày (crop 1080×1920, làm mờ họa tiết vùng chơi 60%) thành `assets/ui/bg_hard.jpg`.
 
+Decor "Bưu điện nhỏ" và icon Tem Điểm: một lưới (`gen/lpo_decor_a.png`), hàng 1 là cờ dây trải ngang. Cắt bằng `python3 tools/art_slice.py paths <lưới> -,decor/bunting,-,decor/frame,... --apply`. Hàng 2–3 dùng thêm `--fixed` vì khung tem dính với hòm thư. Cờ dây cắt lại ở độ phân giải gốc (1201 px) vì hiển thị rộng 1020 px.
+
 ## 6. Còn lại
 
 - ~~Âm thanh APK~~: đã thay bằng SFX tự tổng hợp (`tools/synth_sfx.py`, `prototype/stamp/sfx/`). `prototype/stamp/assets/` được commit, chỉ còn ignore `assets/audio/`.

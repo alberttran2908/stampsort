@@ -39,10 +39,15 @@
 > - **#15** `difficulty_report.mjs` có profile phổ thông biết dùng Magnet/Stamper khi kẹt. Hiện không level nào kẹt nên kết quả trùng profile thường.
 > - **#16 (phương án a, [GIẢ THUYẾT])** Hạ giá theo thu nhập: hint 150, Magnet/Stamper 250, Joker 500, ô phụ 400, +5 moves 300, Undo 30. Quà Joker ở L9: 2 → 1. Giữ "Claim x2".
 
-> **Trạng thái P2 (cập nhật cùng ngày):** đã làm 17–23, trừ phần "sao đổi thành Tem Điểm" của #19.
+> **Trạng thái P2 (cập nhật cùng ngày):** đã làm xong 17–23, gồm cả phần Tem Điểm thay sao của #19.
 > - **#17** Vẽ lại qua ChatGPT, cùng style ref: Fruit 6 tem và Ball 9 tem không còn mặt cười. Notes 7 tem thành đồ vật âm nhạc (hộp nhạc, máy đếm nhịp, tờ nhạc, đĩa than, băng cassette, máy hát, tai nghe), tên đổi thành "Music / Âm nhạc". Notes và Music Inst không bao giờ cùng một level nên không nhầm. Tàu chiến (Ship 1) → thuyền gỗ. Thỏ (Beast 14) → cáo. Chó đốm và bò (Zoo 5, 7) → ngựa vằn và hà mã. Giữ nguyên chỉ số art nên level không phải sinh lại. Cắt bằng `tools/art_slice.py cards`.
 > - **#18** Nền level khó `bg_hard.jpg` vẽ lại thành buổi tối cùng bố cục: trời tím có sao, đèn bàn đồng, tường xanh xám ấm. Bản cũ chỉ phủ màu tím bằng code. Chữ đếm thư cạnh thanh tiến độ chuyển sang màu sáng ở level khó.
-> - **#19** Thắng L10 lần đầu thì hiện popup "Chapter complete" (+200 xu, một lần duy nhất), có nút "Open album". Trang album ở màn hình chính liệt kê theo chủ đề: ô tem đã gửi hiện art, ô chưa gửi để trống. Tem được ghi vào album lúc phong bì bay đi. Có sự kiện `album_open`. **Chưa làm:** đổi sao thành Tem Điểm.
+> - **#19** Thắng L10 lần đầu thì hiện popup "Chapter complete" (+200 xu, một lần duy nhất), có nút "Open album". Trang album ở màn hình chính liệt kê theo chủ đề: ô tem đã gửi hiện art, ô chưa gửi để trống. Tem được ghi vào album lúc phong bì bay đi. Có sự kiện `album_open`.
+>   - **Tem Điểm thay sao** (làm theo `gdd-core.md` mục 5 và `concept-little-post-office.md` mục 5):
+>     - Mỗi lần thắng được 1–3 Tem Điểm, cách tính theo slack giữ nguyên như sao. Icon là con tem vàng có dấu bưu điện đỏ, "đóng cộp" xuống ở màn thắng kèm tiếng con dấu.
+>     - Tổng kiếm được bằng tổng điểm cao nhất của từng level. Chơi lại chỉ được phần vượt điểm cũ ("+1 Stamp Points" hoặc "Best: 3"). Ô level ở màn hình chính hiện 1–3 Tem Điểm nhỏ.
+>     - **Bưu điện nhỏ:** 6 decor ở màn hình chính, mở lần lượt qua nút "Decorate n": cờ dây 2, khung tem 3, đồng hồ treo 4, hòm thư 4, bảng ghim 5, giỏ mèo ngủ 6. Tổng 24 trên tối đa 30 của chương 1 `[GIẢ THUYẾT]`. Món kế tiếp hiện bóng mờ đúng chỗ sẽ đặt. Decor không cho perk gameplay.
+>     - Sự kiện: `points_earned`, `decor_open`, `decor_place`. Art vẽ qua ChatGPT (`assets/decor/`, `assets/ui/tem_diem.png`).
 > - **#20** Lật ra lá vương miện có vòng sáng, lấp lánh và tiếng "open" cao hơn. Dọn sạch cột có lấp lánh, và 3 lần đầu hiện chữ "Column free!".
 > - **#21** L1 ẩn khay ô phụ. Thanh booster chỉ hiện booster khoá kế tiếp (ghi "Lv 7"), các booster khoá sau đó ẩn.
 > - **#22** 33 SFX tự tổng hợp (`tools/synth_sfx.py`, chỉ dùng sine và nhiễu lọc, không có sample ngoài). Tông bưu điện: tiếng giấy, tiếng đóng dấu, chuông nhỏ, mộc cầm ngũ cung cho combo. Lưu ở `prototype/stamp/sfx/` và được commit. Game không còn tải `assets/audio` (APK). Bản build bỏ thư mục này. Art trong `prototype/stamp/assets/` đã vẽ lại hết nên bỏ gitignore, chỉ còn ignore `assets/audio/`. **Chưa có nhạc nền.** Âm thanh mới chưa được nghe thử bằng tai, chỉ kiểm tra bằng ảnh phổ, cần người nghe duyệt.
