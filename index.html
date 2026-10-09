@@ -3,29 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#1f7a3c">
+<meta name="theme-color" content="#cfe7dc">
 <title>Stamp Sort Prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
 <style>
 :root{
-  --felt:#23843f; --felt-dark:#155f2b; --ink:#4a2a1a; --cream:#fff6e6; --gold:#ffcf3f;
-  --red:#e2453c; --green:#3cc04a; --shadow:rgba(0,0,0,.28);
+  --felt:#23843f; --felt-dark:#155f2b; --ink:#5a3a26; --cream:#fff8ea; --gold:#ffcf3f;
+  --red:#d9473d; --green:#3cc04a; --shadow:rgba(0,0,0,.28); --blue:#3f8fd8; --mint:#cfe7dc;
   --font:'Lilita One', 'Arial Rounded MT Bold', system-ui, sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden;background:var(--felt-dark);touch-action:none;
+html,body{margin:0;height:100%;overflow:hidden;background:var(--mint);touch-action:none;
   font-family:var(--font);color:#fff;user-select:none;-webkit-user-select:none}
-body{background:radial-gradient(120% 80% at 50% 40%, #2a9447 0%, #1f7a3c 55%, #155f2b 100%)}
-#stage{position:absolute;left:0;top:0;width:1080px;height:1920px;transform-origin:0 0;overflow:hidden}
+body{background:#cfe7dc}
+/* Concept B "cửa sổ bưu điện": nền tường pastel + kệ gỗ (ảnh vẽ sẵn, không gradient runtime) */
+#stage{position:absolute;left:0;top:0;width:1080px;height:1920px;transform-origin:0 0;overflow:hidden;
+  background:#d1d9c3 url(assets/ui/bg_game.jpg) center bottom/1080px 1920px no-repeat;color:var(--ink)}
+#stage::before{content:'';position:absolute;left:0;right:0;top:var(--extra,0px);height:min(320px, calc(var(--extra,0px) * 3));
+  background:linear-gradient(#d1d9c3,rgba(209,217,195,0));pointer-events:none}
+body.hard #stage{background-color:#b0a0a8;background-image:url(assets/ui/bg_hard.jpg)}
+body.hard #stage::before{background:linear-gradient(#b0a0a8,rgba(176,160,168,0))}
 #board,#ui,#fx,#overlay{position:absolute;inset:0}
+#fx{height:100%}
 #board{z-index:1}
 #fx{z-index:5;pointer-events:none;width:1080px;height:1920px}
 #ui{z-index:6;pointer-events:none}
 #ui > *{pointer-events:auto}
 #overlay{z-index:10;pointer-events:none}
-.felt-noise{position:absolute;inset:0;opacity:.07;pointer-events:none;
+.felt-noise{display:none;position:absolute;inset:0;opacity:.07;pointer-events:none;
   background-image:repeating-radial-gradient(circle at 17% 32%, #000 0 1px, transparent 1px 4px),
   repeating-radial-gradient(circle at 71% 64%, #fff 0 1px, transparent 1px 5px)}
 
@@ -46,9 +53,9 @@ body{background:radial-gradient(120% 80% at 50% 40%, #2a9447 0%, #1f7a3c 55%, #1
 .card.topic .front{background-image:url(assets/ui/topic_frame.png)}
 .card.topic .front .art{left:33px;top:51px;width:99px;height:99px}
 .card .crown{position:absolute;left:58px;top:-20px;width:50px;height:48px;background:url(assets/ui/crown.png) center/contain no-repeat}
-.card .tag{position:absolute;left:8px;right:8px;bottom:16px;text-align:center;font-size:23px;color:#8a4b12;
+.card .tag{position:absolute;left:8px;right:8px;bottom:14px;text-align:center;font-size:30px;color:#8a4b12;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px}
-.card .cnt{position:absolute;left:12px;top:13px;font-size:24px;color:#8a4b12}
+.card .cnt{position:absolute;left:12px;top:10px;font-size:30px;color:#8a4b12}
 .card.infound .crown,.card.infound .cnt{display:none}
 .card.joker .front{background-image:url(assets/ui/joker_card.png)}
 /* viền sáng: ảnh vẽ sẵn, chỉ animate opacity (compositor), không animate filter */
@@ -61,108 +68,125 @@ body{background:radial-gradient(120% 80% at 50% 40%, #2a9447 0%, #1f7a3c 55%, #1
 .lite .radial{animation:none}
 
 /* ---------- slots / zones ---------- */
-.slot{position:absolute;width:165px;height:214px;background:url(assets/ui/slot_empty.png) center/100% 100% no-repeat;opacity:.9}
-.slot .ribbon{position:absolute;left:-6px;right:-6px;top:-40px;height:38px;border-radius:10px 10px 4px 4px;
-  background:linear-gradient(#c9493b,#a8352a);box-shadow:0 3px 0 #7c2219;text-align:center;font-size:22px;line-height:38px;
-  color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 40px 0 6px;font-size:20px;transform-origin:50% 100%;
+.slot{position:absolute;width:165px;height:214px}
+/* khay gỗ: rộng hơn lá (lộ thành khay hai bên), thấp hơn lá (tem cắm đứng, nhô phần trên); mép trước là lớp .tray-front đè lên chân lá */
+.slot::before{content:'';position:absolute;left:-18px;top:30px;width:201px;height:194px;background:url(assets/ui/slot_tray.png) center/100% 100% no-repeat;pointer-events:none}
+.tray-front{position:absolute;left:-18px;top:175px;width:201px;height:49px;background:url(assets/ui/tray_front.png) center/100% 100% no-repeat;z-index:380;pointer-events:none}
+/* 5 khay: hẹp lại để không chồng lên nhau (bước 201) */
+#board.n5 .slot::before,#board.n5 .tray-front{left:-14px;width:193px}
+.slot .ribbon{position:absolute;left:-6px;right:-6px;top:-52px;height:48px;border-radius:12px 12px 4px 4px;
+  background:linear-gradient(#7a4a2c,#5e3820);box-shadow:0 3px 0 #3e2414;text-align:center;font-size:30px;line-height:48px;
+  color:#fff3dc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px;transform-origin:50% 100%;
   opacity:0;transform:scaleY(.2)}
 .slot.open .ribbon{opacity:1;transform:none;transition:transform .28s cubic-bezier(.3,1.6,.5,1),opacity .15s}
-.slot .count{position:absolute;right:-14px;top:-62px;min-width:54px;height:40px;border-radius:20px;background:#fff6e6;
-  color:#8a4b12;font-size:24px;line-height:40px;text-align:center;box-shadow:0 3px 0 #c9a77a;opacity:0}
+.slot .count{position:absolute;left:0;right:0;top:8px;height:34px;text-align:center;font-size:30px;line-height:34px;color:#4a2a12;opacity:0}
 .slot.open .count{opacity:1}
-.slot.locked{background-image:url(assets/ui/slot_empty.png);opacity:.8}
+.slot.locked::before,.slot.locked .tray-front{opacity:.5}
 /* ô trống: vương miện mờ = "ô này dành cho tem vương miện" (affordance, không cần chữ) */
-.slot:not(.open):not(.locked)::before{content:'';position:absolute;left:38px;top:58px;width:90px;height:86px;
-  background:url(assets/ui/crown.png) center/contain no-repeat;opacity:.3;pointer-events:none}
-.slot .lockicon{position:absolute;left:50px;top:60px;width:64px;height:78px;background:url(assets/ui/lock.png) center/contain no-repeat}
-.slot .plus{position:absolute;right:-18px;top:-18px;width:56px;height:56px;background:url(assets/ui/plus.png) center/contain no-repeat}
-.slot .lv{position:absolute;left:0;right:0;bottom:18px;text-align:center;font-size:22px;color:#e8ffe8;opacity:.9}
-.colzone{position:absolute;width:165px;height:214px;border-radius:14px;background:rgba(0,0,0,.14);
-  box-shadow:inset 0 0 0 3px rgba(255,255,255,.08)}
+/* khay đã có vương miện mờ trong ảnh (affordance "ô dành cho tem vương miện") */
+.slot .lockicon{position:absolute;left:52px;top:80px;width:60px;height:74px;background:url(assets/ui/lock.png) center/contain no-repeat;z-index:381}
+.slot .plus{position:absolute;right:-22px;top:16px;width:60px;height:60px;background:url(assets/ui/plus.png) center/contain no-repeat;z-index:381}
+.slot .lv{position:absolute;left:-14px;right:-14px;bottom:-4px;text-align:center;font-size:30px;color:var(--cream);z-index:382;text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
+.colzone{position:absolute;width:165px;height:214px;border-radius:16px;background:rgba(90,58,38,.06);
+  box-shadow:inset 0 0 0 3px rgba(90,58,38,.12)}
 .colzone.target{background:rgba(255,240,140,.22);box-shadow:inset 0 0 0 4px rgba(255,240,140,.6)}
 .deck-hit{position:absolute;width:185px;height:234px;cursor:pointer}
-.deck-count{position:absolute;min-width:56px;height:44px;border-radius:22px;background:#fff6e6;color:#8a4b12;font-size:28px;
-  line-height:44px;text-align:center;box-shadow:0 3px 0 #c9a77a;z-index:900}
-.recycle{position:absolute;width:165px;height:214px;border-radius:14px;background:rgba(0,0,0,.14);display:grid;place-items:center}
+.deck-count{position:absolute;width:128px;height:60px;padding-left:26px;background:url(assets/ui/deck_tag.png) center/100% 100% no-repeat;
+  color:var(--ink);font-size:36px;line-height:62px;text-align:center;z-index:900}
+.recycle{position:absolute;width:165px;height:214px;border-radius:16px;background:rgba(90,58,38,.06);box-shadow:inset 0 0 0 3px rgba(90,58,38,.12);display:grid;place-items:center}
 .recycle i{width:92px;height:92px;background:url(assets/ui/recycle.png) center/contain no-repeat;opacity:.95}
 
 /* ---------- HUD ---------- */
-.hud-moves{position:absolute;left:36px;top:34px;width:150px;height:158px;background:url(assets/ui/moves_box.png) center/100% 100% no-repeat}
-.hud-moves .lbl{position:absolute;left:0;right:0;top:10px;text-align:center;font-size:22px;color:#fff;letter-spacing:1px}
-.hud-moves .val{position:absolute;left:0;right:0;top:48px;text-align:center;font-size:66px;color:var(--ink)}
+.hud-moves{position:absolute;left:46px;top:calc(26px + var(--hud,0px));width:170px;height:184px;background:url(assets/ui/hud_moves.png) center/100% 100% no-repeat}
+.hud-moves .lbl{position:absolute;left:0;right:0;top:28px;text-align:center;font-size:30px;color:var(--red);letter-spacing:1px}
+.hud-moves .val{position:absolute;left:0;right:0;top:58px;text-align:center;font-size:74px;color:var(--ink)}
 .hud-moves.low .val{color:var(--red);animation:pulse .7s ease-in-out infinite}
 .hud-moves.overtime .val{color:var(--red);font-size:80px;top:38px}
-.hud-moves.overtime .lbl{color:#ffd0c8}
-body.hard{background:radial-gradient(120% 80% at 50% 40%, #8a3a52 0%, #5e2440 55%, #3d1530 100%)}
+.hud-moves.overtime .lbl{color:var(--red)}
+body.hard{background:#6a5a6c}
 .hard-pill{display:inline-block;margin-bottom:18px;padding:10px 34px;border-radius:26px;font-size:48px;letter-spacing:2px;
   background:linear-gradient(#ff6a4a,#d1342a);box-shadow:0 6px 0 #8e1f18;color:#fff}
 @keyframes pulse{50%{transform:scale(1.14)}}
-.hud-title{position:absolute;left:260px;right:260px;top:30px;text-align:center;font-size:54px;text-shadow:0 4px 0 rgba(0,0,0,.25)}
-.combo{position:absolute;left:350px;width:380px;top:104px;height:44px;border-radius:22px;background:rgba(0,0,0,.25);
-  box-shadow:inset 0 2px 0 rgba(0,0,0,.2);overflow:hidden}
-.combo .fill{position:absolute;left:0;top:0;bottom:0;width:100%;background:linear-gradient(90deg,#ffb53b,#ffe66b);transform-origin:0 50%;transform:scaleX(0);transition:transform .25s}
-.combo .txt{position:absolute;inset:0;text-align:center;font-size:26px;line-height:44px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.3)}
-.hud-coins{position:absolute;right:150px;top:44px;height:56px;padding:0 18px 0 62px;border-radius:28px;background:rgba(0,0,0,.25);
-  font-size:34px;line-height:56px}
+.hud-title{position:absolute;left:240px;width:500px;top:calc(32px + var(--hud,0px));height:86px;text-align:center;font-size:46px;line-height:80px;color:var(--ink);
+  border:28px solid transparent;border-image:url(assets/ui/banner.png) 60 fill / 30px stretch;padding:0;line-height:30px;
+  white-space:nowrap;overflow:hidden}
+.combo{position:absolute;left:262px;width:380px;top:calc(130px + var(--hud,0px));height:52px;border:24px solid transparent;
+  border-image:url(assets/ui/bar_track.png) 60 fill / 26px stretch}
+/* thanh tiến độ chia N đoạn = N lá thư cần gửi */
+.combo::after{content:'';position:absolute;left:-12px;right:-12px;top:-12px;bottom:-12px;border-radius:16px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100% / var(--segs,6) - 4px),rgba(90,58,38,.4) calc(100% / var(--segs,6) - 4px),rgba(90,58,38,.4) calc(100% / var(--segs,6)))}
+.combo .fill{position:absolute;left:-12px;right:-12px;top:-12px;bottom:-12px;border-radius:16px;background:linear-gradient(#8ccaf5,#3f8fd8);
+  transform-origin:0 50%;transform:scaleX(0);transition:transform .25s}
+.combo .txt{position:absolute;left:auto;right:-150px;width:126px;top:-22px;height:48px;text-align:left;font-size:34px;line-height:48px;color:var(--ink);padding-left:48px;
+  background:url(assets/ui/envelope_closed.png) left center/42px auto no-repeat;white-space:nowrap}
+.hud-coins{position:absolute;right:164px;top:calc(46px + var(--hud,0px));height:60px;padding:0 22px 0 66px;border-radius:30px;background:var(--cream);
+  border:4px solid var(--ink);box-shadow:0 4px 0 rgba(90,58,38,.25);font-size:34px;line-height:52px;color:var(--ink)}
 .hud-coins i{position:absolute;left:4px;top:4px;width:48px;height:48px;background:url(assets/ui/coin.png) center/contain no-repeat}
-.btn-round{position:absolute;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 50% 35%,#c9745a,#9b4b33);
-  box-shadow:0 6px 0 #6d2f1e, inset 0 -4px 0 rgba(0,0,0,.15);display:grid;place-items:center;cursor:pointer}
-.btn-round:active{transform:translateY(4px);box-shadow:0 2px 0 #6d2f1e}
+.btn-round{position:absolute;width:108px;height:108px;background:url(assets/ui/btn_pause.png) center/contain no-repeat;cursor:pointer}
+#pauseBtn{right:40px;top:calc(32px + var(--hud,0px))}
+/* vùng chạm >= 44pt (127px stage) dù hình nhỏ hơn */
+.btn-round::after,.btn-undo::after{content:'';position:absolute;inset:-14px}
+.btn-round:active{transform:scale(.92)}
+.btn-round .pause-ico{display:none}
 .pause-ico{width:36px;height:40px;display:flex;justify-content:space-between}
 .pause-ico b{width:12px;height:40px;border-radius:5px;background:#fff6e6}
-.boosters{position:absolute;left:60px;right:0;top:1705px;display:flex;justify-content:center;gap:34px}
-.booster{position:relative;width:168px;height:172px;background:url(assets/ui/booster_btn.png) center/100% 100% no-repeat;cursor:pointer;
+.boosters{position:absolute;left:216px;right:36px;top:calc(1690px + var(--bot,0px));display:flex;justify-content:space-between;gap:0}
+.booster{position:relative;width:164px;height:164px;background:url(assets/ui/token.png) center/100% 100% no-repeat;cursor:pointer;
   transition:transform .12s}
 .booster:active{transform:scale(.92)}
-.booster i{position:absolute;left:24px;top:20px;width:120px;height:120px;background:center/contain no-repeat}
-.booster .badge{position:absolute;right:-8px;top:-10px;min-width:52px;height:52px;border-radius:26px;background:var(--red);
-  font-size:30px;line-height:52px;text-align:center;box-shadow:0 3px 0 #9b2a23;padding:0 8px}
-.booster .badge.coin{background:#ffcf3f;color:#7a4a00;box-shadow:0 3px 0 #b88a14;font-size:24px}
-.booster .name{position:absolute;left:0;right:0;bottom:-40px;text-align:center;font-size:26px;text-shadow:0 2px 0 rgba(0,0,0,.3)}
-.booster.locked i{filter:grayscale(1) brightness(.6)}
-.booster.locked .lockbig{position:absolute;left:52px;top:36px;width:64px;height:78px;background:url(assets/ui/lock.png) center/contain no-repeat}
+.booster i{position:absolute;left:30px;top:28px;width:104px;height:104px;background:center/contain no-repeat}
+.booster .badge{position:absolute;right:-6px;top:-8px;min-width:56px;height:56px;border-radius:28px;background:var(--red);color:#fff;
+  border:4px solid var(--ink);font-size:32px;line-height:48px;text-align:center;padding:0 8px}
+.booster .badge.coin{background:#ffcf3f;color:var(--ink);font-size:22px}
+.booster .name{position:absolute;left:-14px;right:-14px;bottom:-46px;text-align:center;font-size:32px;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
+.booster.locked{opacity:.8}
+.booster.locked i{display:none}   /* không dùng filter (nặng trên GPU yếu), khoá ở giữa là đủ */
+.booster.locked .lockbig{position:absolute;left:50px;top:42px;width:64px;height:78px;background:url(assets/ui/lock.png) center/contain no-repeat}
 .booster.active{animation:pulse .8s ease-in-out infinite}
-.btn-undo{position:absolute;left:26px;top:1740px;width:112px;height:112px;border-radius:50%;cursor:pointer;
-  background:radial-gradient(circle at 50% 35%,#6fd0ff,#2f8fd6);box-shadow:0 6px 0 #1f5f94;transition:transform .12s,opacity .2s}
-.btn-undo:active{transform:translateY(4px);box-shadow:0 2px 0 #1f5f94}
-.btn-undo.off{opacity:.45}
-.btn-undo i{position:absolute;left:0;right:0;top:4px;text-align:center;font-style:normal;font-size:80px;line-height:100px;color:#fff;
-  text-shadow:0 4px 0 rgba(0,0,0,.25)}
-.btn-undo i::before{content:'\21B6'}
-.btn-undo .badge{position:absolute;right:-12px;top:-12px;min-width:46px;height:46px;border-radius:23px;background:var(--red);
-  font-size:26px;line-height:46px;text-align:center;box-shadow:0 3px 0 #9b2a23;padding:0 6px}
-.btn-undo .badge.coin{background:#ffcf3f;color:#7a4a00;box-shadow:0 3px 0 #b88a14;font-size:20px}
-.btn-undo .lbl{position:absolute;left:0;right:0;bottom:-36px;text-align:center;font-size:24px;text-shadow:0 2px 0 rgba(0,0,0,.3)}
+.btn-undo{position:absolute;left:36px;top:calc(1702px + var(--bot,0px));width:140px;height:140px;cursor:pointer;
+  background:url(assets/ui/btn_undo.png) center/contain no-repeat;transition:transform .12s,opacity .2s}
+.btn-undo:active{transform:scale(.92)}
+.btn-undo.off{background-image:url(assets/ui/btn_undo_off.png)}
+.btn-undo.off .badge{display:none}
+.btn-undo::before{content:'';position:absolute;left:calc(100% + 18px);top:14px;width:4px;height:120px;border-radius:2px;background:rgba(90,58,38,.35)}
+.btn-undo i{display:none}
+.btn-undo .badge{position:absolute;right:-8px;top:-8px;min-width:52px;height:52px;border-radius:26px;background:var(--red);color:#fff;
+  border:4px solid var(--ink);font-size:30px;line-height:44px;text-align:center;padding:0 6px}
+.btn-undo .badge.coin{background:#ffcf3f;color:var(--ink);font-size:20px}
+.btn-undo .lbl{position:absolute;left:-14px;right:-14px;bottom:-52px;text-align:center;font-size:32px;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
 
 /* ---------- toast / tutorial ---------- */
-.toast{position:absolute;left:120px;right:120px;top:1390px;padding:18px 24px;border-radius:22px;background:rgba(18,64,32,.92);
-  text-align:center;font-size:32px;line-height:1.25;opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none;z-index:20}
+.toast{position:absolute;left:100px;right:100px;top:calc(1390px + var(--bot,0px));padding:18px 24px;border-radius:24px;background:var(--cream);color:var(--ink);
+  border:4px solid var(--ink);box-shadow:0 5px 0 rgba(90,58,38,.25);
+  text-align:center;font-size:38px;line-height:1.25;opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none;z-index:20}
 .toast.on{opacity:1;transform:none}
-.toast em{font-style:normal;color:var(--gold)}
-.tut{position:absolute;left:90px;right:90px;top:1520px;padding:24px 30px;border-radius:26px;background:#155f2b;
-  border:4px solid rgba(255,255,255,.12);text-align:center;font-size:34px;line-height:1.3;opacity:0;transform:scale(.9);
+.toast em{font-style:normal;color:var(--red)}
+.tut{position:absolute;left:70px;right:70px;top:calc(1490px + var(--bot,0px));padding:8px 26px;color:var(--ink);
+  border:34px solid transparent;border-image:url(assets/ui/tipbox.png) 70 fill / 36px stretch;text-align:center;font-size:40px;line-height:1.25;opacity:0;transform:scale(.9);
   transition:.25s cubic-bezier(.3,1.5,.5,1);pointer-events:none;z-index:9}
 .tut.on{opacity:1;transform:none}
-.tut em{font-style:normal;color:var(--gold)}
+.tut em{font-style:normal;color:var(--red)}
 .hand{position:absolute;left:0;top:0;width:150px;height:170px;background:url(assets/ui/hand.png) center/contain no-repeat;
   z-index:9;pointer-events:none;opacity:0;transform-origin:20% 10%}
 
 /* ---------- panels ---------- */
-.scrim{position:absolute;inset:-1200px;background:rgba(6,30,14,.55);opacity:0;transition:opacity .25s;pointer-events:auto;z-index:30}
+.scrim{position:absolute;inset:-1200px;background:rgba(60,40,25,.5);opacity:0;transition:opacity .25s;pointer-events:auto;z-index:30}
 .scrim.on{opacity:1}
-.panel{position:absolute;left:120px;right:120px;top:520px;padding:120px 50px 60px;border-radius:44px;background:#fff6e6;
-  box-shadow:0 14px 0 #c9a77a,0 30px 60px rgba(0,0,0,.4);color:var(--ink);text-align:center;z-index:31;
+.panel{position:absolute;left:100px;right:100px;top:calc(480px + var(--mid,0px));padding:64px 10px 0;color:var(--ink);text-align:center;z-index:31;
+  border:60px solid transparent;border-image:url(assets/ui/panel.png) 110 fill / 64px stretch;
   transform:scale(.6);opacity:0;transition:transform .35s cubic-bezier(.3,1.6,.5,1),opacity .2s}
 .panel.on{transform:none;opacity:1}
-.panel .head{position:absolute;left:-40px;right:-40px;top:-60px;height:130px;background:url(assets/ui/header_win.png) center/100% 100% no-repeat;
-  font-size:56px;line-height:118px;color:#fff;text-shadow:0 4px 0 rgba(0,0,0,.25)}
+.panel .head{position:absolute;left:-110px;right:-110px;top:-140px;height:150px;background:url(assets/ui/ribbon.png) center/100% 100% no-repeat;
+  font-size:54px;line-height:124px;color:#fff;text-shadow:0 4px 0 rgba(120,30,20,.45)}
 .panel h3{margin:10px 0 24px;font-size:44px;font-weight:normal}
-.panel p{margin:10px 0;font-size:34px;line-height:1.35;color:#7a5238}
-.btn{display:inline-block;min-width:360px;margin:16px 10px 0;padding:26px 40px;border-radius:30px;font-size:44px;color:#fff;cursor:pointer;
-  background:linear-gradient(#5fd35a,#2fa83a);box-shadow:0 8px 0 #1f7a2a;text-shadow:0 3px 0 rgba(0,0,0,.2)}
-.btn.orange{background:linear-gradient(#ffb04a,#f07d1c);box-shadow:0 8px 0 #b3560a}
-.btn.brown{background:linear-gradient(#c9745a,#9b4b33);box-shadow:0 8px 0 #6d2f1e}
-.btn:active{transform:translateY(6px);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.panel p{margin:10px 0;font-size:38px;line-height:1.3;color:#7a5238}
+.panel p b{color:var(--ink)}
+.btn{display:inline-block;min-width:380px;margin:14px 10px 0;padding:0 24px;font-size:44px;line-height:56px;color:var(--ink);cursor:pointer;
+  border:34px solid transparent;border-width:34px 48px 40px;border-image:url(assets/ui/btn_yellow.png) 70 90 80 fill / 34px 48px 40px stretch}
+.btn.orange{border-image-source:url(assets/ui/btn_blue.png);color:#fff;text-shadow:0 3px 0 rgba(20,60,110,.45)}
+.btn.brown{border-image-source:url(assets/ui/banner.png);border-image-slice:60 fill;border-width:30px;padding:10px 40px;font-size:40px}
+.btn:active{transform:translateY(5px) scale(.98)}
+.btn.off{opacity:.55}
 .btn small{font-size:30px;opacity:.95}
 .stars{display:flex;justify-content:center;gap:24px;margin:0 0 20px;height:130px}
 .stars i{width:130px;height:120px;background:url(assets/ui/star.png) center/contain no-repeat;filter:grayscale(1) brightness(.75);opacity:.5;transform:scale(.6)}
@@ -177,20 +201,25 @@ body.hard{background:radial-gradient(120% 80% at 50% 40%, #8a3a52 0%, #5e2440 55
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ---------- home ---------- */
-.home{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;
-  background:radial-gradient(120% 80% at 50% 35%, #2a9447 0%, #1f7a3c 55%, #155f2b 100%);transition:opacity .35s}
+.home{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;color:var(--ink);padding-top:var(--hud,0px);
+  background:#d1d9c3 url(assets/ui/bg_game.jpg) center bottom/1080px 1920px no-repeat;transition:opacity .35s}
+.home::before{content:'';position:absolute;left:0;right:0;top:var(--extra,0px);height:min(320px, calc(var(--extra,0px) * 3));
+  background:linear-gradient(#d1d9c3,rgba(209,217,195,0));pointer-events:none}
 .home.off{opacity:0;pointer-events:none}
-.home .logo{width:760px;height:530px;margin-top:180px;background:url(assets/ui/logo.png) center/contain no-repeat;animation:bob 3s ease-in-out infinite}
+.home .logo{position:relative;width:760px;height:530px;margin-top:calc(150px + var(--mid,0px) * .5);background:url(assets/ui/logo.png) center/contain no-repeat;animation:bob 3s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-14px) rotate(-1deg)}}
-.home .grid{display:grid;grid-template-columns:repeat(5,150px);gap:28px;margin-top:80px}
-.lvl{height:150px;border-radius:30px;background:#fff6e6;color:var(--ink);font-size:60px;display:grid;place-items:center;
-  box-shadow:0 8px 0 #c9a77a;cursor:pointer;position:relative}
-.lvl.locked{background:#6a8f73;color:#3d5c45;box-shadow:0 8px 0 #3d5c45;cursor:default}
+/* nút level = con tem */
+.home .grid{position:relative;display:grid;grid-template-columns:repeat(5,140px);gap:30px 34px;margin-top:70px}
+.lvl{height:182px;background:url(assets/ui/face_3.png) center/100% 100% no-repeat;color:var(--ink);font-size:62px;display:grid;place-items:center;
+  cursor:pointer;position:relative}
+.lvl:nth-child(2n){background-image:url(assets/ui/face_5.png)}
+.lvl:nth-child(3n){background-image:url(assets/ui/face_4.png)}
+.lvl.locked{background-image:url(assets/ui/back.png);color:rgba(90,58,38,.55);cursor:default}
 .lvl.done::after{content:'';position:absolute;right:-12px;top:-12px;width:54px;height:50px;background:url(assets/ui/star.png) center/contain no-repeat}
 .lvl.cur{animation:pulse 1.2s ease-in-out infinite}
-.home .play{margin-top:90px}
-.home .foot{position:absolute;bottom:40px;font-size:26px;opacity:.6}
-.debug{position:absolute;left:8px;top:478px;flex-wrap:wrap;width:130px;display:none;flex-direction:column;gap:10px;z-index:50}
+.home .play{position:absolute;left:0;right:0;width:440px;margin:0 auto;text-align:center;top:calc(1640px + var(--bot,0px))}  /* nút Play trên kệ, vùng ngón cái */
+.home .foot{position:absolute;bottom:40px;font-size:24px;opacity:.85;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
+.debug{position:absolute;left:8px;top:calc(478px + var(--bd,0px));flex-wrap:wrap;width:130px;display:none;flex-direction:column;gap:10px;z-index:50}
 .debug.on{display:flex}
 .debug button{font:20px var(--font);padding:8px 10px;border:0;border-radius:14px;background:#0008;color:#fff}
 </style>
@@ -205,7 +234,7 @@ body.hard{background:radial-gradient(120% 80% at 50% 40%, #8a3a52 0%, #5e2440 55
     <div class="hud-title" id="title">Level 1</div>
     <div class="combo" id="combo"><div class="fill"></div><div class="txt"></div></div>
     <div class="hud-coins" id="coins"><i></i><span>0</span></div>
-    <div class="btn-round" id="pauseBtn" style="right:36px;top:34px"><div class="pause-ico"><b></b><b></b></div></div>
+    <div class="btn-round" id="pauseBtn"><div class="pause-ico"><b></b><b></b></div></div>
     <div class="boosters" id="boosters"></div>
     <div class="btn-undo" id="undoBtn"><i></i><div class="badge"></div><div class="lbl">Undo</div></div>
     <div class="debug" id="debug"></div>
@@ -221,6 +250,6 @@ body.hard{background:radial-gradient(120% 80% at 50% 40%, #8a3a52 0%, #5e2440 55
     <div class="foot">Prototype · âm thanh tạm từ APK tham khảo</div>
   </div>
 </div>
-<script type="module" src="src/main.js?v=a8f676a-1791561095"></script>
+<script type="module" src="src/main.js?v=5bacd69-1791566105"></script>
 </body>
 </html>
