@@ -50,7 +50,7 @@ Coin khởi đầu 500 (APK `CurrencyManager`). Thắng được 10 + 10 × sao,
 
 ## 4. Mười level
 
-Level 1-9 dựng lại từ video (thông số đọc bằng OCR 3124 frame với `tools/ocr_frames.swift` và xem frame): số ô, số cột, deck ban đầu, **moves đúng như video**, danh sách chủ đề và n. Chủ đề video không có art trong APK được thay bằng chủ đề gần nhất (Cow→Hoofed, Clock→Time, Animals→Beast, Music Note→Notes, Butterfly→Insect, Marine Animal→Sea life, Summer Trip→Float, Grill→Grilled, Pet Supplies→Pet Care). Level 2 trùng cấu trúc với level 2 trong APK. Thứ tự lá úp không thấy trong video, nên generator (`node tools/gen_proto_levels.mjs`) chọn seed có số move tối ưu của solver không quá 85-100% moves video và tỉ lệ thắng mô phỏng gần mục tiêu. Level 10 là finale riêng vì video dừng ở level 9.
+Level 1-9 dựng lại từ video (thông số đọc bằng OCR 3124 frame với `tools/ocr_frames.swift` và xem frame): số ô, số cột, deck ban đầu, **moves đúng như video**, danh sách chủ đề và n. Chủ đề video không có art trong APK được thay bằng chủ đề gần nhất (Cow→Hoofed, Clock→Time, Animals→Beast, Music Note→Notes, Butterfly→Insect, Marine Animal→Sea life, Summer Trip→Float, Grill→Grilled, Pet Supplies→Pet Care). Level 2 trùng cấu trúc với level 2 trong APK. Thứ tự lá úp không thấy trong video, nên generator (`node tools/gen_proto_levels.mjs`) chọn seed có số move tối ưu của solver không quá 85-100% moves video và tỉ lệ thắng mô phỏng gần mục tiêu. Từ 2026-10-10 "thắng mô phỏng" là tỉ lệ thắng trong moves của người chơi **phổ thông không nhìn trộm lá úp** (profile của `tools/difficulty_report.mjs`); số của các level chưa sinh lại vẫn theo cách đo cũ, xem bảng độ khó ở `difficulty-and-ua-milestones.md`. Level 10 là finale riêng vì video dừng ở level 9.
 
 | Level | Vai trò | Ô | Cột | Chủ đề | Lá | Deck | Move tối ưu | Moves | Moves video | Moves/tối ưu | Thắng mô phỏng | Ghi chú |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -58,9 +58,9 @@ Level 1-9 dựng lại từ video (thông số đọc bằng OCR 3124 frame vớ
 | 2 | teach | 3 | 3-4-5 | 6 | 30 | 18 | 48 | 66 | 66 | 1.38 | 1 | Mở Hint |
 | 3 | teach | 4 | 2-3-4-5 | 6 | 35 | 21 | 56 | 75 | 75 | 1.34 | 0.95 | 4 ô |
 | 4 | normal | 4 | 3-4-5-6 | 8 | 43 | 24 | 66 | 82 | 82 | 1.24 | 0.95 | Mở Pack (ô Dinosaur mở sẵn) |
-| 5 | **HARD** | 4 | 3-4-5-6 | 8 | 52 | 34 | 88 | 96 | 96 | 1.09 | 0.93 | Mốc UA 1, không thể thua (Overtime) |
+| 5 | **HARD** | 4 | 3-4-5-6 | 8 | 50 | 32 | 84 | 86 | 96 | 1.02 | 0.07 | Mốc UA 1, không thể thua (Overtime). Sinh lại 2026-10-10: kẹt 0%, bỏ xe buýt và diều cá mập |
 | 6 | normal | 4 | 3-4-5-6 | 7 | 40 | 22 | 62 | 76 | 76 | 1.23 | 0.91 |  |
-| 7 | normal | 4 | 3-4-5-6 | 7 | 45 | 26 | 70 | 80 | 80 | 1.14 | 0.81 | Mở Stamper (ô Sea life mở sẵn) |
+| 7 | normal | 4 | 3-4-5-6 | 7 | 43 | 24 | 67 | 79 | 80 | 1.18 | 1.0 | Mở Stamper (ô Sea life mở sẵn). 2026-10-10: Zoo → Cake, bỏ kính lặn và kính trượt tuyết |
 | 8 | normal | 4 | 3-4-5-7 | 7 | 41 | 22 | 64 | 75 | 75 | 1.17 | 0.82 |  |
 | 9 | wall | 4 | 3-4-5-6 | 8 | 48 | 30 | 79 | 110 | 110 | 1.39 | 0.53 | Mở Joker, dùng ngay |
 | 10 | **SUPER HARD** | 5 | 3-4-5-6-7 | 9 | 60 | 35 | 97 | 100 | - | 1.03 | 0.3 | Mốc UA 2, không thể thua (Overtime) |

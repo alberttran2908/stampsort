@@ -1,5 +1,5 @@
 {
- "runs": 40,
+ "runs": 30,
  "profiles": {
   "skilled": {
    "width": 4,
@@ -75,9 +75,9 @@
     "win": 1,
     "winPlus5": 1,
     "deadlock": 0,
-    "medianMoves": 52,
+    "medianMoves": 51,
     "attempts": 1,
-    "minutes": 2.8
+    "minutes": 2.7
    },
    "casual25": {
     "win": 1,
@@ -142,43 +142,43 @@
     "minutes": 3.8
    },
    "casual25": {
-    "win": 0.95,
+    "win": 0.93,
     "winPlus5": 1,
     "deadlock": 0,
-    "medianMoves": 73,
+    "medianMoves": 74,
     "attempts": 1.1,
-    "minutes": 4.6
+    "minutes": 4.7
    }
   },
   {
    "level": 5,
    "role": "hard",
    "special": "hard",
-   "budget": 96,
-   "solverMin": 88,
+   "budget": 86,
+   "solverMin": 84,
    "skilled": {
-    "win": 0.23,
-    "winPlus5": 0.23,
-    "deadlock": 0.65,
-    "medianMoves": 89,
-    "attempts": 4.4,
-    "minutes": 3.3
+    "win": 0.37,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 87,
+    "attempts": 2.7,
+    "minutes": 3.2
    },
    "casual10": {
-    "win": 0.13,
-    "winPlus5": 0.15,
-    "deadlock": 0.8,
-    "medianMoves": 93,
-    "attempts": 8,
-    "minutes": 5
+    "win": 0.07,
+    "winPlus5": 0.77,
+    "deadlock": 0,
+    "medianMoves": 89,
+    "attempts": 15,
+    "minutes": 4.7
    },
    "casual25": {
-    "win": 0.07,
-    "winPlus5": 0.1,
-    "deadlock": 0.78,
-    "medianMoves": 103,
-    "attempts": 13.3,
-    "minutes": 6.5
+    "win": 0,
+    "winPlus5": 0.37,
+    "deadlock": 0,
+    "medianMoves": 94,
+    "attempts": 20,
+    "minutes": 6
    }
   },
   {
@@ -205,42 +205,42 @@
    },
    "casual25": {
     "win": 0.9,
-    "winPlus5": 0.95,
+    "winPlus5": 0.97,
     "deadlock": 0,
-    "medianMoves": 68,
+    "medianMoves": 69,
     "attempts": 1.1,
-    "minutes": 4.3
+    "minutes": 4.4
    }
   },
   {
    "level": 7,
    "role": "normal",
    "special": "",
-   "budget": 80,
-   "solverMin": 71,
+   "budget": 79,
+   "solverMin": 67,
    "skilled": {
+    "win": 1,
+    "winPlus5": 1,
+    "deadlock": 0,
+    "medianMoves": 69,
+    "attempts": 1,
+    "minutes": 2.5
+   },
+   "casual10": {
     "win": 1,
     "winPlus5": 1,
     "deadlock": 0,
     "medianMoves": 72,
     "attempts": 1,
-    "minutes": 2.6
+    "minutes": 3.8
    },
-   "casual10": {
-    "win": 0.95,
+   "casual25": {
+    "win": 0.73,
     "winPlus5": 1,
     "deadlock": 0,
     "medianMoves": 77,
-    "attempts": 1.1,
-    "minutes": 4.1
-   },
-   "casual25": {
-    "win": 0.55,
-    "winPlus5": 1,
-    "deadlock": 0,
-    "medianMoves": 80,
-    "attempts": 1.8,
-    "minutes": 5.1
+    "attempts": 1.4,
+    "minutes": 4.9
    }
   },
   {
@@ -258,19 +258,19 @@
     "minutes": 2.5
    },
    "casual10": {
-    "win": 0.93,
+    "win": 1,
     "winPlus5": 1,
     "deadlock": 0,
     "medianMoves": 71,
-    "attempts": 1.1,
+    "attempts": 1,
     "minutes": 3.8
    },
    "casual25": {
-    "win": 0.85,
+    "win": 0.9,
     "winPlus5": 0.97,
     "deadlock": 0,
-    "medianMoves": 73,
-    "attempts": 1.2,
+    "medianMoves": 72,
+    "attempts": 1.1,
     "minutes": 4.6
    }
   },
@@ -292,12 +292,12 @@
     "win": 1,
     "winPlus5": 1,
     "deadlock": 0,
-    "medianMoves": 84,
+    "medianMoves": 85,
     "attempts": 1,
     "minutes": 4.5
    },
    "casual25": {
-    "win": 0.95,
+    "win": 0.93,
     "winPlus5": 0.97,
     "deadlock": 0.03,
     "medianMoves": 88,
@@ -321,10 +321,10 @@
    },
    "casual10": {
     "win": 0.13,
-    "winPlus5": 0.6,
+    "winPlus5": 0.57,
     "deadlock": 0,
     "medianMoves": 104,
-    "attempts": 8,
+    "attempts": 7.5,
     "minutes": 5.5
    },
    "casual25": {

@@ -33,7 +33,7 @@ Level 5 và 10 có cờ `special` trong `levels.js`. Khi vào level, banner đ�
 | `overtime` | Có | Hết moves thì không thua. Ô MOVES chuyển thành ∞ màu đỏ, hiện câu "Out of moves, but the post office stays open: keep going for free!". Thắng trong Overtime chỉ được 1 sao (phần thưởng ít hơn, người giỏi vẫn có lý do thắng trong số moves) |
 | `retry` | Để A/B | Hết moves thì hiện panel "So Close!" chỉ có nút chơi lại miễn phí và +5 moves qua ad. Không phạt, giữ Ô phụ đã mua |
 | `none` | Để A/B (nhóm đối chứng) | Như level thường |
-| Joker cứu trợ | Bật ở `overtime` và `retry` | Khi **kẹt cứng** (không còn nước có ích, kể cả khi deck còn bài) thì game tặng 1 Golden Stamp miễn phí và bật chế độ đặt. Moves vô hạn không cứu được thế kẹt này |
+| Cứu khi kẹt: Magnet trước, Joker sau | Bật ở `overtime` và `retry` | Khi **kẹt cứng** (không còn nước có ích, kể cả khi deck còn bài): nếu đã mở Magnet (từ L4) và còn ô có tem ẩn để hút thì tặng **1 Magnet** (mỗi lượt chơi 1 lần), kèm câu "Stuck? Here's a free Magnet" và bàn tay chỉ vào nút. Vẫn kẹt, hoặc không dùng được Magnet, thì tặng 1 Golden Stamp và bật chế độ đặt. Lý do: dùng booster người chơi đã được dạy, không đưa cơ chế lạ vào level khó (review game design 2026-10-10). Moves vô hạn không cứu được thế kẹt |
 | Gợi ý khi đứng im | Bật ở level khó | Đứng im 7 giây thì tự hiện gợi ý miễn phí |
 
 Cấu hình A/B qua URL (sau này qua Remote Config): `?hard=5,10&safety=overtime|retry|none`. Mọi sự kiện đều mang kèm `special` và `safety`, `app_open` mang `ab_hard` và `ab_safety`.
@@ -48,26 +48,28 @@ Người chơi mô phỏng **không nhìn trộm lá úp**: mỗi lượt nó đ
 - **Phí 10%:** người chơi phổ thông.
 - **Phí 25%:** người mới chơi.
 
-Mỗi level chạy 40 ván cho mỗi mức. **Biên moves** = (moves cho phép − số moves trung vị của người giỏi) / moves cho phép, tức người chơi được phí tối đa bấy nhiêu phần trăm mà vẫn thắng.
+Mỗi level chạy 30 ván cho mỗi mức. **Biên moves** = (moves cho phép − số moves trung vị của người giỏi) / moves cho phép, tức người chơi được phí tối đa bấy nhiêu phần trăm mà vẫn thắng.
 
 | Level | Vai trò | Moves | Tối ưu | Giỏi: trung vị | Biên moves | Giỏi: thắng | Giỏi: kẹt | 10% phí: thắng | 10% phí: kẹt | 25% phí: thắng | 25% phí: thắng nếu +5 | Phút/ván (10% phí) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | tutorial | inf | 23 | 23 | - | 100% | 0% | 100% | 0% | 100% | 100% | 1.3 |
-| 2 | teach | 66 | 48 | 50 | 24% | 100% | 0% | 100% | 0% | 100% | 100% | 2.8 |
+| 2 | teach | 66 | 48 | 50 | 24% | 100% | 0% | 100% | 0% | 100% | 100% | 2.7 |
 | 3 | teach | 75 | 56 | 59 | 21% | 100% | 0% | 100% | 0% | 100% | 100% | 3.3 |
-| 4 | normal | 82 | 66 | 68 | 17% | 100% | 0% | 100% | 0% | 95% | 100% | 3.8 |
-| 5 | HARD | 96 | 88 | 89 | 7% | 23% | 65% | 13% | 80% | 7% | 10% | 5 |
-| 6 | normal | 76 | 62 | 63 | 17% | 100% | 0% | 100% | 0% | 90% | 95% | 3.5 |
-| 7 | normal | 80 | 71 | 72 | 10% | 100% | 0% | 95% | 0% | 55% | 100% | 4.1 |
-| 8 | normal | 75 | 64 | 67 | 11% | 100% | 0% | 93% | 0% | 85% | 97% | 3.8 |
-| 9 | wall | 110 | 80 | 82 | 25% | 100% | 0% | 100% | 0% | 95% | 97% | 4.5 |
+| 4 | normal | 82 | 66 | 68 | 17% | 100% | 0% | 100% | 0% | 93% | 100% | 3.8 |
+| 5 | HARD | 86 | 84 | 87 | -1% | 37% | 0% | 7% | 0% | 0% | 37% | 4.7 |
+| 6 | normal | 76 | 62 | 63 | 17% | 100% | 0% | 100% | 0% | 90% | 97% | 3.5 |
+| 7 | normal | 79 | 67 | 69 | 13% | 100% | 0% | 100% | 0% | 73% | 100% | 3.8 |
+| 8 | normal | 75 | 64 | 67 | 11% | 100% | 0% | 100% | 0% | 90% | 97% | 3.8 |
+| 9 | wall | 110 | 80 | 82 | 25% | 100% | 0% | 100% | 0% | 93% | 97% | 4.5 |
 | 10 | SUPERHARD | 100 | 98 | 101 | -1% | 47% | 0% | 13% | 0% | 0% | 23% | 5.5 |
+
+*Cập nhật 2026-10-10 sau khi sinh lại L5 và L7 (xem mục 6).*
 
 **Đọc kết quả:**
 
 - **Level 2–4** dễ, biên 17–24%. Đúng vai trò dạy luật.
-- **Level 5 (HARD)** đúng chất mốc lọc. Biên chỉ 7%, và 65–80% số ván rơi vào kẹt cứng. Gần như mọi người chơi sẽ hết moves hoặc kẹt, rồi được Overtime hoặc Joker cứu trợ đưa tới đích.
-- **Level 7–8** là nhịp khó vừa. Người mới chơi thắng 55–85%, cần +5 moves.
+- **Level 5 (HARD)** sau khi sinh lại: biên −1%, **kẹt 0%** ở mọi mức. Người giỏi thắng 37% trong moves, phổ thông 7%, nên đa số hết moves khi gần xong rồi vào Overtime. Bản cũ khó sai cách: 65–80% số ván kẹt cứng, phải tặng Joker chưa được dạy.
+- **Level 7–8** là nhịp khó vừa. L7 đã bỏ các tem dễ nhầm (Zoo, kính lặn, kính trượt tuyết) và nới lên 79 moves: người mới thắng khoảng 73–80%. L8 người mới thắng 90%.
 - **Level 9** thực tế dễ, biên 25%, vì có Joker. Nhãn "wall" không còn đúng. Hợp lý khi để level dạy Joker là phần thưởng sau level 8.
 - **Level 10 (SUPER HARD)** có biên âm. Ngay cả người giỏi cũng chỉ thắng 47% trong 100 moves.
 - Đường cong răng cưa: dễ → **khó (L5)** → hồi → khó vừa (L7–8) → dễ (L9) → **siêu khó (L10)**.
@@ -87,6 +89,7 @@ Sự kiện ghi trong `localStorage` (`stampsort_events_v1`). Có SDK AppsFlyer 
 | `level_stuck` | level, attempt, delivered, total, moves_left |
 | `level_quit` | level, attempt, moves_used, delivered, total, time_s |
 | `overtime_start` | level, attempt, delivered, total, topics_left |
+| `rescue_magnet` | level, attempt, delivered, total |
 | `rescue_joker` | level, attempt, delivered, total |
 | `continue_moves` | level, attempt, source (ad/coins), amount |
 | `booster_use` | level, type, paid |
@@ -102,3 +105,11 @@ Sự kiện ghi trong `localStorage` (`stampsort_events_v1`). Có SDK AppsFlyer 
 | Thời gian tới L5, trung vị | 12–20 phút |
 
 **A/B:** chạy 3 nhánh `safety=overtime` / `retry` / `none`. So sánh tỉ lệ hoàn thành L5 và L10, D1 retention, độ dài phiên, và chất lượng người dùng đến từ campaign tối ưu theo `milestone_level_5`.
+
+## 6. Thay đổi 2026-10-10 (theo review game design)
+
+- **Generator đo bằng người chơi không nhìn trộm.** `tools/gen_proto_levels.mjs` chọn seed bằng `sampleHidden`, profile phổ thông (giống bảng trên), cho cả ngưỡng kẹt (`MAX_FAIL`) lẫn tỉ lệ thắng mục tiêu. Trước đây generator dùng solver nhìn được lá úp, nên ghi L5 "thắng 0.93" trong khi người chơi phổ thông thực tế chỉ thắng 13%.
+- **L5 sinh lại theo khuôn L10.** 86 moves (khoảng cho phép 84–96), kẹt 0%. Bỏ tem xe buýt 2 tầng (Truck, nhầm với Train) và diều cá mập (Kite): Truck còn 3 tem, Kite còn 4.
+- **L7.** Zoo đổi thành Cake. Glasses 8 → 6, bỏ kính trượt tuyết và kính lặn. Moves 80 → 79.
+- **Sao** tính theo phần moves dư so với tối ưu: slack = moves − tối ưu; 3★ nếu còn ≥ 50% slack, 2★ nếu ≥ 20%. Luật cũ (còn ≥ 25% ngân sách) gần như không ai đạt 3★.
+- **Cứu khi kẹt:** Magnet trước, Joker sau (mục 3).

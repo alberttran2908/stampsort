@@ -17,6 +17,16 @@
 
 ---
 
+> **Trạng thái (cập nhật cùng ngày):** đã làm xong 6 việc P0.
+> - Generator dùng `sampleHidden`.
+> - L5 sinh lại: 86 moves, kẹt 0%.
+> - Cứu khi kẹt: Magnet trước, Joker sau.
+> - L7: Zoo → Cake, bỏ kính lặn và kính trượt tuyết, 79 moves.
+> - Sao tính theo slack.
+> - Lá to hơn khi level có ≤ 4 cột: CK = 184/165.
+>
+> Số liệu mới ở `difficulty-and-ua-milestones.md` mục 4 và 6. Câu hỏi mở "solverHint có đọc lá úp không": **có**, Hint gọi `solve()` trên trạng thái thật, nên gợi ý đang biết trước bài.
+
 ## 0. Tóm tắt cho người bận
 
 1. **Core loop và gamefeel đã tốt.** Người chơi mô phỏng mức "giỏi" khớp với video gốc gần như từng level, sai lệch chỉ 1–3 moves `[DATA]` so với `[VIDEO]`. Juice cho lúc gửi phong bì đã đủ. Prototype đạt mục tiêu "dựng lại baseline ABI".

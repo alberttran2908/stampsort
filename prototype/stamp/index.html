@@ -68,10 +68,11 @@ body.hard #stage::before{background:linear-gradient(#b0a0a8,rgba(176,160,168,0))
 .lite .radial{animation:none}
 
 /* ---------- slots / zones ---------- */
-.slot{position:absolute;width:165px;height:214px}
+/* ô cỡ theo lá (--ck); KHÔNG dùng transform ở đây: transform tạo stacking context, mép khay sẽ không đè được lên lá */
+.slot{position:absolute;width:calc(165px * var(--ck,1));height:calc(214px * var(--ck,1))}
 /* khay gỗ: rộng hơn lá (lộ thành khay hai bên), thấp hơn lá (tem cắm đứng, nhô phần trên); mép trước là lớp .tray-front đè lên chân lá */
-.slot::before{content:'';position:absolute;left:-18px;top:30px;width:201px;height:194px;background:url(assets/ui/slot_tray.png) center/100% 100% no-repeat;pointer-events:none}
-.tray-front{position:absolute;left:-18px;top:175px;width:201px;height:49px;background:url(assets/ui/tray_front.png) center/100% 100% no-repeat;z-index:380;pointer-events:none}
+.slot::before{content:'';position:absolute;left:calc(-18px * var(--ck,1));top:calc(30px * var(--ck,1));width:calc(201px * var(--ck,1));height:calc(194px * var(--ck,1));background:url(assets/ui/slot_tray.png) center/100% 100% no-repeat;pointer-events:none}
+.tray-front{position:absolute;left:calc(-18px * var(--ck,1));top:calc(175px * var(--ck,1));width:calc(201px * var(--ck,1));height:calc(49px * var(--ck,1));background:url(assets/ui/tray_front.png) center/100% 100% no-repeat;z-index:380;pointer-events:none}
 /* 5 khay: hẹp lại để không chồng lên nhau (bước 201) */
 #board.n5 .slot::before,#board.n5 .tray-front{left:-14px;width:193px}
 .slot .ribbon{position:absolute;left:-6px;right:-6px;top:-52px;height:48px;border-radius:12px 12px 4px 4px;
@@ -79,21 +80,21 @@ body.hard #stage::before{background:linear-gradient(#b0a0a8,rgba(176,160,168,0))
   color:#fff3dc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px;transform-origin:50% 100%;
   opacity:0;transform:scaleY(.2)}
 .slot.open .ribbon{opacity:1;transform:none;transition:transform .28s cubic-bezier(.3,1.6,.5,1),opacity .15s}
-.slot .count{position:absolute;left:0;right:0;top:8px;height:34px;text-align:center;font-size:30px;line-height:34px;color:#4a2a12;opacity:0}
+.slot .count{position:absolute;left:0;right:0;top:calc(8px * var(--ck,1));height:34px;text-align:center;font-size:30px;line-height:34px;color:#4a2a12;opacity:0}
 .slot.open .count{opacity:1}
 .slot.locked::before,.slot.locked .tray-front{opacity:.5}
 /* ô trống: vương miện mờ = "ô này dành cho tem vương miện" (affordance, không cần chữ) */
 /* khay đã có vương miện mờ trong ảnh (affordance "ô dành cho tem vương miện") */
-.slot .lockicon{position:absolute;left:52px;top:80px;width:60px;height:74px;background:url(assets/ui/lock.png) center/contain no-repeat;z-index:381}
+.slot .lockicon{position:absolute;left:calc(52px * var(--ck,1));top:calc(80px * var(--ck,1));width:60px;height:74px;background:url(assets/ui/lock.png) center/contain no-repeat;z-index:381}
 .slot .plus{position:absolute;right:-22px;top:16px;width:60px;height:60px;background:url(assets/ui/plus.png) center/contain no-repeat;z-index:381}
 .slot .lv{position:absolute;left:-14px;right:-14px;bottom:-4px;text-align:center;font-size:30px;color:var(--cream);z-index:382;text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
-.colzone{position:absolute;width:165px;height:214px;border-radius:16px;background:rgba(90,58,38,.06);
+.colzone{position:absolute;width:calc(165px * var(--ck,1));height:calc(214px * var(--ck,1));border-radius:16px;background:rgba(90,58,38,.06);
   box-shadow:inset 0 0 0 3px rgba(90,58,38,.12)}
 .colzone.target{background:rgba(255,240,140,.22);box-shadow:inset 0 0 0 4px rgba(255,240,140,.6)}
-.deck-hit{position:absolute;width:185px;height:234px;cursor:pointer}
+.deck-hit{position:absolute;width:calc(165px * var(--ck,1) + 20px);height:calc(214px * var(--ck,1) + 20px);cursor:pointer}
 .deck-count{position:absolute;width:128px;height:60px;padding-left:26px;background:url(assets/ui/deck_tag.png) center/100% 100% no-repeat;
   color:var(--ink);font-size:36px;line-height:62px;text-align:center;z-index:900}
-.recycle{position:absolute;width:165px;height:214px;border-radius:16px;background:rgba(90,58,38,.06);box-shadow:inset 0 0 0 3px rgba(90,58,38,.12);display:grid;place-items:center}
+.recycle{position:absolute;width:calc(165px * var(--ck,1));height:calc(214px * var(--ck,1));border-radius:16px;background:rgba(90,58,38,.06);box-shadow:inset 0 0 0 3px rgba(90,58,38,.12);display:grid;place-items:center}
 .recycle i{width:92px;height:92px;background:url(assets/ui/recycle.png) center/contain no-repeat;opacity:.95}
 
 /* ---------- HUD ---------- */
