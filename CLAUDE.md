@@ -19,6 +19,7 @@ Dự án nghiên cứu và thiết kế game puzzle mobile, lấy **Stamp Solita
 - `tools/ocr_frames.swift` – OCR hàng loạt frame video bằng macOS Vision (đọc moves, deck, bộ đếm ô) để xác minh luật từ video.
 - `tools/difficulty_report.mjs` – đo độ khó 10 level bằng người chơi mô phỏng không nhìn trộm (giỏi / phí 10% / phí 25%). Mốc UA và level "khó nhưng không thể thua": `docs/design/difficulty-and-ua-milestones.md`.
 - `prototype/stamp/tests/drag-scenarios.browser.js`, `naive-drag.browser.js` – test kéo thả kiểu người mới (chạy trong trình duyệt, PointerEvent thật). Kết quả: `docs/design/ftue-copy.md` mục 7.
+- Giao diện concept B (cửa sổ bưu điện, tràn màn hình, safe area) và kết quả review UI/UX: `docs/design/ui-concept-b.md`.
 - `tools/art_slice.py`, `tools/art_take.sh` – cắt lưới art do ChatGPT vẽ vào `prototype/stamp/assets`. Quy trình và style: `docs/design/art-redo-chatgpt.md`.
 - `prototype/stamp/` – prototype 10 level (web; art mới vẽ qua ChatGPT, âm thanh tạm từ APK). Design: `docs/design/prototype-10-levels.md`. Asset: `tools/build_proto_assets.py`; level: `node tools/gen_proto_levels.mjs`.
 

@@ -31,3 +31,7 @@ research/art-redo/ref_jpg/
 # ảnh ChatGPT gốc và ảnh xem trước: nặng, giữ ở máy
 research/art-redo/gen/
 research/art-redo/*.jpg
+research/ui-review/*.jpg
+research/ui-review/*.png
+research/art-redo/ui2/*.png
+research/art-redo/ui2/*.jpg

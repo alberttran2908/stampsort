@@ -9,8 +9,11 @@ import { t, getLang, setLang, topicName } from './copy.js';
 
 // ============================================================ constants
 const CW = 165, CH = 214;
-const ROW_A = 245, FOUND_Y = 585, TAB_Y = 885, TAB_BOTTOM = 1680;
-const DECK_X = 860, WASTE_X = 430, EXTRA_X = 54;
+// Toạ độ trên stage 1080 x H. H = 1920 trên màn 9:16; máy dài hơn thì stage cao thêm (full-bleed, không letterbox).
+// Các hàng được đẩy theo vùng an toàn (tai thỏ / thanh home) và chia phần dư: xem fit().
+let ROW_A = 245, FOUND_Y = 585, TAB_Y = 885, TAB_BOTTOM = 1560;
+let STAGE_H = 1920, DY_HUD = 0, DY_BOARD = 0, DY_BOT = 0;
+const DECK_X = 867, WASTE_X = 391, EXTRA_X = 48;   // lề trái/phải 48, quạt 3 lá waste căn giữa màn hình
 const DOWN_GAP = 32, UP_GAP = 70;
 const COMBO_MAX = 6;
 // Giá theo APK 0.9.5: BoosterManager (hint 300, pack 500, stamper 500, joker 1200), GameSetting (hộc phụ 1000,
@@ -65,16 +68,50 @@ function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save));
 
 // ============================================================ stage scaling
 let scale = 1, stageLeft = 0, stageTop = 0;
+function safeInsets() {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:0;top:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';
+  document.body.append(d);
+  const cs = getComputedStyle(d);
+  const r = { top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
+  d.remove();
+  return r;
+}
 function fit() {
   scale = Math.min(innerWidth / 1080, innerHeight / 1920);
+  STAGE_H = Math.max(1920, Math.round(innerHeight / scale));
   stageLeft = (innerWidth - 1080 * scale) / 2;
-  stageTop = (innerHeight - 1920 * scale) / 2;
+  stageTop = (innerHeight - STAGE_H * scale) / 2;
+  const ins = safeInsets();
+  const sat = ins.top / scale, sab = ins.bottom / scale;
+  const extra = STAGE_H - 1920;
+  const free = Math.max(0, extra - sat - sab);
+  DY_HUD = sat;                                    // HUD tránh tai thỏ
+  DY_BOARD = sat + free * 0.3;                     // phần dư: 30% đẩy bàn chơi xuống, 70% cho chiều sâu cột bài
+  DY_BOT = extra - sab;                            // thanh booster neo theo đáy, tránh thanh home
+  ROW_A = 245 + DY_BOARD; FOUND_Y = 585 + DY_BOARD; TAB_Y = 885 + DY_BOARD;
+  TAB_BOTTOM = 1560 + DY_BOT;                      // mép kệ gỗ: cột bài không chui xuống dưới kệ / nhãn gợi ý
+  stage.style.height = STAGE_H + 'px';
+  for (const [k, v] of [['--hud', DY_HUD], ['--bd', DY_BOARD], ['--bot', DY_BOT], ['--mid', extra / 2], ['--extra', extra]]) stage.style.setProperty(k, v + 'px');
+  const fxc = document.getElementById('fx');
+  if (fxc) { fxc.height = STAGE_H; fxc.style.height = STAGE_H + 'px'; }
   stage.style.transform = `scale(${scale})`;
   stage.style.left = stageLeft + 'px';
   stage.style.top = stageTop + 'px';
 }
-addEventListener('resize', fit);
+addEventListener('resize', () => { fit(); placeChrome(); });
 fit();
+// Đặt lại vị trí phần khung bàn chơi theo toạ độ mới (đổi cỡ / xoay màn hình) mà không dựng lại lá bài
+function placeChrome() {
+  if (!S || !slotEls.length) return;
+  slotEls.forEach((el, k) => { const p = slotPos(k); el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; });
+  if (extraEl) { extraEl.style.left = EXTRA_X + 'px'; extraEl.style.top = ROW_A + 'px'; }
+  colZones.forEach((z, i) => { z.style.left = colX(i) + 'px'; z.style.top = TAB_Y + 'px'; });
+  if (recycleEl) { recycleEl.style.left = DECK_X + 'px'; recycleEl.style.top = ROW_A + 'px'; }
+  if (deckHit) { deckHit.style.left = DECK_X - 10 + 'px'; deckHit.style.top = ROW_A - 14 + 'px'; }
+  if (deckCount) { deckCount.style.left = DECK_X + CW - 104 + 'px'; deckCount.style.top = ROW_A + CH - 34 + 'px'; }
+  relayout({ dur: 0 });
+}
 const toStage = e => ({ x: (e.clientX - stageLeft) / scale, y: (e.clientY - stageTop) / scale });
 
 // ============================================================ assets
@@ -137,14 +174,14 @@ const completing = new Set();   // slot đang chạy animation phong bì
 // ============================================================ layout
 function colX(i) {
   const n = S.cols.length;
-  const gap = n >= 5 ? 26 : 44;
+  const gap = n >= 5 ? 36 : 44;                    // cùng gap với hàng khay để khay và cột thẳng hàng
   const w = n * CW + (n - 1) * gap;
   return (1080 - w) / 2 + i * (CW + gap);
 }
 function slotPos(k) {
   if (k >= L.foundations) return { x: EXTRA_X, y: ROW_A };
   const n = L.foundations;
-  const gap = n >= 5 ? 22 : 38;
+  const gap = n >= 5 ? 36 : 44;
   const w = n * CW + (n - 1) * gap;
   return { x: (1080 - w) / 2 + k * (CW + gap), y: FOUND_Y };
 }
@@ -166,8 +203,9 @@ function computeLayout() {
   const T = new Map();
   const nd = S.deck.length;
   S.deck.forEach((c, i) => {
-    const d = Math.min(3, nd - 1 - i);            // 3 lá trên cùng tạo độ dày
-    T.set(c.id, { x: DECK_X, y: ROW_A - (nd > 1 ? Math.max(0, 3 - d) * 4 : 0), z: 100 + i, up: false, hide: i < nd - 3 });
+    const d = Math.min(3, nd - 1 - i);            // 4 lá trên cùng lệch chéo tạo độ dày
+    const o = nd > 1 ? (3 - d) * 5 : 0;
+    T.set(c.id, { x: DECK_X - o, y: ROW_A - o, z: 100 + i, up: false, hide: i < nd - 4 });
   });
   const nw = S.waste.length;
   S.waste.forEach((c, i) => {
@@ -201,7 +239,7 @@ function makeView(card) {
   back.className = 'side back';
   if (card.k === 'topic') {
     el.classList.add('topic');
-    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${iconUrl(card.t)}" draggable="false"><div class="tag">${topicName(card.t)}</div>`;
+    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${iconUrl(card.t)}" draggable="false"><div class="tag" style="font-size:${fitSize(topicName(card.t), 30, 9)}px">${topicName(card.t)}</div>`;
   } else if (card.k === E.JOKER) {
     el.classList.add('joker');
   } else {
@@ -299,16 +337,19 @@ function buildChrome() {
     const el = document.createElement('div');
     el.className = 'slot';
     el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
-    el.innerHTML = '<div class="ribbon"></div><div class="count"></div>';
+    // .tray-front là con của .slot nhưng z-index vẫn so với lá trong #board (.slot không có z-index):
+    // mép khay đè lên lá trong ô (z 300+), dưới lá ở cột (z 400+) và lá đang kéo/bay. Số đếm nằm trên biển đồng.
+    el.innerHTML = '<div class="ribbon"></div><div class="tray-front"><div class="count"></div></div>';
     board.append(el);
     slotEls.push(el);
   }
+  board.classList.toggle('n5', L.foundations >= 5 || S.cols.length >= 5);
   // hộc phụ (khóa)
   extraEl = document.createElement('div');
   extraEl.className = 'slot locked';
   extraEl.style.left = EXTRA_X + 'px'; extraEl.style.top = ROW_A + 'px';
   const slotUnlocked = levelIdx + 1 >= UNLOCK_AT.slot;
-  extraEl.innerHTML = '<div class="ribbon"></div><div class="count"></div><div class="lockicon"></div>' +
+  extraEl.innerHTML = '<div class="ribbon"></div><div class="tray-front"><div class="count"></div></div><div class="lockicon"></div>' +
     (slotUnlocked ? `<div class="plus"></div><div class="lv">${t('extra_label')}</div>` : `<div class="lv">Lv ${UNLOCK_AT.slot}</div>`);
   extraEl.addEventListener('pointerup', onExtraSlot);
   board.append(extraEl);
@@ -333,7 +374,7 @@ function buildChrome() {
   board.append(deckHit);
   deckCount = document.createElement('div');
   deckCount.className = 'deck-count';
-  deckCount.style.left = DECK_X + CW - 44 + 'px'; deckCount.style.top = ROW_A - 26 + 'px';
+  deckCount.style.left = DECK_X + CW - 104 + 'px'; deckCount.style.top = ROW_A + CH - 34 + 'px';   // nhãn đè góc dưới phải bộ bài (concept B)
   board.append(deckCount);
 }
 function updateDeckUI() {
@@ -349,6 +390,11 @@ function updateDeckUI() {
   colZones.forEach((z, i) => { z.style.opacity = S.cols[i].length ? 0 : 1; });
 }
 function slotEl(k) { return k >= L.foundations ? extraEl : slotEls[k]; }
+// cỡ chữ theo độ dài (không đo DOM): đủ chỗ thì giữ cỡ chuẩn, dài thì co dần tới tối thiểu 22px rồi mới cắt "..."
+function fitSize(text, base, fitChars) {
+  const n = String(text).length;
+  return n <= fitChars ? base : Math.max(22, Math.floor(base * fitChars / n));
+}
 function updateSlotLabels() {
   S.found.forEach((f, k) => {
     const el = slotEl(k);
@@ -356,7 +402,10 @@ function updateSlotLabels() {
     if (!f && completing.has(k)) return;
     el.classList.toggle('open', !!f);
     if (f) {
-      el.querySelector('.ribbon').textContent = topicName(f.t);
+      const nm = topicName(f.t);
+      const rb = el.querySelector('.ribbon');
+      rb.textContent = nm;
+      rb.style.fontSize = fitSize(nm, 30, 9) + 'px';
       el.querySelector('.count').textContent = `${f.cards.length}/${f.n}`;
     }
   });
@@ -377,7 +426,7 @@ function updateHUD(bump = false) {
   $('coins').querySelector('span').textContent = save.coins;
   $('title').textContent = `Level ${levelIdx + 1}`;
   const fill = $('combo').querySelector('.fill');
-  { const tp0 = topicProgress(); fill.style.transform = `scaleX(${tp0.total ? tp0.done / tp0.total : 0})`; }
+  { const tp0 = topicProgress(); fill.style.transform = `scaleX(${tp0.total ? tp0.done / tp0.total : 0})`; $('combo').style.setProperty('--segs', Math.max(1, tp0.total)); }
   const tp = topicProgress();
   $('combo').querySelector('.txt').textContent = t('piles', { done: tp.done, total: tp.total });
   if (S.moves === 5 && !lowWarned && L.moves != null) { lowWarned = true; toast(t('tip_low', { n: 5 }), 1600); }
@@ -692,7 +741,7 @@ function onExtraSlot(e) {
   if (levelIdx + 1 < UNLOCK_AT.slot) { toast(t('unlocks', { n: UNLOCK_AT.slot })); sfx('close'); return; }
   panel({
     title: t('extra_title'),
-    body: `<div class="feature-icon" style="background-image:url(assets/ui/slot_empty.png);width:180px;height:230px"></div><p>${t('extra_body')}</p>`,
+    body: `<div class="feature-icon" style="background-image:url(assets/ui/slot_tray.png);width:230px;height:224px"></div><p>${t('extra_body')}</p>`,
     buttons: [
       { label: t('free_ad'), cls: 'orange', act: () => fakeAd(unlockExtra) },
       { label: t('coins', { n: COSTS.slot }), act: () => {
@@ -761,10 +810,15 @@ function toast(msg, ms = 1500) {
 }
 function tut(html) {
   const t = $('tut');
+  clearTimeout(tutTimer);
   if (!html) { t.classList.remove('on'); return; }
+  const deepest = S ? Math.max(0, ...S.cols.map(col => (col.length ? colOffsets(col)[col.length - 1] : TAB_Y) + CH)) : 0;
+  if (!script && deepest > 1490 + DY_BOT) { t.classList.remove('on'); toast(html, 2600); return; }
   t.innerHTML = html;
   t.classList.add('on');
+  if (!script) tutTimer = setTimeout(() => t.classList.remove('on'), 6000);   // gợi ý tự ẩn, không nằm mãi trên màn
 }
+let tutTimer = 0;
 
 // ---- Tutorial ép bước (level 1 dựng lại từ video). Bước: { text, src: cardId, dst: {found:k}|{onto:cardId}, draw, info }
 function scriptStep() { return script ? script.steps[script.i] || null : null; }
@@ -1583,8 +1637,8 @@ async function winSequence() {
     title: last ? t('win_last') : st === 3 ? t('win_title') : st === 2 ? t('win_great') : t('win_ok'),
     radial: true,
     body: `<div class="stars"><i></i><i></i><i></i></div>
-      <h3>${t('win_sub')}</h3><p>${t('level', { n: lv })}${S.moves === Infinity ? '' : ' · ' + t('moves_left', { n: S.moves })}</p>
-      ${L.moves != null && !overtime ? `<p style="font-size:26px;margin:0">${t('stars_hint')}</p>` : ''}
+      ${S.moves === Infinity ? '' : `<p>${t('moves_left', { n: S.moves })}</p>`}
+      ${L.moves != null && !overtime && st < 3 ? `<p style="font-size:32px;margin:0">${t('stars_hint')}</p>` : ''}
       ${last ? `<p>${t('win_end')}</p>` : ''}
       <div class="coins-line"><i></i><span>+${reward}</span></div>`,
     buttons: [
@@ -1618,13 +1672,14 @@ function outOfMoves() {
   const canFree = !freeMovesUsed;
   const buttons = [];
   if (canFree) buttons.push({ label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) });
-  buttons.push({ label: t('more_coins', { n: COSTS.moves }), act: () => {
+  const short = save.coins < COSTS.moves;
+  buttons.push({ cls: short ? 'off' : '', label: t('more_coins', { n: COSTS.moves }) + (short ? `<br><small>${t('coins_need', { n: COSTS.moves - save.coins })}</small>` : ''), act: () => {
     if (save.coins < COSTS.moves) { toast(t('coins_short')); outOfMoves(); return; }
     save.coins -= COSTS.moves; persist(); bumpCoins(); addMoves(5, false, 'coins');
   } });
   buttons.push({ label: t('retry'), cls: 'brown', act: () => startLevel(levelIdx) });
   const tp = topicProgress();
-  panel({ title: t('oom_title'), body: `<p>${t('oom_body', { n: tp.total - tp.done })}</p><p>${t('oom_body2')}</p>`, buttons });
+  panel({ title: t('oom_title'), body: `<p>${t('oom_body', { n: tp.total - tp.done })}</p>`, buttons });
 }
 function stuckPanel() {
   track('level_stuck', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total, moves_left: S.moves });
@@ -1721,7 +1776,8 @@ async function startLevel(i) {
   for (let j = 0; j < maxLen; j++) S.cols.forEach(col => { if (col[j]) order.push(col[j]); });
   for (const c of order) { const v = views.get(c.id); v.x = DECK_X; v.y = ROW_A; setZ(v, 1000); applyTransform(v); }
   const bannerDone = levelBanner();
-  await wait(350);
+  // level khó: chờ banner xong mới chia bài, để hai chuyển động không tranh nhau
+  if (specialOf(L)) await bannerDone; else await wait(350);
   order.forEach((c, k) => {
     const v = views.get(c.id);
     const t = T.get(c.id);
@@ -1759,9 +1815,10 @@ function levelBanner() {
   bannerEl = el;
   const sp = specialOf(L);
   el.innerHTML = (sp ? `<div class="hard-pill">${t(sp === 'superhard' ? 'superhard' : 'hard')}</div>` : '') + `<div style="font-size:110px;line-height:1">${t('level', { n: levelIdx + 1 })}</div>
-    <div style="margin-top:22px;display:inline-block;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.35);font-size:44px">
+    <div style="margin-top:22px;display:inline-block;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.25);font-size:46px">
       ${t('goal', { n: tp.total - tp.done, moves: L.moves == null ? t('goalInf') : t('goalMoves', { n: L.moves }) })}</div>`;
-  el.style.cssText = 'position:absolute;left:0;right:0;top:700px;text-align:center;color:#fff;text-shadow:0 6px 0 rgba(0,0,0,.25);z-index:4000;pointer-events:none';
+  el.style.cssText = `position:absolute;left:0;right:0;top:${660 + (STAGE_H - 1920) / 2}px;padding:40px 0 46px;text-align:center;color:#fff;background:rgba(50,32,20,.55);
+    text-shadow:0 5px 0 #5a3a26,3px 0 0 #5a3a26,-3px 0 0 #5a3a26,0 -3px 0 #5a3a26;z-index:4000;pointer-events:none`;
   overlay.append(el);
   const o = { y: -60, a: 0, s: 0.6 };
   const draw = () => { el.style.transform = `translateY(${o.y}px) scale(${o.s})`; el.style.opacity = o.a; };
@@ -1784,12 +1841,13 @@ function rulesHtml() {
     <img src="assets/cards/cat/5.png" style="position:absolute;left:12px;top:16px;width:72px;height:72px">`);
   const env = box(`<div style="position:absolute;inset:8px -6px;background:url(assets/ui/envelope_closed.png) center/contain no-repeat"></div>
     <div style="position:absolute;left:30px;top:40px;width:36px;height:42px;background:url(assets/ui/wax.png) center/contain no-repeat"></div>`);
-  const moves = box(`<div style="position:absolute;inset:0;background:url(assets/ui/moves_box.png) center/100% 100%"></div>
+  const moves = box(`<div style="position:absolute;inset:0;background:url(assets/ui/hud_moves.png) center/100% 100%"></div>
     <div style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:44px;color:#4a2a1a">12</div>`);
-  const row = (fig, txt) => `<div style="display:flex;align-items:center;gap:24px;margin:0 0 18px;text-align:left">${fig}
-    <div style="font-size:34px;line-height:1.25;color:#5a3a26">${txt}</div></div>`;
-  return `<div>${row(crownCard, t('r1'))}${row(stampCard, t('r2'))}${row(env, t('r3'))}${row(moves, t('r4'))}
-    <p style="font-size:28px;margin:6px 0 0">${t('r5')} ${t('r6')}</p></div>`;
+  const undo = box(`<div style="position:absolute;left:4px;top:14px;width:88px;height:88px;background:url(assets/ui/btn_undo.png) center/contain no-repeat"></div>`);
+  const row = (fig, txt) => `<div style="display:flex;align-items:center;gap:24px;margin:0 0 14px;text-align:left">${fig}
+    <div style="font-size:38px;line-height:1.22;color:#5a3a26">${txt}</div></div>`;
+  return `<div>${row(crownCard, t('r1'))}${row(stampCard, t('r2'))}${row(env, t('r3'))}${row(moves, t('r4'))}${row(undo, t('r6'))}
+    <p style="font-size:32px;margin:4px 0 0">${t('r5')}</p></div>`;
 }
 function showRules(onClose) {
   panel({ title: t('howto'), body: rulesHtml(), buttons: [{ label: t('got_it'), act: () => onClose && onClose() }] });
@@ -1934,8 +1992,9 @@ function applyStaticCopy() {
   setLite(LITE);
   buildDebug();
   try { manifest = await (await fetch('assets/manifest.json')).json(); } catch (e) { manifest = {}; }
-  await preload(['back', 'topic_frame', 'crown', 'slot_empty', 'moves_box', 'booster_btn', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'star', 'lock', 'plus', 'recycle', 'radial', 'header_win', 'logo',
-    'face_1', 'face_2', 'face_3', 'face_4', 'face_5', 'face_6', 'ic_hint', 'ic_joker', 'ic_undo'].map(n => `assets/ui/${n}.png`));
+  await preload(['back', 'topic_frame', 'crown', 'slot_tray', 'tray_front', 'btn_undo_off', 'hud_moves', 'token', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'star', 'lock', 'plus', 'recycle', 'radial', 'logo',
+    'face_1', 'face_2', 'face_3', 'face_4', 'face_5', 'face_6', 'ic_hint', 'ic_joker', 'banner', 'bar_track', 'tipbox', 'ribbon', 'btn_yellow', 'btn_blue',
+    'btn_pause', 'btn_undo', 'deck_tag', 'panel'].map(n => `assets/ui/${n}.png`).concat(['assets/ui/bg_game.jpg']));
   initAudio();
   track('app_open', { lite: LITE, ab_hard: AB.hard ? AB.hard.join('-') : 'default', ab_safety: AB.safety || 'default' });
   goHome();
