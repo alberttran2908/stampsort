@@ -260,6 +260,9 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .ch2-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .ch2-btns .btn{min-width:320px}
 .ch2-btns .btn.done{opacity:.7}
+.ch2.open .ch2-st div::after,.ch2.open .ch2-tip{display:none}
+.ch2.open .ch2-st img{opacity:1}
+.ch2.open .ch2-soon{border-color:#3f8f4e;color:#3f8f4e}
 /* ---------- album tem ---------- */
 .home .album-btn,.home .decor-btn{position:absolute;min-width:0;width:300px;padding:0 8px;white-space:nowrap;margin:0;text-align:center;font-size:38px;top:calc(1480px + var(--bot,0px))}
 .home .album-btn{left:208px}
@@ -277,6 +280,13 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .dc-board{left:462px;width:236px;bottom:452px}
 .dc-postbox{left:30px;width:160px;bottom:330px}
 .dc-cat{right:18px;width:200px;bottom:326px}
+/* decor chương 2 Bến Cảng: cùng 6 chỗ */
+.dc-fan{left:350px;width:380px;top:calc(var(--hud,0px) - 10px)}
+.dc-porthole{left:240px;width:190px;bottom:462px}
+.dc-chart{left:458px;width:250px;bottom:452px}
+.dc-buoy{right:84px;width:180px;bottom:470px}
+.dc-lantern{left:46px;width:140px;bottom:330px}
+.dc-boatbed{right:12px;width:230px;bottom:322px}
 .album{position:absolute;left:30px;right:30px;top:calc(40px + var(--hud,0px));bottom:30px;z-index:46;display:flex;flex-direction:column;align-items:center;
   border:60px solid transparent;border-image:url(assets/ui/panel.png) 110 fill / 64px stretch;color:var(--ink);transition:opacity .25s}
 .album.off{opacity:0;pointer-events:none}
@@ -329,7 +339,7 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
       <div class="ch2-row" id="ch2StampRow"></div>
       <p class="ch2-npc" id="ch2Npc"></p>
       <div class="ch2-sec" id="ch2Decor"></div>
-      <div class="ch2-row ch2-decor"><img src="assets/ch2/buoy.png" alt=""><img src="assets/ch2/porthole.png" alt=""><img src="assets/ch2/fan.png" alt=""></div>
+      <div class="ch2-row ch2-decor"><img src="assets/decor/buoy.png" alt=""><img src="assets/decor/porthole.png" alt=""><img src="assets/decor/fan.png" alt=""></div>
       <p class="ch2-tip" id="ch2Tip"></p>
     </div>
     <div class="ch2-btns"><div class="btn" id="ch2Notify">Notify me</div><div class="btn orange" id="ch2Close">Close</div></div>

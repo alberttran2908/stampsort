@@ -234,5 +234,21 @@
  "Tool": {
   "dir": "cards/tool",
   "arts": 7
+ },
+ "Sailboats": {
+  "dir": "cards/sailboats",
+  "arts": 7
+ },
+ "Seafood": {
+  "dir": "cards/seafood",
+  "arts": 7
+ },
+ "Shells": {
+  "dir": "cards/shells",
+  "arts": 7
+ },
+ "Nautical": {
+  "dir": "cards/nautical",
+  "arts": 7
  }
 }

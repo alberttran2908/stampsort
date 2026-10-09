@@ -57,7 +57,38 @@ const DESIGN = [
   { role: 'superhard', special: 'superhard', F: 5, cols: [3, 4, 5, 6, 7], moves: null, target: 0.25, unlock: null,
     topics: { Cat: 6, Coffee: 6, 'Music Inst': 6, Cake: 6, Aircraft: 6, Mushroom: 6, Gems: 5, Sushi: 5, Tool: 5 },
     note: 'Finale riêng (video dừng ở L9). MỐC UA 2: siêu khó, hết moves vào Overtime, không thể thua.' },
+  // ---------------- CHƯƠNG 2: BẾN CẢNG (L11-L20, concept-little-post-office.md mục 3.1) ----------------
+  // Không có video gốc: moves chọn theo target (người chơi phổ thông, không nhìn trộm), sàn = solver x slack.
+  // Bốn bộ tem mới: Sailboats, Seafood, Shells, Nautical. Không đặt chung level các cặp dễ nhầm trong CONFUSE (kiểm tra bên dưới).
+  // Đường cong: mở đầu dễ (giới thiệu tem mới) -> tăng dần -> L15 mốc khó (Overtime) -> L16 nghỉ -> L20 siêu khó cuối chương.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.95, slack: 1.15, unlock: null, chapter: 2,
+    topics: { Sailboats: 5, Shells: 5, 'Ice cream': 5, Fruit: 5, Kite: 4, Bird: 3, Hat: 4 }, note: 'Chương 2 mở màn: giới thiệu Sailboats, Shells.' },
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.9, slack: 1.12, unlock: null, chapter: 2,
+    topics: { Seafood: 5, Nautical: 5, Float: 5, Soda: 5, Glasses: 5, Footwear: 4, Tree: 4 }, note: 'Giới thiệu Seafood, Nautical.' },
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.88, slack: 1.12, unlock: null, chapter: 2,
+    topics: { Sailboats: 6, Seafood: 5, Cocktail: 5, Flower: 5, Hat: 4, Cake: 5, Insect: 4 }, note: '' },
+  { role: 'bump', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.85, slack: 1.1, unlock: null, chapter: 2,
+    topics: { Shells: 6, Nautical: 6, 'Ice cream': 6, Kite: 5, Bird: 3, Coffee: 5, Bouquet: 5, Footwear: 4 }, note: '8 chủ đề, bump trước mốc khó.' },
+  { role: 'hard', special: 'hard', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.2, skilledTarget: 0.45, maxStuck: 0.25, unlock: null, chapter: 2,
+    topics: { Sailboats: 6, Seafood: 6, Shells: 6, Nautical: 6, 'Soft drink': 6, Fruit: 6, Hat: 4, Glasses: 5 },
+    note: 'MỐC KHÓ chương 2 (khuôn L5): thiếu moves chứ không kẹt; hết moves vào Overtime, không thể thua.' },
+  { role: 'breather', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.97, slack: 1.3, unlock: null, chapter: 2,
+    topics: { Float: 5, Tree: 5, Flower: 5, Cake: 5, Sailboats: 5, Time: 5, Bird: 3 }, note: 'Level nghỉ sau mốc khó.' },
+  { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: null, target: 0.88, slack: 1.12, unlock: null, chapter: 2,
+    topics: { Nautical: 6, Seafood: 6, Kite: 5, Tea: 5, Glasses: 6, Cocktail: 5, Insect: 4 }, note: '' },
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.85, slack: 1.1, unlock: null, chapter: 2,
+    topics: { Shells: 6, Sailboats: 6, Soda: 6, 'Ice cream': 6, Footwear: 4, Bouquet: 5, Dog: 6 }, note: '' },
+  { role: 'bump', F: 4, cols: [3, 4, 5, 7], moves: null, target: 0.8, slack: 1.08, unlock: null, chapter: 2,
+    topics: { Seafood: 6, Nautical: 6, Float: 6, Fruit: 6, Coffee: 6, Flower: 5, Hat: 4, Bird: 3 }, note: '8 chủ đề trước finale.' },
+  { role: 'superhard', special: 'superhard', F: 5, cols: [3, 4, 5, 6, 7], moves: null, target: 0.25, unlock: null, chapter: 2,
+    topics: { Sailboats: 6, Seafood: 6, Shells: 6, Nautical: 6, 'Ice cream': 6, Cocktail: 5, Kite: 5, Glasses: 5, Tree: 5 },
+    note: 'Finale chương 2. MỐC siêu khó, hết moves vào Overtime, không thể thua.' },
 ];
+
+// Cặp chủ đề dễ nhầm (art giống nhau): không bao giờ đặt chung một level (so sánh art 2026-10-10).
+// Ship có thuyền buồm; Sea life có vỏ sò ngọc trai và bạch tuộc; Grilled có cá nướng; Sushi/Sashimi có tôm; Ball có bóng bãi biển.
+const CONFUSE = [['Sailboats', 'Ship'], ['Shells', 'Sea life'], ['Seafood', 'Sea life'], ['Seafood', 'Grilled'], ['Seafood', 'Sushi'],
+  ['Seafood', 'Sashimi'], ['Nautical', 'Ship'], ['Ball', 'Float'], ['Soda', 'Soft drink'], ['Coffee', 'Tea'], ['Nautical', 'Time']];   // la bàn giống đồng hồ quả quýt   // Truck-Train ở A L5 đã xử lý bằng avoid (bỏ tem xe buýt)
 
 // VARIANT B (review game design 2026-10-10, mục 23): luật riêng để A/B với Baseline A (clone ABI ở trên).
 // Mỗi level tối đa 6 chủ đề, không có cặp dễ nhầm trước tier 3 (bỏ Truck cạnh Train, Float cạnh Sea life,
@@ -71,6 +102,16 @@ const VARIANT_B = {
   8: { topics: { Footwear: 4, Ship: 5, Outerwear: 5, Cocktail: 5, Desserts: 5, Bouquet: 5 } },
   9: { topics: { Zoo: 5, Pizza: 5, Candy: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 } },
   10: { topics: { Cat: 6, Coffee: 6, 'Music Inst': 6, Aircraft: 6, Mushroom: 6, Gems: 5 } },
+  11: { topics: { Sailboats: 5, Shells: 5, 'Ice cream': 5, Fruit: 5, Kite: 4, Glasses: 4 } },
+  12: { topics: { Seafood: 5, Nautical: 5, Float: 5, Soda: 5, Glasses: 5, Footwear: 4 } },
+  13: { topics: { Sailboats: 6, Seafood: 5, Cocktail: 5, Flower: 5, Hat: 4, Cake: 5 } },
+  14: { topics: { Shells: 6, Nautical: 6, 'Ice cream': 6, Kite: 5, Coffee: 5, Bouquet: 5 } },
+  15: { topics: { Sailboats: 6, Seafood: 6, Shells: 6, Nautical: 6, 'Soft drink': 6, Fruit: 6 } },
+  16: { topics: { Float: 5, Tree: 5, Flower: 5, Cake: 5, Sailboats: 5, Time: 5 } },
+  17: { topics: { Nautical: 6, Seafood: 6, Kite: 5, Tea: 5, Glasses: 6, Cocktail: 5 } },
+  18: { topics: { Shells: 6, Sailboats: 6, Soda: 6, 'Ice cream': 6, Bouquet: 5, Dog: 6 } },
+  19: { topics: { Seafood: 6, Nautical: 6, Float: 6, Fruit: 6, Coffee: 6, Flower: 5 } },
+  20: { F: 4, topics: { Sailboats: 6, Seafood: 6, Shells: 6, Nautical: 6, 'Ice cream': 6, Cocktail: 5 } },   // 6 chủ đề + 5 khay thì quá dễ (casual 67%) -> 4 khay
 };
 const VARIANT = (process.argv.find(a => a.startsWith('--variant=')) || '').slice(10) || 'a';
 if (VARIANT === 'b') {
@@ -82,6 +123,9 @@ if (VARIANT === 'b') {
     Object.assign(d, o, { moves: null, movesRange: undefined, newbieTarget: undefined, skilledTarget: undefined,
       note: 'Variant B: ' + Object.keys(o.topics).length + ' chủ đề, không cặp dễ nhầm. ' + d.note });
   }
+}
+for (const [i, d] of DESIGN.entries()) {
+  for (const [x, y] of CONFUSE) if (d.topics && d.topics[x] && d.topics[y]) throw new Error(`L${i + 1}: ${x} và ${y} dễ nhầm, không được chung level`);
 }
 const SUFFIX = VARIANT === 'b' ? '_b' : '';
 
@@ -252,13 +296,13 @@ for (let li = 0; li < DESIGN.length; li++) {
   if (budget == null && d.slackB) budget = Math.ceil(solverMoves * d.slackB);
   if (budget == null) {
     const k = Math.min(dist.length - 1, Math.ceil(d.target * dist.length) - 1);
-    budget = Math.max(Math.ceil(solverMoves * SLACK[d.role]), Number.isFinite(dist[k]) ? dist[k] : 0);
+    budget = Math.max(Math.ceil(solverMoves * (d.slack ?? SLACK[d.role])), Number.isFinite(dist[k]) ? dist[k] : 0);
   }
   const winSim = winAt(dist, budget);
   const lv = { ...pick.lv, moves: budget };
   const cardsN = lv.columns.flat().length + lv.deck.length + lv.preplaced.flat().length;
   out.push({ id: li + 1, role: d.role, unlock: d.unlock, note: d.note, seed: pick.seed, solverMoves, winRateSim: +winSim.toFixed(2),
-    ...(d.special ? { special: d.special, safety: 'overtime' } : {}),
+    ...(d.special ? { special: d.special, safety: 'overtime' } : {}), ...(d.chapter ? { chapter: d.chapter } : {}),
     ...(d.script ? { script: d.script } : {}), ...lv });
   report.push({ L: li + 1, role: d.role, F: d.F, cols: d.cols.join('-'), topics: Object.keys(d.topics).length, cards: cardsN,
     deck: lv.deck.length, solver: solverMoves, moves: budget, video: d.moves ?? '-', movesPerCard: +(budget / cardsN).toFixed(2),

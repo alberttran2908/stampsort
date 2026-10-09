@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import * as E from '../src/engine.js';
 import { solve, hint, candidateActions } from '../src/solver.js';
 import { LEVELS } from '../src/levels.js';
+import { LEVELS as LEVELS_B } from '../src/levels_b.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGS = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
@@ -604,9 +605,21 @@ test('stateKey phân biệt ô phụ / joker (nghi vấn, chỉ ảnh hưởng s
 const manifest = JSON.parse(readFileSync(join(ROOT, 'assets/manifest.json'), 'utf8'));
 const slug = t => t.toLowerCase().replace(/ /g, '_').replace(/&/g, 'and');
 
-test('levels: có đúng 10 level, id 1..10', () => {
-  eq(LEVELS.length, 10, 'số level'); LEVELS.forEach((l, i) => eq(l.id, i + 1, 'id'));
+test('levels: 20 level (2 chương), id 1..20, L11-20 thuộc chương 2', () => {
+  eq(LEVELS.length, 20, 'số level'); LEVELS.forEach((l, i) => eq(l.id, i + 1, 'id'));
+  LEVELS.slice(10).forEach(l => eq(l.chapter, 2, `L${l.id} chapter`));
 });
+// Cặp chủ đề dễ nhầm (tools/gen_proto_levels.mjs CONFUSE) không được chung level ở chương 2
+const CONFUSE2 = [['Sailboats', 'Ship'], ['Shells', 'Sea life'], ['Seafood', 'Sea life'], ['Seafood', 'Grilled'], ['Seafood', 'Sushi'], ['Seafood', 'Sashimi'], ['Nautical', 'Ship'], ['Nautical', 'Time']];
+for (const [name, LV] of [['A', LEVELS], ['B', LEVELS_B]]) {
+  test(`levels ${name}: chương 2 không có cặp chủ đề dễ nhầm, B tối đa 6 chủ đề`, () => {
+    for (const l of LV.slice(10)) {
+      const tp = new Set([...l.columns.flat(), ...l.deck, ...(l.preplaced || []).flat()].map(c => c.t));
+      for (const [x, y] of CONFUSE2) if (tp.has(x) && tp.has(y)) throw new Error(`L${l.id}: ${x} + ${y}`);
+      if (name === 'B' && tp.size > 6) throw new Error(`B L${l.id}: ${tp.size} chủ đề`);
+    }
+  });
+}
 for (const L of LEVELS) {
   test(`level ${L.id}: id lá duy nhất, mỗi topic 1 lá topic + đúng n stamp, preplaced hợp lệ`, () => {
     const ids = levelIds(L);

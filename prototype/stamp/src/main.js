@@ -28,15 +28,23 @@ const COMBO_MAX = 6;
 const COSTS = { undo: 30, hint: 150, pack: 250, stamper: 250, joker: 500, slot: 400, moves: 300 };
 // Lịch mở theo video: Hint L2, Pack L4, Stamper L7, Joker L9; hộc phụ mua được từ L2.
 const UNLOCK_AT = { hint: 2, pack: 4, stamper: 7, joker: 9, slot: 2 };
-const GIFTS = { hint: 3, pack: 2, stamper: 2, joker: 1 };
+const GIFTS = { hint: 3, pack: 2, stamper: 2, joker: 1 };   // Joker 1: quà 2 lá làm L10 "trông khó" mà không "thấy khó"
 // Tem Điểm (thay sao, gdd-core.md mục 5 + concept mục 5 "Bưu điện nhỏ"): mỗi level 1-3 Tem Điểm theo moves dư.
 // Tổng kiếm được = tổng điểm CAO NHẤT từng level (chơi lại để nâng điểm thì được phần chênh). Tiêu vào decor màn hình chính,
 // mở lần lượt; decor không cho perk gameplay. Giá [GIẢ THUYẾT]: tổng 24 / tối đa 30 của chương 1 -> trung bình ~2.4 điểm/level
 // là đủ cả phòng, món cuối thường cần chơi lại 1-2 level.
-const DECOR = [
-  { id: 'bunting', cost: 2 }, { id: 'frame', cost: 3 }, { id: 'clock', cost: 4 },
-  { id: 'postbox', cost: 4 }, { id: 'board', cost: 5 }, { id: 'cat', cost: 6 },
-];   // Joker 1: quà 2 lá làm L10 "trông khó" mà không "thấy khó"
+// Mỗi chương (concept mục 3.1: khu mới = tem mới + decor mới) có 6 decor riêng, dùng chung 6 chỗ trên ảnh nền
+// (đỉnh, tường trái/giữa/phải, kệ trái/phải). Màn hình chính hiện lưới level + decor của chương đang xem.
+const CHAPTERS = [
+  { id: 1, from: 1, to: 10, key: 'decor', decor: [
+    { id: 'bunting', cost: 2 }, { id: 'frame', cost: 3 }, { id: 'clock', cost: 4 },
+    { id: 'postbox', cost: 4 }, { id: 'board', cost: 5 }, { id: 'cat', cost: 6 }] },
+  { id: 2, from: 11, to: 20, key: 'decor2', decor: [
+    { id: 'fan', cost: 2 }, { id: 'porthole', cost: 3 }, { id: 'buoy', cost: 4 },
+    { id: 'lantern', cost: 4 }, { id: 'chart', cost: 5 }, { id: 'boatbed', cost: 6 }] },
+];
+const chapterOf = lv => CHAPTERS.find(c => lv >= c.from && lv <= c.to) || CHAPTERS[CHAPTERS.length - 1];
+let homeCh = CHAPTERS[0];     // chương đang xem ở màn hình chính
 // Mốc UA: level "khó nhưng không thể thua". Mặc định theo levels.js (special/safety); ghi đè để A/B test:
 //   ?hard=5,10      danh sách level khó      ?safety=overtime | retry | none
 const AB = (() => {
@@ -90,6 +98,11 @@ const defaultSave = () => ({ unlocked: 1, coins: 500, stars: {}, hint: 0, pack: 
 let save = defaultSave();
 try { save = { ...defaultSave(), ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') }; } catch (e) { /* ignore */ }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
+// Save của bản 10 level dừng ở unlocked = 10 dù đã thắng L10: mở level kế tiếp level cao nhất đã thắng
+{
+  const won = Object.keys(save.stars).map(Number).filter(n => save.stars[n]);
+  if (won.length) save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, Math.max(...won) + 1));
+}
 
 // ============================================================ stage scaling
 let scale = 1, stageLeft = 0, stageTop = 0;
@@ -1770,7 +1783,7 @@ async function runAutoFinish(token, r) {
 // Kẹt cứng: không còn nước có ích, kể cả khi deck còn bài (rút vòng vòng cũng vô ích).
 function isStuck() { return isDeadlocked(S); }
 const pointsEarned = () => Object.values(save.stars).reduce((a, b) => a + b, 0);
-const pointsSpent = () => DECOR.slice(0, save.decor || 0).reduce((a, d) => a + d.cost, 0);
+const pointsSpent = () => CHAPTERS.reduce((sum, c) => sum + c.decor.slice(0, save[c.key] || 0).reduce((a, d) => a + d.cost, 0), 0);
 const pointsLeft = () => pointsEarned() - pointsSpent();
 // Sao theo phần moves dư so với lời giải tối ưu (gdd-core.md mục 5): slack = moves - tối ưu.
 // 3★ nếu còn >= 50% slack, 2★ nếu >= 20%. Luật cũ (>= 25% ngân sách) gần như không ai đạt 3★.
@@ -1807,8 +1820,9 @@ async function winSequence() {
   await wait(700);
   if (token !== levelToken) return;
   const last = lv === LEVELS.length;
+  const chEnd = CHAPTERS.find(c => c.to === lv);          // level cuối chương -> thưởng chương
   panel({
-    title: last ? t('win_last') : st === 3 ? t('win_title') : st === 2 ? t('win_great') : t('win_ok'),
+    title: chEnd ? t('win_last') : st === 3 ? t('win_title') : st === 2 ? t('win_great') : t('win_ok'),
     radial: true,
     body: `<div class="stars"><i></i><i></i><i></i></div>
       <div class="pts-line">${gain ? t('pts_gain', { n: gain }) : t('pts_best', { n: save.stars[lv] })}</div>
@@ -1821,9 +1835,9 @@ async function winSequence() {
       { label: t('claim2'), cls: 'orange', act: () => fakeAd(() => {
         coinsTo(reward, 540, 900);
         const tk = levelToken;
-        setTimeout(() => { if (tk === levelToken) (last ? chapterReward() : startLevel(levelIdx + 1)); }, 1300);
+        setTimeout(() => { if (tk === levelToken) (chEnd ? chapterReward(chEnd) : startLevel(levelIdx + 1)); }, 1300);
       }) },
-      { label: last ? t('home') : t('cont'), act: () => (last ? chapterReward() : startLevel(levelIdx + 1)) },
+      { label: t('cont'), act: () => (chEnd ? chapterReward(chEnd) : startLevel(levelIdx + 1)) },
     ],
     onOpen: pEl => {
       const ss = pEl.querySelectorAll('.stars i');
@@ -1833,17 +1847,21 @@ async function winSequence() {
     },
   });
 }
-// Cuối chương (L10): thưởng một lần + mời mở album -> lý do quay lại (đo D1)
-function chapterReward() {
-  if (save.chapter1) { goHome(); return; }
-  save.chapter1 = 1;
+// Cuối chương: thưởng một lần + mời sang chương sau (hoặc mở album) -> lý do quay lại (đo D1)
+function chapterReward(ch = CHAPTERS[0]) {
+  const next = CHAPTERS.find(c => c.id === ch.id + 1 && c.from <= LEVELS.length);
+  const flag = 'chapter' + ch.id;
+  if (save[flag]) { goHome(next ? next.id : ch.id); return; }
+  save[flag] = 1;
   save.coins += 200;
   persist();
-  track('chapter_complete', { chapter: 1 });
+  track('chapter_complete', { chapter: ch.id });
   sfx('feature');
-  panel({ title: t('chapter_title'), radial: true,
-    body: `<div class="feature-icon" style="background-image:url(assets/ui/envelope_closed.png)"></div><p>${t('chapter_body')}</p><div class="coins-line"><i></i><span>+200</span></div>`,
-    buttons: [{ label: t('next_ch'), act: () => { goHome(); openCh2('chapter_reward'); } }, { label: t('open_album'), cls: 'orange', act: () => { goHome(); openAlbum(); } }],
+  panel({ title: t('chapter_title', { n: ch.id }), radial: true,
+    body: `<div class="feature-icon" style="background-image:url(assets/ui/envelope_closed.png)"></div><p>${t('chapter_body_' + ch.id)}</p><div class="coins-line"><i></i><span>+200</span></div>`,
+    buttons: next
+      ? [{ label: t('next_ch', { n: next.id }), act: () => { goHome(next.id); openCh2('chapter_reward'); } }, { label: t('open_album'), cls: 'orange', act: () => { goHome(next.id); openAlbum(); } }]
+      : [{ label: t('open_album'), act: () => { goHome(ch.id); openAlbum(); } }, { label: t('home'), cls: 'orange', act: () => goHome(ch.id) }],
     onOpen: () => setTimeout(() => coinsTo(200, 540, 1000), 500) });
 }
 // Album tem: mọi chủ đề trong 10 level, tem đã gửi hiện ra, tem chưa có hiện mặt sau lá
@@ -2104,7 +2122,8 @@ function featureIntro(force = false) {
 }
 
 // ============================================================ home / pause
-function goHome() {
+function goHome(chId) {
+  homeCh = CHAPTERS.find(c => c.id === chId) || chapterOf(save.unlocked);
   if (levelActive && S) track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000) });
   levelActive = false;
   document.body.classList.remove('hard');
@@ -2120,26 +2139,35 @@ function goHome() {
   const grid = $('grid');
   grid.innerHTML = '';
   LEVELS.forEach((_, i) => {
-    const el = document.createElement('div');
     const lv = i + 1;
+    if (lv < homeCh.from || lv > homeCh.to) return;          // chỉ hiện level của chương đang xem
+    const el = document.createElement('div');
     el.className = 'lvl' + (lv > save.unlocked ? ' locked' : '') + (save.stars[lv] ? ' done' : '') + (lv === save.unlocked ? ' cur' : '');
     el.innerHTML = `${lv}${save.stars[lv] ? `<span class="pts">${'<i></i>'.repeat(save.stars[lv])}</span>` : ''}`;
     el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('close'); });
     grid.append(el);
   });
-  // Ô chương 2 có khoá ngay dưới lưới level: luôn thấy được "thị trấn còn gì" (concept mục 7), bấm mở teaser
+  // Ô chuyển chương ngay dưới lưới level. Chương 2 chưa mở: có khoá, bấm xem teaser (luôn thấy "thị trấn còn gì", concept mục 7).
   const ch = document.createElement('div');
   ch.className = 'ch2-tile';
-  ch.innerHTML = `<i></i>${t('ch2_tile')}`;
-  ch.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); openCh2('home_tile'); });
+  if (homeCh.id === 1) {
+    ch.innerHTML = ch2Open() ? `${t('ch_name_2')} →` : `<i></i>${t('ch_name_2')}`;
+    ch.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); if (ch2Open()) goHome(2); else openCh2('home_tile'); });
+  } else {
+    ch.innerHTML = `← ${t('ch_name_1')}`;
+    ch.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); goHome(1); });
+  }
   grid.append(ch);
-  $('playBtn').textContent = save.chapter1 ? t('play_ch2') : t('play', { n: save.unlocked });
+  $('playBtn').textContent = allDone() ? t('more_soon') : t('play', { n: save.unlocked });
   renderDecor();
   $('home').classList.remove('off');
 }
 // ============================================================ Bưu điện nhỏ (decor màn hình chính, mua bằng Tem Điểm)
+const ch2Open = () => LEVELS.length >= CHAPTERS[1].from && save.unlocked >= CHAPTERS[1].from;
+const allDone = () => !!save.stars[LEVELS.length];
 function renderDecor(justPlaced = -1) {
-  const n = save.decor || 0;
+  const DECOR = homeCh.decor;
+  const n = save[homeCh.key] || 0;
   $('decor').innerHTML = DECOR.map((d, i) => (i < n || i === n)
     ? `<img class="dc dc-${d.id}${i === n ? ' ghost' : ''}${i === justPlaced ? ' new' : ''}" src="assets/decor/${d.id}.png" alt="">` : '').join('');
   $('decorBtn').innerHTML = `${t('decorate')} ${pointsLeft()}<i></i>`;
@@ -2147,10 +2175,11 @@ function renderDecor(justPlaced = -1) {
   $('decorBtn').classList.toggle('ready', !!next && pointsLeft() >= next.cost);
 }
 function decorPanel() {
-  const n = save.decor || 0;
+  const DECOR = homeCh.decor;
+  const n = save[homeCh.key] || 0;
   const d = DECOR[n];
   const left = pointsLeft();
-  track('decor_open', { placed: n, points: left });
+  track('decor_open', { chapter: homeCh.id, placed: n, points: left });
   if (!d) {
     panel({ title: t('decorate'), body: `<p>${t('decor_done')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
     return;
@@ -2165,9 +2194,9 @@ function decorPanel() {
     buttons: [
       { label: t('decor_place', { n: d.cost }), cls: ok ? '' : 'off', act: () => {
         if (!ok) { decorPanel(); return; }
-        save.decor = n + 1;
+        save[homeCh.key] = n + 1;
         persist();
-        track('decor_place', { id: d.id, index: n + 1, cost: d.cost, points_left: pointsLeft() });
+        track('decor_place', { chapter: homeCh.id, id: d.id, index: n + 1, cost: d.cost, points_left: pointsLeft() });
         sfx('slot');
         haptic([15, 40, 15]);
         renderDecor(n);
@@ -2177,23 +2206,34 @@ function decorPanel() {
   });
 }
 $('undoBtn').addEventListener('pointerup', () => { unlockAudio(); onBooster('undo'); });
-$('playBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); if (save.chapter1) openCh2('home_play'); else startLevel(save.unlocked - 1); });
+$('playBtn').addEventListener('pointerup', () => {
+  unlockAudio(); sfx('click');
+  if (allDone()) panel({ title: t('more_soon'), body: `<p>${t('chapter_body_2')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
+  else startLevel(save.unlocked - 1);
+});
 // Chương 2 "Bến Cảng" sắp mở (concept-little-post-office.md mục 3.1): teaser khu mới + tem mới + cư dân + decor.
 // Hook thay cho story: "thị trấn còn gì". Đo ý định quay lại bằng chapter2_teaser_open / chapter2_notify.
-const CH2_STAMPS = ['sailboat', 'crab', 'shell', 'lighthouse'];
+// Khi chương 2 đã mở, cùng màn này thành màn giới thiệu chương (dấu "OPEN", nút chơi level đầu chương).
+const CH2_TOPICS = ['Sailboats', 'Seafood', 'Shells', 'Nautical'];
 function openCh2(source) {
-  $('ch2StampRow').innerHTML = CH2_STAMPS.map(k => `<div class="ch2-st"><div><img src="assets/ch2/${k}.png" alt=""></div>${t('ch2_t_' + k)}</div>`).join('');
+  const open = ch2Open();
+  $('ch2').classList.toggle('open', open);
+  $('ch2StampRow').innerHTML = CH2_TOPICS.map(tp => `<div class="ch2-st"><div><img src="${iconUrl(tp)}" alt=""></div>${topicName(tp)}</div>`).join('');
+  $('ch2Sub').textContent = open ? t('ch2_sub_open') : t('ch2_sub');
+  $('ch2Soon').textContent = open ? t('ch2_open') : t('ch2_soon');
   const nb = $('ch2Notify');
-  nb.textContent = save.ch2notify ? t('ch2_notified') : t('ch2_notify');
-  nb.classList.toggle('done', !!save.ch2notify);
+  nb.textContent = open ? t('play', { n: ch2Level() }) : save.ch2notify ? t('ch2_notified') : t('ch2_notify');
+  nb.classList.toggle('done', !open && !!save.ch2notify);
   $('ch2').classList.remove('off');
   const soon = $('ch2Soon');
   soon.style.animation = 'none'; void soon.offsetWidth; soon.style.animation = '';   // chạy lại hiệu ứng đóng dấu
   setTimeout(() => sfx('place', { rate: 0.85 }), 280);
-  track('chapter2_teaser_open', { source, points_left: pointsLeft(), decor: save.decor || 0 });
+  track('chapter2_teaser_open', { source, open, points_left: pointsLeft(), decor: save.decor || 0 });
 }
+const ch2Level = () => Math.min(CHAPTERS[1].to, LEVELS.length, Math.max(CHAPTERS[1].from, save.unlocked));
 $('ch2Notify').addEventListener('pointerup', () => {
   unlockAudio();
+  if (ch2Open()) { sfx('click'); $('ch2').classList.add('off'); startLevel(ch2Level() - 1); return; }
   if (save.ch2notify) return;
   save.ch2notify = 1;
   persist();
