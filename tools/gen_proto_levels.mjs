@@ -59,6 +59,32 @@ const DESIGN = [
     note: 'Finale riêng (video dừng ở L9). MỐC UA 2: siêu khó, hết moves vào Overtime, không thể thua.' },
 ];
 
+// VARIANT B (review game design 2026-10-10, mục 23): luật riêng để A/B với Baseline A (clone ABI ở trên).
+// Mỗi level tối đa 6 chủ đề, không có cặp dễ nhầm trước tier 3 (bỏ Truck cạnh Train, Float cạnh Sea life,
+// Sculpture tương phản thấp, Sashimi lệch tone). Ít lá hơn nên moves không theo video: chọn theo target như L10.
+// Chạy: node tools/gen_proto_levels.mjs --variant=b   (ghi prototype/stamp/src/levels_b.js)
+const VARIANT_B = {
+  4: { topics: { Dinosaur: 4, Glasses: 5, Pets: 5, 'Fast food': 5, Flower: 5, Chess: 4 } },
+  5: { topics: { Dog: 6, Train: 6, Tree: 5, Soda: 6, 'Ice cream': 6, Fruit: 6 } },
+  6: { topics: { 'Soft drink': 6, Planet: 5, Beast: 4, Notes: 5, Bird: 3, Vegetable: 6 } },
+  7: { topics: { 'Sea life': 6, Glasses: 6, Tea: 5, Notes: 4, Car: 5, Cake: 5 } },
+  8: { topics: { Footwear: 4, Ship: 5, Outerwear: 5, Cocktail: 5, Desserts: 5, Bouquet: 5 } },
+  9: { topics: { Zoo: 5, Pizza: 5, Candy: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 } },
+  10: { topics: { Cat: 6, Coffee: 6, 'Music Inst': 6, Aircraft: 6, Mushroom: 6, Gems: 5 } },
+};
+const VARIANT = (process.argv.find(a => a.startsWith('--variant=')) || '').slice(10) || 'a';
+if (VARIANT === 'b') {
+  // Giữ biên moves như A (moves / solver của từng level ở levels-report.json) để A/B chỉ khác luật chủ đề, không khác độ rộng moves
+  const repA = JSON.parse(readFileSync(ROOT + 'prototype/stamp/levels-report.json', 'utf8'));
+  for (const [L, o] of Object.entries(VARIANT_B)) {
+    const d = DESIGN[L - 1];
+    if (!d.special) o.slackB = repA[L - 1].slack;
+    Object.assign(d, o, { moves: null, movesRange: undefined, newbieTarget: undefined, skilledTarget: undefined,
+      note: 'Variant B: ' + Object.keys(o.topics).length + ' chủ đề, không cặp dễ nhầm. ' + d.note });
+  }
+}
+const SUFFIX = VARIANT === 'b' ? '_b' : '';
+
 // Level 1 theo video (art index xem prototype/stamp/assets/cards/<topic>/): đáy -> đỉnh; deck theo thứ tự rút.
 function buildL1() {
   const T = (id, t, n) => ({ id, t, k: 'topic', n });
@@ -148,8 +174,8 @@ const sim = (lv, prof, runs, seed) => { const r = sampleHidden(createState(lv), 
 const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean).map(Number);
 let OLD = null, OLD_REPORT = null;
 if (ONLY.length) {
-  OLD = (await import(ROOT + 'prototype/stamp/src/levels.js?' + Date.now())).LEVELS;
-  OLD_REPORT = JSON.parse(readFileSync(ROOT + 'prototype/stamp/levels-report.json', 'utf8'));
+  OLD = (await import(ROOT + `prototype/stamp/src/levels${SUFFIX}.js?` + Date.now())).LEVELS;
+  OLD_REPORT = JSON.parse(readFileSync(ROOT + `prototype/stamp/levels-report${SUFFIX}.json`, 'utf8'));
 }
 const out = [];
 const report = [];
@@ -223,6 +249,7 @@ for (let li = 0; li < DESIGN.length; li++) {
   const solverMoves = Math.min(pick.solver, exact ? exact.moves : Infinity);
   const { dist, stuck } = sim(pick.lv, CASUAL, 60, pick.seed);
   let budget = pick.budget ?? d.moves;
+  if (budget == null && d.slackB) budget = Math.ceil(solverMoves * d.slackB);
   if (budget == null) {
     const k = Math.min(dist.length - 1, Math.ceil(d.target * dist.length) - 1);
     budget = Math.max(Math.ceil(solverMoves * SLACK[d.role]), Number.isFinite(dist[k]) ? dist[k] : 0);
@@ -240,6 +267,6 @@ for (let li = 0; li < DESIGN.length; li++) {
 }
 
 const header = '// SINH TỰ ĐỘNG bởi tools/gen_proto_levels.mjs. Đừng sửa tay; sửa DESIGN rồi chạy lại.\n';
-writeFileSync(ROOT + 'prototype/stamp/src/levels.js', header + 'export const LEVELS = ' + JSON.stringify(out) + ';\n');
-writeFileSync(ROOT + 'prototype/stamp/levels-report.json', JSON.stringify(report, null, 1));
-console.log('-> prototype/stamp/src/levels.js');
+writeFileSync(ROOT + `prototype/stamp/src/levels${SUFFIX}.js`, header + 'export const LEVELS = ' + JSON.stringify(out) + ';\n');
+writeFileSync(ROOT + `prototype/stamp/levels-report${SUFFIX}.json`, JSON.stringify(report, null, 1));
+console.log(`-> prototype/stamp/src/levels${SUFFIX}.js`);

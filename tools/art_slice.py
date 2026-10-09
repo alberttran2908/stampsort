@@ -4,6 +4,7 @@
 Dùng:
   python3 tools/art_slice.py topic <slug> <grid.png>      # icon + tem của một chủ đề (theo research/art-redo/grid_map.json)
   python3 tools/art_slice.py ui <sheet.png> name1,name2,...   # lưới 3x3 các file UI (bỏ trống bằng "-")
+  python3 tools/art_slice.py cards <sheet.png> fruit/0,ball/1,...   # lưới 3x3 tem lẻ của nhiều chủ đề
 
 Ghi vào research/art-redo/out/... (bản xem trước) và, với --apply, ghi đè vào prototype/stamp/assets.
 Nền: nếu ảnh không trong suốt, xoá nền bằng flood-fill từ mép (màu gần màu góc).
@@ -183,6 +184,9 @@ if __name__ == '__main__':
         targets = [f'cards/{slug}/{a}.png' for a in gm]
         if '--no-icon' in sys.argv:
             targets[0] = None                      # icon làm riêng bằng bảng icon
+    elif args[0] == 'cards':                         # cards <sheet.png> fruit/0,ball/1,...: lưới tem lẻ của nhiều chủ đề
+        grid = args[1]
+        targets = [None if n == '-' else f'cards/{n}.png' for n in args[2].split(',')]
     else:
         grid = args[1]
         targets = [None if n == '-' else f'ui/{n}.png' for n in args[2].split(',')]

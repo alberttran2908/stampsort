@@ -2,7 +2,7 @@
 # Build prototype/stamp thành trang tĩnh và đẩy lên nhánh gh-pages (GitHub Pages).
 # Dùng: tools/deploy_web.sh            (build + deploy)
 #       tools/deploy_web.sh --build-only (chỉ build vào dist/web)
-# Lưu ý: bản build chứa art/audio tạm từ APK Stamp Solitaire (xem docs/design/prototype-10-levels.md).
+# Art vẽ lại qua ChatGPT (docs/design/art-redo-chatgpt.md), SFX tự tổng hợp (tools/synth_sfx.py).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/dist/web"
@@ -11,7 +11,8 @@ cd "$ROOT"
 [ -d prototype/stamp/assets ] || .venv/bin/python tools/build_proto_assets.py
 rm -rf "$OUT" && mkdir -p "$OUT"
 cp prototype/stamp/index.html "$OUT/"
-cp -R prototype/stamp/src prototype/stamp/assets "$OUT/"
+cp -R prototype/stamp/src prototype/stamp/assets prototype/stamp/sfx "$OUT/"
+rm -rf "$OUT/assets/audio"          # âm thanh APK cũ: không còn dùng (đã thay bằng sfx/ tự tổng hợp)
 touch "$OUT/.nojekyll"
 # Chống cache JS cũ (GitHub Pages cache 10 phút): gắn ?v=<phiên bản> vào script và mọi import nội bộ
 VER="$(git rev-parse --short HEAD)-$(date +%s)"

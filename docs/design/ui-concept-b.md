@@ -12,7 +12,7 @@ Người dùng chọn **B**. Lý do: nền sáng và không có đồ trang trí
 
 | Thành phần | File (`assets/ui/`) | Ghi chú |
 |---|---|---|
-| Nền | `bg_game.jpg`, `bg_hard.jpg` | Tường mint có họa tiết phong bì, kèn bưu điện, dấu chân mèo; kệ gỗ ở đáy. Họa tiết trong vùng chơi được làm mờ 60%. Bản level khó là tông tím chiều tối, pha bằng code |
+| Nền | `bg_game.jpg`, `bg_hard.jpg` | Tường mint có họa tiết phong bì, kèn bưu điện, dấu chân mèo; kệ gỗ ở đáy. Họa tiết trong vùng chơi được làm mờ 60%. Bản level khó ("Busy Day", từ P2 #18) là cùng cảnh vẽ lại buổi tối: trời tím có sao, đèn bàn đồng (`research/art-redo/ui2/lpo_bg_evening.png`) |
 | Ô MOVES, băng tiêu đề, nhãn gợi ý | `hud_moves.png`, `banner.png`, `tipbox.png` | Viền air-mail đỏ-xanh. Băng tiêu đề và nhãn gợi ý dùng 9-slice (`border-image`) |
 | Thanh tiến độ | `bar_track.png` | Chia N đoạn bằng CSS (`--segs`), mỗi đoạn là một lá thư |
 | Khay ô chứa | `slot_tray.png`, `tray_front.png` | Mép trước có biển đồng (`.tray-front`, z 380) đè lên chân lá, nên tem trông như cắm trong khay. Số đếm nằm trên biển đồng |

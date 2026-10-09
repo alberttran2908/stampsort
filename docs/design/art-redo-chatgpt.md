@@ -43,8 +43,16 @@
 | **Hết lượt tải file của gói Plus** (khoảng 90 ảnh trong một khung giờ; báo "Upload limit reached", không có lỗi trong trang) | Làm tiếp bằng chữ, trong chat đã có sẵn các lưới làm mẫu style. Kết quả vẫn đồng bộ |
 | ChatGPT đặt vật lệch ô (nấm morel nằm ở ô 8) | Gán tay |
 
-## 5. Còn lại
+## 5. Vẽ lại thêm theo review game design (P2 #17, #18)
 
-- **Âm thanh** (`assets/audio`, 33 file) vẫn là của APK. Dòng chú thích ở màn hình chính đã đổi thành "âm thanh tạm từ APK tham khảo".
-- **Level 7** có Zoo (hải cẩu), Sea life và Float (phao cá mập, phao chim cánh cụt) cùng lúc, dễ nhầm. Tình huống này giống bản gốc vì tem bám theo lưới cũ. Nên đổi vài tem Zoo hoặc Float, hoặc đổi chủ đề của level 7 **[GIẢ THUYẾT, cần playtest]**.
-- `prototype/stamp/assets/` vẫn gitignore (vì còn audio APK). Art mới chỉ lên web qua `tools/deploy_web.sh`. Muốn lưu art vào git thì cần tách audio ra trước.
+Cùng chat và style ref với các đợt trước. Ba lưới 3x3 (`research/art-redo/gen/lpo_p2_a|b|c.png`) được cắt bằng `python3 tools/art_slice.py cards <lưới> fruit/0,ball/1,... --fixed --apply`:
+- Fruit 0, 1, 2, 4, 5, 6 và Ball 0, 1, 2, 5, 6, 7: bỏ mặt cười.
+- Notes 0, 2, 3, 6, 7, 8, 11: đồ vật âm nhạc thay cho ký hiệu nhạc phẳng.
+- Ship 1 → thuyền gỗ, Beast 14 → cáo, Zoo 5 → ngựa vằn, Zoo 7 → hà mã.
+
+Nền level khó: tải nền ban ngày lên, yêu cầu vẽ lại cùng bố cục lúc buổi tối (`ui2/lpo_bg_evening.png`), rồi xử lý như nền ngày (crop 1080×1920, làm mờ họa tiết vùng chơi 60%) thành `assets/ui/bg_hard.jpg`.
+
+## 6. Còn lại
+
+- ~~Âm thanh APK~~: đã thay bằng SFX tự tổng hợp (`tools/synth_sfx.py`, `prototype/stamp/sfx/`). `prototype/stamp/assets/` được commit, chỉ còn ignore `assets/audio/`.
+- ~~Level 7 có Zoo cạnh Sea life và Float~~: đã đổi Zoo → Cake (P0).

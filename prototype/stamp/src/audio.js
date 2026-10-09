@@ -1,12 +1,8 @@
 // WebAudio: nạp trước toàn bộ sfx, phát không trễ, hỗ trợ pitch/volume.
-const FILES = {
-  pick: 'pickcard', place: 'addcardnormal', open: 'sfndocktopic', complete: 'endaddtopic',
-  flip: 'changefacecard', back: 'backcard', draw: 'spawncard', hint: 'suggest', joker: 'boosterchoosetopic',
-  magnet: 'magnet', feature: 'newfeature', slot: 'unlockdock', win: 'wins', lose: 'outofmove', coin: 'coin',
-  coins: 'coincollect', claim: 'endclaimcoin', click: 'click', close: 'close', whoosh: 'iconmove',
-  sparkle: 'etfx_spawn', boom: 'etfx_explosion_magic2',
-};
-for (let i = 1; i <= 11; i++) FILES['combo' + i] = `collectable_card_flying_v2_var_${String(i).padStart(2, '0')}`;
+// SFX tự tổng hợp bằng tools/synth_sfx.py (sfx/<tên>.mp3), không dùng âm thanh của APK.
+const NAMES = ['pick', 'place', 'open', 'complete', 'flip', 'back', 'draw', 'hint', 'joker', 'magnet', 'feature',
+  'slot', 'win', 'lose', 'coin', 'coins', 'claim', 'click', 'close', 'whoosh', 'sparkle', 'boom'];
+for (let i = 1; i <= 11; i++) NAMES.push('combo' + i);
 
 let ctx = null;
 let master = null;
@@ -21,9 +17,9 @@ export async function initAudio() {
   master = ctx.createGain();
   master.gain.value = muted ? 0 : 0.8;
   master.connect(ctx.destination);
-  await Promise.all(Object.entries(FILES).map(async ([k, f]) => {
+  await Promise.all(NAMES.map(async (k) => {
     try {
-      const res = await fetch(`assets/audio/${f}.mp3`);
+      const res = await fetch(`sfx/${k}.mp3`);
       buffers[k] = await ctx.decodeAudioData(await res.arrayBuffer());
     } catch (e) { /* thiếu file: im lặng */ }
   }));

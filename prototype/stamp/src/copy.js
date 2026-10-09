@@ -43,6 +43,9 @@ const STR = {
     err_slots_busy: 'No empty slot. <em>Fill a slot</em> first.',
     err_mixed: 'Only <em>same-kind</em> stacks move together.',
     err_last_slot: 'Last free slot! <em>Drag</em> it there if you are sure.',
+    col_free: 'Column free!',
+    album: 'Album', album_title: 'Stamp Album', album_count: '{n}/{total} stamps collected', close: 'Close',
+    chapter_title: 'Chapter complete!', chapter_body: 'Main Street is all caught up. Everyone got their letters.', open_album: 'Open album',
     err_facedown: 'Hidden stamp. Clear the ones <em>on top</em>.',
     err_no_place: 'No spot for it <em>yet</em>.',
     follow: 'Not yet! Follow the <em>hand</em>.',
@@ -114,6 +117,9 @@ const STR = {
     err_slots_busy: 'Hết ô trống. <em>Lấp đầy một ô</em>.',
     err_mixed: 'Chỉ xấp tem <em>cùng loại</em> mới nhấc cùng nhau.',
     err_last_slot: 'Ô trống cuối cùng! Chắc thì <em>kéo</em> vào nhé.',
+    col_free: 'Trống một cột!',
+    album: 'Album', album_title: 'Album tem', album_count: 'Đã sưu tầm {n}/{total} tem', close: 'Đóng',
+    chapter_title: 'Xong chương 1!', chapter_body: 'Phố Chính đã nhận đủ thư. Ai cũng vui.', open_album: 'Mở album',
     err_facedown: 'Tem úp. Dọn tem <em>phía trên</em> trước.',
     err_no_place: 'Tem này <em>chưa có chỗ</em>.',
     follow: 'Chưa được! Làm theo <em>bàn tay</em>.',
@@ -155,7 +161,7 @@ const TOPIC_VI = {
   Car: 'Ô tô', Hoofed: 'Thú trang trại', Ship: 'Tàu thủy', Candy: 'Kẹo', Balloon: 'Bóng bay', Time: 'Đồng hồ', Hat: 'Mũ',
   Glasses: 'Kính', Pets: 'Thú cưng', Dinosaur: 'Khủng long', 'Fast food': 'Đồ ăn nhanh', Chess: 'Cờ vua', Flower: 'Hoa',
   Leaf: 'Lá cây', Train: 'Tàu hỏa', Tree: 'Cây', Soda: 'Nước ngọt', 'Ice cream': 'Kem', Truck: 'Xe tải', Kite: 'Diều',
-  'Soft drink': 'Đồ uống', Planet: 'Hành tinh', Beast: 'Thú hoang', Notes: 'Nốt nhạc', Sauce: 'Nước sốt', Vegetable: 'Rau củ',
+  'Soft drink': 'Đồ uống', Planet: 'Hành tinh', Beast: 'Thú hoang', Notes: 'Âm nhạc', Sauce: 'Nước sốt', Vegetable: 'Rau củ',
   Insect: 'Côn trùng', 'Sea life': 'Sinh vật biển', Float: 'Đồ đi biển', Tea: 'Trà', Zoo: 'Sở thú', Footwear: 'Giày dép',
   'Raw meat': 'Thịt sống', Outerwear: 'Áo khoác', Cocktail: 'Cocktail', Desserts: 'Tráng miệng', Grilled: 'Đồ nướng',
   Bouquet: 'Bó hoa', Sculpture: 'Tượng', Sashimi: 'Sashimi', 'Pet Care': 'Đồ thú cưng', 'Water Plants': 'Cây thủy sinh',
@@ -164,7 +170,7 @@ const TOPIC_VI = {
 };
 /** Tên chủ đề theo ngôn ngữ đang chọn. */
 const TOPIC_EN = {
-  Hoofed: 'Farm animals', Time: 'Clocks', Notes: 'Music notes', Float: 'Beach floats', Beast: 'Wild animals',
+  Hoofed: 'Farm animals', Time: 'Clocks', Notes: 'Music', Float: 'Beach floats', Beast: 'Wild animals',
   'Pet Care': 'Pet supplies', Grilled: 'BBQ', 'Soft drink': 'Drinks', 'Music Inst': 'Instruments', 'Water Plants': 'Water plants',
   Pets: 'Small pets', Tool: 'Tools', Gems: 'Gems', Leaf: 'Leaves', Glasses: 'Glasses',
 };

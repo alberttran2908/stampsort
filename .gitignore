@@ -19,8 +19,8 @@ research/apk/*/assets_export/
 research/video/frames/
 research/video/sheets/
 research/video/key/
-# Art/audio tạm từ APK cho prototype (build bằng tools/build_proto_assets.py)
-prototype/stamp/assets/
+# Âm thanh APK cũ của prototype (không còn dùng, đã thay bằng prototype/stamp/sfx/). Art trong assets/ đã vẽ lại nên được commit
+prototype/stamp/assets/audio/
 # Bản build web (deploy lên nhánh gh-pages)
 dist/
 
