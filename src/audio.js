@@ -1,5 +1,5 @@
 // WebAudio: nạp trước toàn bộ sfx, phát không trễ, hỗ trợ pitch/volume.
-// SFX tự tổng hợp bằng tools/synth_sfx.py (sfx/<tên>.mp3), không dùng âm thanh của APK.
+// SFX tự tổng hợp bằng tools/synth_sfx.py (sfx-348b9adf/<tên>.mp3), không dùng âm thanh của APK.
 const NAMES = ['pick', 'place', 'open', 'complete', 'flip', 'back', 'draw', 'hint', 'joker', 'magnet', 'feature',
   'slot', 'win', 'lose', 'coin', 'coins', 'claim', 'click', 'close', 'whoosh', 'sparkle', 'boom'];
 for (let i = 1; i <= 11; i++) NAMES.push('combo' + i);
@@ -19,7 +19,7 @@ export async function initAudio() {
   master.connect(ctx.destination);
   await Promise.all(NAMES.map(async (k) => {
     try {
-      const res = await fetch(`sfx/${k}.mp3`);
+      const res = await fetch(`sfx-348b9adf/${k}.mp3`);
       buffers[k] = await ctx.decodeAudioData(await res.arrayBuffer());
     } catch (e) { /* thiếu file: im lặng */ }
   }));
