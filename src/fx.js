@@ -122,7 +122,7 @@ function particlesStep(now) {
   const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016);
   lastT = now;
   cx.clearRect(0, 0, 1080, 1920);
-  const coin = img('assets-5c8a70cf/ui/coin.png');
+  const coin = img('assets-e4fb3f19/ui/coin.png');
   for (let i = parts.length - 1; i >= 0; i--) {
     const p = parts[i];
     if (p.kind === 'coin') {
