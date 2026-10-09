@@ -23,3 +23,11 @@ research/video/key/
 prototype/stamp/assets/
 # Bản build web (deploy lên nhánh gh-pages)
 dist/
+
+# art APK dùng làm mẫu khi vẽ lại bằng ChatGPT (không commit)
+research/art-redo/backup/
+research/art-redo/ref/
+research/art-redo/ref_jpg/
+# ảnh ChatGPT gốc và ảnh xem trước: nặng, giữ ở máy
+research/art-redo/gen/
+research/art-redo/*.jpg

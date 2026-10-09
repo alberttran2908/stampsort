@@ -147,7 +147,7 @@ const STR = {
   },
 };
 
-// Tên chủ đề tiếng Việt (art tạm từ APK dùng tên tiếng Anh)
+// Tên chủ đề tiếng Việt (tên gốc tiếng Anh theo dữ liệu level)
 const TOPIC_VI = {
   Cat: 'Mèo', Fruit: 'Trái cây', Pizza: 'Pizza', Ball: 'Bóng', Dog: 'Chó', Noodle: 'Mì', Phone: 'Điện thoại', Bird: 'Chim',
   Car: 'Ô tô', Hoofed: 'Thú móng guốc', Ship: 'Tàu thủy', Candy: 'Kẹo', Balloon: 'Bóng bay', Time: 'Đồng hồ', Hat: 'Mũ',
