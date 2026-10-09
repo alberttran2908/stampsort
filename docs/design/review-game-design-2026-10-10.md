@@ -49,7 +49,7 @@
 >     - **Bưu điện nhỏ:** 6 decor ở màn hình chính, mở lần lượt qua nút "Decorate n": cờ dây 2, khung tem 3, đồng hồ treo 4, hòm thư 4, bảng ghim 5, giỏ mèo ngủ 6. Tổng 24 trên tối đa 30 của chương 1 `[GIẢ THUYẾT]`. Món kế tiếp hiện bóng mờ đúng chỗ sẽ đặt. Decor không cho perk gameplay.
 >     - Sự kiện: `points_earned`, `decor_open`, `decor_place`. Art vẽ qua ChatGPT (`assets/decor/`, `assets/ui/tem_diem.png`).
 >   - **Màn "Chương 2 sắp mở"** (Bến Cảng, theo `concept-little-post-office.md` mục 3.1): bưu thiếp cảnh cảng có dấu "SOON", 4 tem mới bị khoá (thuyền buồm, hải sản, vỏ ốc, hải đăng), giới thiệu thuyền trưởng Bo, 3 decor mới (phao, cửa sổ tròn, quạt trần).
->     - Đường vào: nút "Chapter 2 →" trong popup hết chương, và nút Play ở màn hình chính đổi thành "Chapter 2 · Soon" sau khi xong L10.
+>     - Đường vào: ô "Chapter 2 · The Harbor" có khoá ngay dưới lưới level (luôn hiện, từ đầu game), nút "Chapter 2 →" trong popup hết chương, và nút Play ở màn hình chính (đổi thành "Chapter 2 · Soon" sau khi xong L10).
 >     - Nút "Notify me" chỉ ghi nhận ý định, chưa gửi thông báo thật. Sự kiện `chapter2_teaser_open` (source) và `chapter2_notify` dùng để đo hook "thị trấn còn gì" (concept mục 7: % người mở chương 2).
 > - **Góp ý người dùng (cùng ngày):** lá chủ đề vương miện dùng icon chỉ có nét nâu, không tô màu, để không lẫn với tem thường có màu. Icon được sinh tự động từ icon màu bằng `tools/icon_line.py` (`cards/<chủ đề>/icon_line.png`). Album vẫn dùng icon màu.
 > - **#20** Lật ra lá vương miện có vòng sáng, lấp lánh và tiếng "open" cao hơn. Dọn sạch cột có lấp lánh, và 3 lần đầu hiện chữ "Column free!".

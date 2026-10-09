@@ -2127,6 +2127,12 @@ function goHome() {
     el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('close'); });
     grid.append(el);
   });
+  // Ô chương 2 có khoá ngay dưới lưới level: luôn thấy được "thị trấn còn gì" (concept mục 7), bấm mở teaser
+  const ch = document.createElement('div');
+  ch.className = 'ch2-tile';
+  ch.innerHTML = `<i></i>${t('ch2_tile')}`;
+  ch.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); openCh2('home_tile'); });
+  grid.append(ch);
   $('playBtn').textContent = save.chapter1 ? t('play_ch2') : t('play', { n: save.unlocked });
   renderDecor();
   $('home').classList.remove('off');
