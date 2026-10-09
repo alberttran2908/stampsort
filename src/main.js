@@ -1,12 +1,12 @@
-import { LEVELS as LEVELS_A } from './levels.js?v=ed43c4c-1791578388';
+import { LEVELS as LEVELS_A } from './levels.js?v=5e502a1-1791579308';
 import { LEVELS as LEVELS_B } from './levels_b.js';
-import * as E from './engine.js?v=ed43c4c-1791578388';
-import { hint as solverHint, solve } from './solver.js?v=ed43c4c-1791578388';
-import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=ed43c4c-1791578388';
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=ed43c4c-1791578388';
-import { candidateActions, isDeadlocked } from './solver.js?v=ed43c4c-1791578388';
-import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js?v=ed43c4c-1791578388';
-import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js?v=ed43c4c-1791578388';
+import * as E from './engine.js?v=5e502a1-1791579308';
+import { hint as solverHint, solve } from './solver.js?v=5e502a1-1791579308';
+import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=5e502a1-1791579308';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=5e502a1-1791579308';
+import { candidateActions, isDeadlocked } from './solver.js?v=5e502a1-1791579308';
+import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js?v=5e502a1-1791579308';
+import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js?v=5e502a1-1791579308';
 
 // ============================================================ constants
 // Lá dựng trong DOM ở kích thước gốc 165x214 rồi phóng to bằng CK khi đặt vị trí (applyTransform, .slot dùng --ck).
@@ -28,7 +28,15 @@ const COMBO_MAX = 6;
 const COSTS = { undo: 30, hint: 150, pack: 250, stamper: 250, joker: 500, slot: 400, moves: 300 };
 // Lịch mở theo video: Hint L2, Pack L4, Stamper L7, Joker L9; hộc phụ mua được từ L2.
 const UNLOCK_AT = { hint: 2, pack: 4, stamper: 7, joker: 9, slot: 2 };
-const GIFTS = { hint: 3, pack: 2, stamper: 2, joker: 1 };   // Joker 1: quà 2 lá làm L10 "trông khó" mà không "thấy khó"
+const GIFTS = { hint: 3, pack: 2, stamper: 2, joker: 1 };
+// Tem Điểm (thay sao, gdd-core.md mục 5 + concept mục 5 "Bưu điện nhỏ"): mỗi level 1-3 Tem Điểm theo moves dư.
+// Tổng kiếm được = tổng điểm CAO NHẤT từng level (chơi lại để nâng điểm thì được phần chênh). Tiêu vào decor màn hình chính,
+// mở lần lượt; decor không cho perk gameplay. Giá [GIẢ THUYẾT]: tổng 24 / tối đa 30 của chương 1 -> trung bình ~2.4 điểm/level
+// là đủ cả phòng, món cuối thường cần chơi lại 1-2 level.
+const DECOR = [
+  { id: 'bunting', cost: 2 }, { id: 'frame', cost: 3 }, { id: 'clock', cost: 4 },
+  { id: 'postbox', cost: 4 }, { id: 'board', cost: 5 }, { id: 'cat', cost: 6 },
+];   // Joker 1: quà 2 lá làm L10 "trông khó" mà không "thấy khó"
 // Mốc UA: level "khó nhưng không thể thua". Mặc định theo levels.js (special/safety); ghi đè để A/B test:
 //   ?hard=5,10      danh sách level khó      ?safety=overtime | retry | none
 const AB = (() => {
@@ -49,10 +57,10 @@ setCommon({ variant: VARIANT });
 const specialOf = lv => ((AB.hard ? AB.hard.includes(lv.id) : !!lv.special) ? (lv.special || 'hard') : null);
 const safetyOf = lv => (specialOf(lv) ? (AB.safety || lv.safety || 'overtime') : 'none');
 const BOOSTERS = [
-  { id: 'hint', name: 'Hint', icon: 'assets-02c337f6/ui/ic_hint.png' },
-  { id: 'pack', name: 'Pack', icon: 'assets-02c337f6/ui/ic_pack.png' },
-  { id: 'stamper', name: 'Stamper', icon: 'assets-02c337f6/ui/ic_stamper.png' },
-  { id: 'joker', name: 'Joker', icon: 'assets-02c337f6/ui/ic_joker.png' },
+  { id: 'hint', name: 'Hint', icon: 'assets-5c8a70cf/ui/ic_hint.png' },
+  { id: 'pack', name: 'Pack', icon: 'assets-5c8a70cf/ui/ic_pack.png' },
+  { id: 'stamper', name: 'Stamper', icon: 'assets-5c8a70cf/ui/ic_stamper.png' },
+  { id: 'joker', name: 'Joker', icon: 'assets-5c8a70cf/ui/ic_joker.png' },
 ];
 
 const $ = id => document.getElementById(id);
@@ -142,8 +150,8 @@ const toStage = e => ({ x: (e.clientX - stageLeft) / scale, y: (e.clientY - stag
 // ============================================================ assets
 let manifest = {};
 const slug = t => t.toLowerCase().replace(/ /g, '_').replace(/&/g, 'and');
-const artUrl = c => `assets-02c337f6/cards/${slug(c.t)}/${c.art}.png`;
-const iconUrl = t => `assets-02c337f6/cards/${slug(t)}/icon.png`;
+const artUrl = c => `assets-5c8a70cf/cards/${slug(c.t)}/${c.art}.png`;
+const iconUrl = t => `assets-5c8a70cf/cards/${slug(t)}/icon.png`;
 const decoded = new Map();     // giữ tham chiếu để trình duyệt không bỏ bitmap đã giải mã
 function preload(urls) {
   return Promise.all(urls.map(u => {
@@ -273,7 +281,7 @@ function makeView(card) {
   } else if (card.k === E.JOKER) {
     el.classList.add('joker');
   } else {
-    front.style.backgroundImage = `url(assets-02c337f6/ui/face_${faceIndex(card)}.png)`;
+    front.style.backgroundImage = `url(assets-5c8a70cf/ui/face_${faceIndex(card)}.png)`;
     front.innerHTML = `<img class="art" src="${artUrl(card)}" draggable="false">`;
   }
   inner.append(front, back);
@@ -807,7 +815,7 @@ function applyPull(k, kind) {
 }
 function stampSlam(x, y) {
   const el = document.createElement('div');
-  el.style.cssText = 'position:absolute;left:0;top:0;width:200px;height:203px;background:url(assets-02c337f6/ui/ic_stamper.png) center/contain no-repeat;z-index:3800;pointer-events:none';
+  el.style.cssText = 'position:absolute;left:0;top:0;width:200px;height:203px;background:url(assets-5c8a70cf/ui/ic_stamper.png) center/contain no-repeat;z-index:3800;pointer-events:none';
   board.append(el);
   const o = { y: y - 420, s: 1.2, a: 0 };
   const draw = () => { el.style.transform = `translate(${x - 100}px,${o.y - 150}px) scale(${o.s})`; el.style.opacity = o.a; };
@@ -829,7 +837,7 @@ function onExtraSlot(e) {
   if (levelIdx + 1 < UNLOCK_AT.slot) { toast(t('unlocks', { n: UNLOCK_AT.slot })); sfx('close'); return; }
   panel({
     title: t('extra_title'),
-    body: `<div class="feature-icon" style="background-image:url(assets-02c337f6/ui/slot_tray.png);width:230px;height:224px"></div><p>${t('extra_body')}</p>`,
+    body: `<div class="feature-icon" style="background-image:url(assets-5c8a70cf/ui/slot_tray.png);width:230px;height:224px"></div><p>${t('extra_body')}</p>`,
     buttons: [
       { label: t('free_ad'), cls: 'orange', act: () => fakeAd(unlockExtra) },
       { label: t('coins', { n: COSTS.slot }), act: () => {
@@ -1069,6 +1077,7 @@ function panel({ title, body = '', buttons = [], radial = false, onOpen }) {
     btns.append(el);
   }
   overlay.style.pointerEvents = 'auto';
+  overlay.style.zIndex = $('home').classList.contains('off') ? '' : '48';   // panel mở từ màn hình chính (Trang trí) phải nằm trên .home
   handEl.style.visibility = 'hidden';
   if (radial) { const r = document.createElement('div'); r.className = 'radial'; scrim.append(r); }
   overlay.append(scrim, p);
@@ -1593,7 +1602,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   await wait(170);
   // phong bì
   const env = document.createElement('div');
-  env.style.cssText = `position:absolute;left:0;top:0;width:230px;height:193px;background:url(assets-02c337f6/ui/envelope_closed.png) center/contain no-repeat;z-index:3600;pointer-events:none`;
+  env.style.cssText = `position:absolute;left:0;top:0;width:230px;height:193px;background:url(assets-5c8a70cf/ui/envelope_closed.png) center/contain no-repeat;z-index:3600;pointer-events:none`;
   board.append(env);
   const e = { x: cx - 115, y: cy - 96, s: 0.1, r: -8, a: 1 };
   const drawEnv = () => { env.style.transform = `translate(${e.x}px,${e.y}px) rotate(${e.r}deg) scale(${e.s})`; env.style.opacity = e.a; };
@@ -1605,7 +1614,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   vs.forEach(v => { v.el.remove(); views.delete(v.id); });
   // sáp
   const wax = document.createElement('div');
-  wax.style.cssText = `position:absolute;left:0;top:0;width:84px;height:100px;background:url(assets-02c337f6/ui/wax.png) center/contain no-repeat;z-index:3700;pointer-events:none`;
+  wax.style.cssText = `position:absolute;left:0;top:0;width:84px;height:100px;background:url(assets-5c8a70cf/ui/wax.png) center/contain no-repeat;z-index:3700;pointer-events:none`;
   board.append(wax);
   const w = { s: 3.2, a: 0 };
   const drawWax = () => { wax.style.transform = `translate(${cx - 42}px,${cy - 50}px) scale(${w.s})`; wax.style.opacity = w.a; };
@@ -1758,6 +1767,9 @@ async function runAutoFinish(token, r) {
 }
 // Kẹt cứng: không còn nước có ích, kể cả khi deck còn bài (rút vòng vòng cũng vô ích).
 function isStuck() { return isDeadlocked(S); }
+const pointsEarned = () => Object.values(save.stars).reduce((a, b) => a + b, 0);
+const pointsSpent = () => DECOR.slice(0, save.decor || 0).reduce((a, d) => a + d.cost, 0);
+const pointsLeft = () => pointsEarned() - pointsSpent();
 // Sao theo phần moves dư so với lời giải tối ưu (gdd-core.md mục 5): slack = moves - tối ưu.
 // 3★ nếu còn >= 50% slack, 2★ nếu >= 20%. Luật cũ (>= 25% ngân sách) gần như không ai đạt 3★.
 function stars() {
@@ -1783,7 +1795,9 @@ async function winSequence() {
   const st = stars();
   const reward = 10 + st * 10;
   const lv = levelIdx + 1;
+  const gain = Math.max(0, st - (save.stars[lv] || 0));     // Tem Điểm mới: chỉ phần vượt điểm cao nhất cũ
   save.stars[lv] = Math.max(save.stars[lv] || 0, st);
+  if (gain) track('points_earned', { level: lv, gain, total: pointsEarned(), left: pointsLeft() });
   save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, lv + 1));
   extraKept = -1;
   persist();
@@ -1795,6 +1809,7 @@ async function winSequence() {
     title: last ? t('win_last') : st === 3 ? t('win_title') : st === 2 ? t('win_great') : t('win_ok'),
     radial: true,
     body: `<div class="stars"><i></i><i></i><i></i></div>
+      <div class="pts-line">${gain ? t('pts_gain', { n: gain }) : t('pts_best', { n: save.stars[lv] })}</div>
       ${S.moves === Infinity ? '' : `<p>${t('moves_left', { n: S.moves })}</p>`}
       ${L.moves != null && !overtime && st < 3 ? `<p style="font-size:32px;margin:0">${t('stars_hint')}</p>` : ''}
       ${last ? `<p>${t('win_end')}</p>` : ''}
@@ -1810,7 +1825,8 @@ async function winSequence() {
     ],
     onOpen: pEl => {
       const ss = pEl.querySelectorAll('.stars i');
-      for (let k = 0; k < st; k++) setTimeout(() => { ss[k].classList.add('on'); sfx('claim', { vol: 0.6, rate: 1 + k * 0.12 }); haptic(10); }, 380 + k * 260);
+      // Tem Điểm "đóng cộp" từng cái (tiếng con dấu + chuông nhỏ lên dần)
+      for (let k = 0; k < st; k++) setTimeout(() => { ss[k].classList.add('on'); sfx('place', { rate: 0.9 }); sfx('claim', { vol: 0.4, rate: 1 + k * 0.12, delay: 0.05 }); haptic(14); }, 380 + k * 300);
       setTimeout(() => coinsTo(reward, 540, 1000), 380 + st * 260 + 200);
     },
   });
@@ -1824,7 +1840,7 @@ function chapterReward() {
   track('chapter_complete', { chapter: 1 });
   sfx('feature');
   panel({ title: t('chapter_title'), radial: true,
-    body: `<div class="feature-icon" style="background-image:url(assets-02c337f6/ui/envelope_closed.png)"></div><p>${t('chapter_body')}</p><div class="coins-line"><i></i><span>+200</span></div>`,
+    body: `<div class="feature-icon" style="background-image:url(assets-5c8a70cf/ui/envelope_closed.png)"></div><p>${t('chapter_body')}</p><div class="coins-line"><i></i><span>+200</span></div>`,
     buttons: [{ label: t('open_album'), act: () => { goHome(); openAlbum(); } }, { label: t('home'), cls: 'orange', act: () => goHome() }],
     onOpen: () => setTimeout(() => coinsTo(200, 540, 1000), 500) });
 }
@@ -1853,6 +1869,7 @@ function openAlbum() {
   track('album_open', { have, total });
 }
 $('albumBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); openAlbum(); });
+$('decorBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); decorPanel(); });
 $('albumClose').addEventListener('pointerup', () => { sfx('close'); $('album').classList.add('off'); });
 function outOfMoves() {
   ended = true;
@@ -2037,16 +2054,16 @@ function levelBanner() {
 function rulesHtml() {
   // hình minh hoạ ghép từ chính sprite trong game (lá vương miện Cat, tem mèo, phong bì, ô MOVES)
   const box = inner => `<div style="position:relative;flex:0 0 96px;height:124px">${inner}</div>`;
-  const crownCard = box(`<div style="position:absolute;inset:0;background:url(assets-02c337f6/ui/topic_frame.png) center/100% 100%"></div>
+  const crownCard = box(`<div style="position:absolute;inset:0;background:url(assets-5c8a70cf/ui/topic_frame.png) center/100% 100%"></div>
     <img src="${iconUrl('Cat')}" style="position:absolute;left:20px;top:30px;width:56px;height:56px">
-    <div style="position:absolute;left:30px;top:-12px;width:36px;height:34px;background:url(assets-02c337f6/ui/crown.png) center/contain no-repeat"></div>`);
-  const stampCard = box(`<div style="position:absolute;inset:0;background:url(assets-02c337f6/ui/face_3.png) center/100% 100%"></div>
-    <img src="assets-02c337f6/cards/cat/5.png" style="position:absolute;left:12px;top:16px;width:72px;height:72px">`);
-  const env = box(`<div style="position:absolute;inset:8px -6px;background:url(assets-02c337f6/ui/envelope_closed.png) center/contain no-repeat"></div>
-    <div style="position:absolute;left:30px;top:40px;width:36px;height:42px;background:url(assets-02c337f6/ui/wax.png) center/contain no-repeat"></div>`);
-  const moves = box(`<div style="position:absolute;inset:0;background:url(assets-02c337f6/ui/hud_moves.png) center/100% 100%"></div>
+    <div style="position:absolute;left:30px;top:-12px;width:36px;height:34px;background:url(assets-5c8a70cf/ui/crown.png) center/contain no-repeat"></div>`);
+  const stampCard = box(`<div style="position:absolute;inset:0;background:url(assets-5c8a70cf/ui/face_3.png) center/100% 100%"></div>
+    <img src="assets-5c8a70cf/cards/cat/5.png" style="position:absolute;left:12px;top:16px;width:72px;height:72px">`);
+  const env = box(`<div style="position:absolute;inset:8px -6px;background:url(assets-5c8a70cf/ui/envelope_closed.png) center/contain no-repeat"></div>
+    <div style="position:absolute;left:30px;top:40px;width:36px;height:42px;background:url(assets-5c8a70cf/ui/wax.png) center/contain no-repeat"></div>`);
+  const moves = box(`<div style="position:absolute;inset:0;background:url(assets-5c8a70cf/ui/hud_moves.png) center/100% 100%"></div>
     <div style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:44px;color:#4a2a1a">12</div>`);
-  const undo = box(`<div style="position:absolute;left:4px;top:14px;width:88px;height:88px;background:url(assets-02c337f6/ui/btn_undo.png) center/contain no-repeat"></div>`);
+  const undo = box(`<div style="position:absolute;left:4px;top:14px;width:88px;height:88px;background:url(assets-5c8a70cf/ui/btn_undo.png) center/contain no-repeat"></div>`);
   const row = (fig, txt) => `<div style="display:flex;align-items:center;gap:24px;margin:0 0 14px;text-align:left">${fig}
     <div style="font-size:38px;line-height:1.22;color:#5a3a26">${txt}</div></div>`;
   return `<div>${row(crownCard, t('r1'))}${row(stampCard, t('r2'))}${row(env, t('r3'))}${row(moves, t('r4'))}${row(undo, t('r6'))}
@@ -2063,7 +2080,7 @@ function featureIntro(force = false) {
   if (u === 'hint' && !force) { deferredIntro = true; return Promise.resolve(); }
   deferredIntro = false;
   save.seen['unlock_' + u] = 1;
-  const icons = { hint: 'assets-02c337f6/ui/ic_hint.png', pack: 'assets-02c337f6/ui/ic_pack_big.png', stamper: 'assets-02c337f6/ui/ic_stamper.png', joker: 'assets-02c337f6/ui/joker_card.png' };
+  const icons = { hint: 'assets-5c8a70cf/ui/ic_hint.png', pack: 'assets-5c8a70cf/ui/ic_pack_big.png', stamper: 'assets-5c8a70cf/ui/ic_stamper.png', joker: 'assets-5c8a70cf/ui/joker_card.png' };
   const info = { title: t('booster', { name: t('b_' + u) }), icon: icons[u], text: t('bi_' + u), name: t('b_' + u) };
   save[u] = (save[u] || 0) + GIFTS[u];
   persist();
@@ -2104,12 +2121,52 @@ function goHome() {
     const el = document.createElement('div');
     const lv = i + 1;
     el.className = 'lvl' + (lv > save.unlocked ? ' locked' : '') + (save.stars[lv] ? ' done' : '') + (lv === save.unlocked ? ' cur' : '');
-    el.textContent = lv;
+    el.innerHTML = `${lv}${save.stars[lv] ? `<span class="pts">${'<i></i>'.repeat(save.stars[lv])}</span>` : ''}`;
     el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('close'); });
     grid.append(el);
   });
   $('playBtn').textContent = t('play', { n: save.unlocked });
+  renderDecor();
   $('home').classList.remove('off');
+}
+// ============================================================ Bưu điện nhỏ (decor màn hình chính, mua bằng Tem Điểm)
+function renderDecor(justPlaced = -1) {
+  const n = save.decor || 0;
+  $('decor').innerHTML = DECOR.map((d, i) => (i < n || i === n)
+    ? `<img class="dc dc-${d.id}${i === n ? ' ghost' : ''}${i === justPlaced ? ' new' : ''}" src="assets-5c8a70cf/decor/${d.id}.png" alt="">` : '').join('');
+  $('decorBtn').innerHTML = `${t('decorate')} ${pointsLeft()}<i></i>`;
+  const next = DECOR[n];
+  $('decorBtn').classList.toggle('ready', !!next && pointsLeft() >= next.cost);
+}
+function decorPanel() {
+  const n = save.decor || 0;
+  const d = DECOR[n];
+  const left = pointsLeft();
+  track('decor_open', { placed: n, points: left });
+  if (!d) {
+    panel({ title: t('decorate'), body: `<p>${t('decor_done')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
+    return;
+  }
+  const ok = left >= d.cost;
+  panel({
+    title: t('decorate'),
+    body: `<div class="feature-icon" style="background-image:url(assets-5c8a70cf/decor/${d.id}.png)"></div>
+      <p><b>${t('decor_' + d.id)}</b> · ${n + 1}/${DECOR.length}</p>
+      <div class="pts-line">${t('pts_have', { n: left })}</div>
+      ${ok ? '' : `<p style="font-size:32px;margin:0">${t('pts_need', { n: d.cost - left })}</p>`}`,
+    buttons: [
+      { label: t('decor_place', { n: d.cost }), cls: ok ? '' : 'off', act: () => {
+        if (!ok) { decorPanel(); return; }
+        save.decor = n + 1;
+        persist();
+        track('decor_place', { id: d.id, index: n + 1, cost: d.cost, points_left: pointsLeft() });
+        sfx('slot');
+        haptic([15, 40, 15]);
+        renderDecor(n);
+      } },
+      { label: t('close'), cls: 'orange', act: () => {} },
+    ],
+  });
 }
 $('undoBtn').addEventListener('pointerup', () => { unlockAudio(); onBooster('undo'); });
 $('playBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); startLevel(save.unlocked - 1); });
@@ -2185,6 +2242,7 @@ function applyStaticCopy() {
   movesEl.querySelector('.lbl').textContent = t('moves');
   document.documentElement.lang = getLang();
   $('albumBtn').textContent = t('album');
+  $('decorBtn').title = t('pts_name');
   $('albumTitle').textContent = t('album_title');
   $('albumClose').textContent = t('close');
 }
@@ -2193,10 +2251,10 @@ function applyStaticCopy() {
   initFx($('fx'));
   setLite(LITE);
   buildDebug();
-  try { manifest = await (await fetch('assets-02c337f6/manifest.json')).json(); } catch (e) { manifest = {}; }
-  await preload(['back', 'topic_frame', 'crown', 'slot_tray', 'tray_front', 'btn_undo_off', 'hud_moves', 'token', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'star', 'lock', 'plus', 'recycle', 'radial', 'logo',
+  try { manifest = await (await fetch('assets-5c8a70cf/manifest.json')).json(); } catch (e) { manifest = {}; }
+  await preload(['back', 'topic_frame', 'crown', 'slot_tray', 'tray_front', 'btn_undo_off', 'hud_moves', 'token', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'tem_diem', 'lock', 'plus', 'recycle', 'radial', 'logo',
     'face_1', 'face_2', 'face_3', 'face_4', 'face_5', 'face_6', 'ic_hint', 'ic_joker', 'banner', 'bar_track', 'tipbox', 'ribbon', 'btn_yellow', 'btn_blue',
-    'btn_pause', 'btn_undo', 'deck_tag', 'panel'].map(n => `assets-02c337f6/ui/${n}.png`).concat(['assets-02c337f6/ui/bg_game.jpg']));
+    'btn_pause', 'btn_undo', 'deck_tag', 'panel'].map(n => `assets-5c8a70cf/ui/${n}.png`).concat(['assets-5c8a70cf/ui/bg_game.jpg']));
   initAudio();
   track('app_open', { lite: LITE, ab_hard: AB.hard ? AB.hard.join('-') : 'default', ab_safety: AB.safety || 'default' });
   goHome();
