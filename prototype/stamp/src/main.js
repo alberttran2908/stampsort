@@ -152,6 +152,8 @@ let manifest = {};
 const slug = t => t.toLowerCase().replace(/ /g, '_').replace(/&/g, 'and');
 const artUrl = c => `assets/cards/${slug(c.t)}/${c.art}.png`;
 const iconUrl = t => `assets/cards/${slug(t)}/icon.png`;
+// Lá chủ đề vương miện: icon chỉ có nét, không màu (tools/icon_line.py) để không lẫn với tem thường có màu
+const lineIconUrl = t => `assets/cards/${slug(t)}/icon_line.png`;
 const decoded = new Map();     // giữ tham chiếu để trình duyệt không bỏ bitmap đã giải mã
 function preload(urls) {
   return Promise.all(urls.map(u => {
@@ -277,7 +279,7 @@ function makeView(card) {
   back.className = 'side back';
   if (card.k === 'topic') {
     el.classList.add('topic');
-    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${iconUrl(card.t)}" draggable="false"><div class="tag" style="font-size:${fitSize(topicName(card.t), 30, 9)}px">${topicName(card.t)}</div>`;
+    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${lineIconUrl(card.t)}" draggable="false"><div class="tag" style="font-size:${fitSize(topicName(card.t), 30, 9)}px">${topicName(card.t)}</div>`;
   } else if (card.k === E.JOKER) {
     el.classList.add('joker');
   } else {
@@ -1841,7 +1843,7 @@ function chapterReward() {
   sfx('feature');
   panel({ title: t('chapter_title'), radial: true,
     body: `<div class="feature-icon" style="background-image:url(assets/ui/envelope_closed.png)"></div><p>${t('chapter_body')}</p><div class="coins-line"><i></i><span>+200</span></div>`,
-    buttons: [{ label: t('open_album'), act: () => { goHome(); openAlbum(); } }, { label: t('home'), cls: 'orange', act: () => goHome() }],
+    buttons: [{ label: t('next_ch'), act: () => { goHome(); openCh2('chapter_reward'); } }, { label: t('open_album'), cls: 'orange', act: () => { goHome(); openAlbum(); } }],
     onOpen: () => setTimeout(() => coinsTo(200, 540, 1000), 500) });
 }
 // Album tem: mọi chủ đề trong 10 level, tem đã gửi hiện ra, tem chưa có hiện mặt sau lá
@@ -1972,7 +1974,7 @@ async function startLevel(i) {
   const pre = (L.preplaced || []).flat();
   const allCards = [...L.columns.flat(), ...L.deck, ...pre];
   const topics = [...new Set(allCards.map(c => c.t))];
-  await preload(allCards.filter(c => c.k === 'stamp').map(artUrl).concat(topics.map(iconUrl)));
+  await preload(allCards.filter(c => c.k === 'stamp').map(artUrl).concat(topics.map(lineIconUrl)));
   if (token !== levelToken) return;
   setCardScale();
   // thứ tự chủ đề cố định theo dữ liệu level (deck + cột), để mỗi lần chơi lại màu khung không đổi
@@ -2055,7 +2057,7 @@ function rulesHtml() {
   // hình minh hoạ ghép từ chính sprite trong game (lá vương miện Cat, tem mèo, phong bì, ô MOVES)
   const box = inner => `<div style="position:relative;flex:0 0 96px;height:124px">${inner}</div>`;
   const crownCard = box(`<div style="position:absolute;inset:0;background:url(assets/ui/topic_frame.png) center/100% 100%"></div>
-    <img src="${iconUrl('Cat')}" style="position:absolute;left:20px;top:30px;width:56px;height:56px">
+    <img src="${lineIconUrl('Cat')}" style="position:absolute;left:20px;top:30px;width:56px;height:56px">
     <div style="position:absolute;left:30px;top:-12px;width:36px;height:34px;background:url(assets/ui/crown.png) center/contain no-repeat"></div>`);
   const stampCard = box(`<div style="position:absolute;inset:0;background:url(assets/ui/face_3.png) center/100% 100%"></div>
     <img src="assets/cards/cat/5.png" style="position:absolute;left:12px;top:16px;width:72px;height:72px">`);
@@ -2125,7 +2127,7 @@ function goHome() {
     el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('close'); });
     grid.append(el);
   });
-  $('playBtn').textContent = t('play', { n: save.unlocked });
+  $('playBtn').textContent = save.chapter1 ? t('play_ch2') : t('play', { n: save.unlocked });
   renderDecor();
   $('home').classList.remove('off');
 }
@@ -2169,7 +2171,32 @@ function decorPanel() {
   });
 }
 $('undoBtn').addEventListener('pointerup', () => { unlockAudio(); onBooster('undo'); });
-$('playBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); startLevel(save.unlocked - 1); });
+$('playBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); if (save.chapter1) openCh2('home_play'); else startLevel(save.unlocked - 1); });
+// Chương 2 "Bến Cảng" sắp mở (concept-little-post-office.md mục 3.1): teaser khu mới + tem mới + cư dân + decor.
+// Hook thay cho story: "thị trấn còn gì". Đo ý định quay lại bằng chapter2_teaser_open / chapter2_notify.
+const CH2_STAMPS = ['sailboat', 'crab', 'shell', 'lighthouse'];
+function openCh2(source) {
+  $('ch2StampRow').innerHTML = CH2_STAMPS.map(k => `<div class="ch2-st"><div><img src="assets/ch2/${k}.png" alt=""></div>${t('ch2_t_' + k)}</div>`).join('');
+  const nb = $('ch2Notify');
+  nb.textContent = save.ch2notify ? t('ch2_notified') : t('ch2_notify');
+  nb.classList.toggle('done', !!save.ch2notify);
+  $('ch2').classList.remove('off');
+  const soon = $('ch2Soon');
+  soon.style.animation = 'none'; void soon.offsetWidth; soon.style.animation = '';   // chạy lại hiệu ứng đóng dấu
+  setTimeout(() => sfx('place', { rate: 0.85 }), 280);
+  track('chapter2_teaser_open', { source, points_left: pointsLeft(), decor: save.decor || 0 });
+}
+$('ch2Notify').addEventListener('pointerup', () => {
+  unlockAudio();
+  if (save.ch2notify) return;
+  save.ch2notify = 1;
+  persist();
+  sfx('claim');
+  track('chapter2_notify', {});
+  $('ch2Notify').textContent = t('ch2_notified');
+  $('ch2Notify').classList.add('done');
+});
+$('ch2Close').addEventListener('pointerup', () => { sfx('close'); $('ch2').classList.add('off'); });
 $('pauseBtn').addEventListener('pointerup', () => {
   if (panelOpen) return;
   unlockAudio();
@@ -2243,6 +2270,14 @@ function applyStaticCopy() {
   document.documentElement.lang = getLang();
   $('albumBtn').textContent = t('album');
   $('decorBtn').title = t('pts_name');
+  $('ch2Title').textContent = t('ch2_title');
+  $('ch2Sub').textContent = t('ch2_sub');
+  $('ch2Soon').textContent = t('ch2_soon');
+  $('ch2Stamps').textContent = t('ch2_stamps');
+  $('ch2Npc').innerHTML = t('ch2_npc');
+  $('ch2Decor').textContent = t('ch2_decor');
+  $('ch2Tip').textContent = t('ch2_tip');
+  $('ch2Close').textContent = t('close');
   $('albumTitle').textContent = t('album_title');
   $('albumClose').textContent = t('close');
 }

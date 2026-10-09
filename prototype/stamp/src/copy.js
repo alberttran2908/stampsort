@@ -84,6 +84,11 @@ const STR = {
     pts_name: 'Stamp Points', pts_gain: '+{n} <i></i> Stamp Points', pts_best: 'Best: {n} <i></i>', pts_have: 'You have {n} <i></i>',
     pts_need: 'Need {n} more. Replay a level with more moves left.', decorate: 'Decorate', decor_place: 'Place · {n} <i></i>',
     decor_done: 'Your little post office is all set. More decor in chapter 2!',
+    ch2_title: 'Chapter 2', ch2_sub: 'The Harbor · coming soon', ch2_soon: 'SOON', ch2_stamps: 'New stamps', ch2_decor: 'New decor for your post office',
+    ch2_npc: '<b>Captain Bo</b> keeps the lighthouse. He draws the weather on his letters instead of writing.',
+    ch2_tip: 'Meanwhile: replay levels for more Stamp Points.', ch2_notify: 'Notify me', ch2_notified: 'We\'ll let you know!',
+    ch2_t_sailboat: 'Sailboats', ch2_t_crab: 'Seafood', ch2_t_shell: 'Shells', ch2_t_lighthouse: 'Lighthouses',
+    play_ch2: 'Chapter 2 · Soon', next_ch: 'Chapter 2 →',
     decor_bunting: 'Bunting', decor_frame: 'Stamp frame', decor_clock: 'Wall clock', decor_postbox: 'Post box', decor_board: 'Notice board', decor_cat: 'Cat basket', extra_label: '+1 slot', b_undo_icon: '↶',
   },
   vi: {
@@ -159,6 +164,11 @@ const STR = {
     pts_name: 'Tem Điểm', pts_gain: '+{n} <i></i> Tem Điểm', pts_best: 'Cao nhất: {n} <i></i>', pts_have: 'Bạn có {n} <i></i>',
     pts_need: 'Cần thêm {n}. Chơi lại một level, còn nhiều nước hơn.', decorate: 'Trang trí', decor_place: 'Đặt · {n} <i></i>',
     decor_done: 'Bưu điện nhỏ đã trang trí xong. Chương 2 sẽ có thêm decor!',
+    ch2_title: 'Chương 2', ch2_sub: 'Bến Cảng · sắp mở', ch2_soon: 'SẮP MỞ', ch2_stamps: 'Tem mới', ch2_decor: 'Decor mới cho bưu điện',
+    ch2_npc: '<b>Thuyền trưởng Bo</b> giữ hải đăng. Ông vẽ thời tiết lên thư thay vì viết chữ.',
+    ch2_tip: 'Trong lúc chờ: chơi lại level để có thêm Tem Điểm.', ch2_notify: 'Báo tôi khi mở', ch2_notified: 'Sẽ báo bạn!',
+    ch2_t_sailboat: 'Thuyền buồm', ch2_t_crab: 'Hải sản', ch2_t_shell: 'Vỏ ốc', ch2_t_lighthouse: 'Hải đăng',
+    play_ch2: 'Chương 2 · Sắp mở', next_ch: 'Chương 2 →',
     decor_bunting: 'Cờ dây', decor_frame: 'Khung tem', decor_clock: 'Đồng hồ treo', decor_postbox: 'Hòm thư', decor_board: 'Bảng ghim', decor_cat: 'Giỏ mèo ngủ', extra_label: '+1 ô', b_undo_icon: '↶',
   },
 };

@@ -229,8 +229,34 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .lvl .pts{position:absolute;left:0;right:0;bottom:-16px;display:flex;justify-content:center;gap:2px}
 .lvl .pts i{width:42px;height:42px;background:url(assets/ui/tem_diem.png) center/contain no-repeat}
 .lvl.cur{animation:pulse 1.2s ease-in-out infinite}
-.home .play{position:absolute;left:0;right:0;width:440px;margin:0 auto;text-align:center;top:calc(1640px + var(--bot,0px))}  /* nút Play trên kệ, vùng ngón cái */
+.home .play{position:absolute;left:0;right:0;width:520px;white-space:nowrap;margin:0 auto;text-align:center;top:calc(1640px + var(--bot,0px))}  /* nút Play trên kệ, vùng ngón cái */
 .home .foot{position:absolute;bottom:40px;font-size:24px;opacity:.85;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
+/* ---------- Chương 2 sắp mở (teaser Bến Cảng, concept mục 3.1) ---------- */
+.ch2{position:absolute;left:30px;right:30px;top:calc(40px + var(--hud,0px));bottom:30px;z-index:47;display:flex;flex-direction:column;align-items:center;
+  border:60px solid transparent;border-image:url(assets/ui/panel.png) 110 fill / 64px stretch;color:var(--ink);transition:opacity .25s}
+.ch2.off{opacity:0;pointer-events:none}
+.ch2-head{font-size:60px;text-align:center;margin-top:-10px}
+.ch2-head small{display:block;font-size:34px;color:#7a5238}
+.ch2-body{flex:1;width:100%;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;align-items:center;padding:10px 0}
+.ch2-body>:first-child{margin-top:auto}.ch2-body>:last-child{margin-bottom:auto}   /* căn giữa dọc mà không cắt đầu khi tràn */
+.ch2-card{position:relative;width:760px;max-width:100%;margin:14px 0 26px;padding:18px;background:#fffdf6;box-shadow:0 10px 0 rgba(90,58,38,.18),0 0 0 3px rgba(90,58,38,.25);transform:rotate(-2deg)}
+.ch2-card img{display:block;width:100%;border-radius:6px}
+.ch2-soon{position:absolute;right:-26px;top:-34px;width:190px;height:190px;border-radius:50%;border:8px double #c8452f;color:#c8452f;display:grid;place-items:center;
+  font-size:40px;letter-spacing:2px;transform:rotate(14deg);background:rgba(255,253,246,.55);animation:soonin .5s .25s cubic-bezier(.5,0,.6,1.4) both}
+@keyframes soonin{0%{transform:scale(2.2) rotate(-10deg);opacity:0}100%{transform:rotate(14deg);opacity:1}}
+.ch2-sec{font-size:38px;margin:6px 0 10px}
+.ch2-row{display:flex;justify-content:center;gap:22px;margin-bottom:18px}
+.ch2-st{width:172px;text-align:center;font-size:28px;color:#7a5238}
+.ch2-st div{position:relative;height:218px;background:url(assets/ui/face_3.png) center/100% 100% no-repeat;display:grid;place-items:center;margin-bottom:6px}
+.ch2-st:nth-child(2n) div{background-image:url(assets/ui/face_5.png)}
+.ch2-st img{width:110px;height:110px;object-fit:contain;opacity:.8}
+.ch2-st div::after{content:'';position:absolute;right:-10px;top:-12px;width:54px;height:54px;background:url(assets/ui/lock.png) center/contain no-repeat}
+.ch2-npc{font-size:32px;line-height:1.35;text-align:center;margin:4px 20px 18px}
+.ch2-decor img{height:150px;max-width:200px;object-fit:contain}
+.ch2-tip{font-size:30px;color:#7a5238;text-align:center;margin:0 20px}
+.ch2-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.ch2-btns .btn{min-width:320px}
+.ch2-btns .btn.done{opacity:.7}
 /* ---------- album tem ---------- */
 .home .album-btn,.home .decor-btn{position:absolute;min-width:0;width:300px;padding:0 8px;white-space:nowrap;margin:0;text-align:center;font-size:38px;top:calc(1480px + var(--bot,0px))}
 .home .album-btn{left:208px}
@@ -291,6 +317,19 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
     <div class="album-head"><span id="albumTitle">Stamp Album</span><small id="albumCount"></small></div>
     <div class="album-body" id="albumBody"></div>
     <div class="btn" id="albumClose">Close</div>
+  </div>
+  <div class="ch2 off" id="ch2">
+    <div class="ch2-head"><span id="ch2Title">Chapter 2</span><small id="ch2Sub"></small></div>
+    <div class="ch2-body">
+      <div class="ch2-card"><img src="assets/ch2/postcard.jpg" alt=""><span class="ch2-soon" id="ch2Soon">SOON</span></div>
+      <div class="ch2-sec" id="ch2Stamps"></div>
+      <div class="ch2-row" id="ch2StampRow"></div>
+      <p class="ch2-npc" id="ch2Npc"></p>
+      <div class="ch2-sec" id="ch2Decor"></div>
+      <div class="ch2-row ch2-decor"><img src="assets/ch2/buoy.png" alt=""><img src="assets/ch2/porthole.png" alt=""><img src="assets/ch2/fan.png" alt=""></div>
+      <p class="ch2-tip" id="ch2Tip"></p>
+    </div>
+    <div class="ch2-btns"><div class="btn" id="ch2Notify">Notify me</div><div class="btn orange" id="ch2Close">Close</div></div>
   </div>
   <div class="home" id="home">
     <div class="decor" id="decor"></div>
