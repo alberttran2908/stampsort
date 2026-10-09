@@ -1,20 +1,24 @@
-import { LEVELS } from './levels.js?v=5bacd69-1791566105';
-import * as E from './engine.js?v=5bacd69-1791566105';
-import { hint as solverHint, solve } from './solver.js?v=5bacd69-1791566105';
-import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=5bacd69-1791566105';
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=5bacd69-1791566105';
-import { candidateActions, isDeadlocked } from './solver.js?v=5bacd69-1791566105';
-import { track, events as allEvents, funnelSummary, clearEvents } from './analytics.js?v=5bacd69-1791566105';
-import { t, getLang, setLang, topicName } from './copy.js?v=5bacd69-1791566105';
+import { LEVELS } from './levels.js?v=4ba956c-1791574323';
+import * as E from './engine.js?v=4ba956c-1791574323';
+import { hint as solverHint, solve } from './solver.js?v=4ba956c-1791574323';
+import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=4ba956c-1791574323';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=4ba956c-1791574323';
+import { candidateActions, isDeadlocked } from './solver.js?v=4ba956c-1791574323';
+import { track, events as allEvents, funnelSummary, clearEvents } from './analytics.js?v=4ba956c-1791574323';
+import { t, getLang, setLang, topicName } from './copy.js?v=4ba956c-1791574323';
 
 // ============================================================ constants
-const CW = 165, CH = 214;
+// Lá dựng trong DOM ở kích thước gốc 165x214 rồi phóng to bằng CK khi đặt vị trí (applyTransform, .slot dùng --ck).
+// CW/CH là kích thước THẬT trên stage, mọi phép tính bố cục / vùng chạm dùng CW/CH. CK đổi theo level: setCardScale().
+const CW0 = 165, CH0 = 214;
+let CW = CW0, CH = CH0, CK = 1;
 // Toạ độ trên stage 1080 x H. H = 1920 trên màn 9:16; máy dài hơn thì stage cao thêm (full-bleed, không letterbox).
 // Các hàng được đẩy theo vùng an toàn (tai thỏ / thanh home) và chia phần dư: xem fit().
 let ROW_A = 245, FOUND_Y = 585, TAB_Y = 885, TAB_BOTTOM = 1560;
 let STAGE_H = 1920, DY_HUD = 0, DY_BOARD = 0, DY_BOT = 0;
-const DECK_X = 867, WASTE_X = 391, EXTRA_X = 48;   // lề trái/phải 48, quạt 3 lá waste căn giữa màn hình
-const DOWN_GAP = 32, UP_GAP = 70;
+let DECK_X = 867, WASTE_X = 391, FAN = 66;
+const EXTRA_X = 48;   // lề trái/phải 48, quạt 3 lá waste căn giữa màn hình
+let DOWN_GAP = 32, UP_GAP = 70;
 const COMBO_MAX = 6;
 // Giá theo APK 0.9.5: BoosterManager (hint 300, pack 500, stamper 500, joker 1200), GameSetting (hộc phụ 1000,
 // 900 = giả thuyết giá +5 moves). Undo không có trong game gốc: khác biệt "cozy" của mình.
@@ -210,7 +214,7 @@ function computeLayout() {
   const nw = S.waste.length;
   S.waste.forEach((c, i) => {
     const vis = i - (nw - 3);                      // vị trí trong quạt 3 lá
-    const x = WASTE_X + Math.max(0, vis) * 66;
+    const x = WASTE_X + Math.max(0, vis) * FAN;
     T.set(c.id, { x, y: ROW_A, z: 200 + i, up: true, hide: vis < -1 });
   });
   S.found.forEach((f, k) => {
@@ -259,7 +263,18 @@ function makeView(card) {
 function animOn(v) { v.ac = (v.ac || 0) + 1; if (v.ac === 1) v.el.classList.add('anim'); }
 function animOff(v) { v.ac = Math.max(0, (v.ac || 0) - 1); if (!v.ac) v.el.classList.remove('anim'); }
 function applyTransform(v) {
-  v.el.style.transform = `translate3d(${v.x + v.ox}px,${v.y}px,0) rotate(${v.r}deg) scale(${v.s})`;
+  // phóng quanh tâm hộp 165x214 nên dịch thêm để góc trên-trái của lá (đã phóng) nằm đúng (x, y)
+  v.el.style.transform = `translate3d(${v.x + v.ox + 82.5 * (CK - 1)}px,${v.y + 107 * (CK - 1)}px,0) rotate(${v.r}deg) scale(${v.s * CK})`;
+}
+// Level ít cột/ô (<= 4) thì lá to hơn ~11% (art ~43pt -> ~48pt trên điện thoại 375pt); 5 cột giữ cỡ gốc cho vừa ngang.
+function setCardScale() {
+  const n = Math.max(L.foundations || 0, S.cols.length);
+  CK = n <= 4 ? 184 / CW0 : 1;
+  CW = CW0 * CK; CH = CH0 * CK;
+  UP_GAP = 70 * CK; DOWN_GAP = 32 * CK; FAN = 66 * CK;
+  DECK_X = 1080 - 48 - CW;
+  WASTE_X = 540 - (2 * FAN + CW) / 2;
+  board.style.setProperty('--ck', CK);
 }
 function setZ(v, z) { if (v.z !== z) { v.z = z; v.el.style.zIndex = z; } }
 function setUp(v, up, { animate = true, delay = 0 } = {}) {
@@ -1130,10 +1145,12 @@ function onUp(e) {
     return;
   }
   const p = toStage(e);
+  // Lượt 1: chỗ NGÓN TAY thả, thử mọi cách hiểu cú cầm (xấp lớn nhất trước). Lượt 2 (dự phòng): tâm lá đáy của xấp.
   let pick = null;
-  for (const src of d.cands) {
+  for (const src of d.cands) { const dst = targetAt(src, p); if (dst) { pick = { src, dst }; break; } }
+  if (!pick) for (const src of d.cands) {
     const v0 = views.get(E.sourceCards(S, src)[0].id);
-    const dst = dropTarget(src, p, v0);
+    const dst = targetAt(src, { x: v0.x + CW / 2, y: v0.y + CH / 2 });
     if (dst) { pick = { src, dst }; break; }
   }
   d.vs.forEach(v => { v.lifted = false; v.el.classList.remove('lift'); });
@@ -1171,21 +1188,16 @@ function targetRect(dst) {
   const bottom = (col.length ? ys[ys.length - 1] : TAB_Y) + CH + 140;
   return { x: colX(dst.j) - 22, y: TAB_Y - 60, w: CW + 44, h: bottom - TAB_Y + 60 };
 }
-function dropTarget(src, p, v0) {
-  // Người chơi nhắm bằng NGÓN TAY (lá đang cầm). Chỉ khi ngón tay không nằm trên đích nào mới xét tới lá dưới cùng của xấp.
-  const c = { x: v0.x + CW / 2, y: v0.y + CH / 2 };
-  const targets = allTargets(src);
-  for (const q of [p, c]) {
-    let best = null, bd = Infinity;
-    for (const dst of targets) {
-      const r = targetRect(dst);
-      if (q.x < r.x || q.x > r.x + r.w || q.y < r.y || q.y > r.y + r.h) continue;
-      const d = Math.hypot(r.x + r.w / 2 - q.x, r.y + Math.min(r.h, CH) / 2 - q.y);
-      if (d < bd) { bd = d; best = dst; }
-    }
-    if (best) return best;
+/** Đích hợp lệ có vùng chứa điểm q (gần tâm nhất), hoặc null. */
+function targetAt(src, q) {
+  let best = null, bd = Infinity;
+  for (const dst of allTargets(src)) {
+    const r = targetRect(dst);
+    if (q.x < r.x || q.x > r.x + r.w || q.y < r.y || q.y > r.y + r.h) continue;
+    const d = Math.hypot(r.x + r.w / 2 - q.x, r.y + Math.min(r.h, CH) / 2 - q.y);
+    if (d < bd) { bd = d; best = dst; }
   }
-  return null;
+  return best;
 }
 function dropReason(src, p) {
   const run = E.sourceCards(S, src);
@@ -1544,7 +1556,7 @@ function afterAction() {
   if (isStuck()) {
     Promise.all(pending).then(() => wait(500)).then(same(() => {
       if (!isStuck() || ended || jokerMode) return;
-      if (safetyOf(L) !== 'none') rescueJoker(); else stuckPanel();
+      if (safetyOf(L) !== 'none') rescue(); else stuckPanel();
     }));
   }
 }
@@ -1561,7 +1573,27 @@ function startOvertime() {
   const tp = topicProgress();
   track('overtime_start', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total, topics_left: tp.total - tp.done, special: specialOf(L) || '' });
 }
-// Kẹt cứng ở level khó: tặng Joker miễn phí để luôn đi tiếp được.
+// Kẹt cứng ở level khó: ưu tiên booster người chơi đã được dạy (Magnet, mở từ L4) để họ tự gỡ thế kẹt,
+// mỗi lượt chơi 1 lần; vẫn kẹt (hoặc chưa mở Magnet, hoặc không ô nào còn tem ẩn để hút) thì tặng Joker.
+function rescue() {
+  const lv = levelIdx + 1;
+  const piles = S.found.map((_, k) => k).filter(k => pullable(k) && E.cardsOfTopic(S, S.found[k].t).hidden.length > 0);
+  if (lv >= UNLOCK_AT.pack && !play.magnetRescued && piles.length) {
+    play.magnetRescued = true;
+    play.rescues++;
+    save.pack = (save.pack || 0) + 1;
+    persist();
+    renderBoosters();
+    track('rescue_magnet', { level: lv, attempt: play.attempt, delivered: S.delivered, total: S.total });
+    toast(t('rescue_magnet'), 3200);
+    sfx('feature');
+    const b = $('boosters').querySelector('[data-id=pack]');
+    b.classList.add('active');
+    handTap(b.parentElement.offsetLeft + b.offsetLeft + b.offsetWidth / 2, b.parentElement.offsetTop + b.offsetTop + b.offsetHeight / 2);
+    return;
+  }
+  rescueJoker();
+}
 function rescueJoker() {
   play.rescues++;
   jokerFree = true;
@@ -1602,11 +1634,13 @@ async function runAutoFinish(token, r) {
 }
 // Kẹt cứng: không còn nước có ích, kể cả khi deck còn bài (rút vòng vòng cũng vô ích).
 function isStuck() { return isDeadlocked(S); }
+// Sao theo phần moves dư so với lời giải tối ưu (gdd-core.md mục 5): slack = moves - tối ưu.
+// 3★ nếu còn >= 50% slack, 2★ nếu >= 20%. Luật cũ (>= 25% ngân sách) gần như không ai đạt 3★.
 function stars() {
   if (overtime) return 1;
   if (L.moves == null) return 3;
-  const r = S.moves / L.moves;
-  return r >= 0.25 ? 3 : r >= 0.1 ? 2 : 1;
+  const slack = Math.max(1, L.moves - (L.solverMoves || Math.round(L.moves * 0.8)));
+  return S.moves >= 0.5 * slack ? 3 : S.moves >= 0.2 * slack ? 2 : 1;
 }
 async function winSequence() {
   levelActive = false;
@@ -1758,6 +1792,7 @@ async function startLevel(i) {
   const topics = [...new Set(allCards.map(c => c.t))];
   await preload(allCards.filter(c => c.k === 'stamp').map(artUrl).concat(topics.map(iconUrl)));
   if (token !== levelToken) return;
+  setCardScale();
   buildChrome();
   for (const c of [...L.deck, ...L.columns.flat()]) makeView(c);
   // lá trong ô mở sẵn: hiện ngay tại ô

@@ -48,7 +48,7 @@ const STR = {
     peek: '{topic}: <em>{n} more</em> to go',
     // trạng thái / booster
     overtime_big: 'OVERTIME!', overtime: 'Out of moves… <em>keep going, free!</em>',
-    rescue: 'Stuck? Here’s a <em>free Golden Stamp</em>!',
+    rescue: 'Stuck? Here’s a <em>free Golden Stamp</em>!', rescue_magnet: 'Stuck? Here’s a <em>free Magnet</em>. Tap it!',
     autofinish: 'Auto finish!', coins_short: 'Not enough coins', unlocks: 'Unlocks at level {n}',
     nothing_undo: 'Nothing to undo', no_hint: 'No good move. Try a booster.', try_deck: 'Try the deck',
     joker_place: 'Tap a column for the <em>Golden Stamp</em>.',
@@ -117,7 +117,7 @@ const STR = {
     follow: 'Chưa được! Làm theo <em>bàn tay</em>.',
     peek: '{topic}: còn <em>{n} tem</em>',
     overtime_big: 'GIỜ BÙ!', overtime: 'Hết nước… <em>chơi tiếp miễn phí!</em>',
-    rescue: 'Bí rồi? Tặng bạn <em>Tem Vàng</em>!',
+    rescue: 'Bí rồi? Tặng bạn <em>Tem Vàng</em>!', rescue_magnet: 'Bí rồi? Tặng bạn <em>Nam châm</em>. Chạm vào nhé!',
     autofinish: 'Tự hoàn thành!', coins_short: 'Không đủ xu', unlocks: 'Mở ở level {n}',
     nothing_undo: 'Chưa có gì để hoàn tác', no_hint: 'Không có nước hay. Thử booster.', try_deck: 'Thử rút bài',
     joker_place: 'Chạm một cột để đặt <em>Tem Vàng</em>.',
