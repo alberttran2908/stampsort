@@ -1,5 +1,5 @@
 // Solver (beam search, full information) + người chơi mô phỏng (chỉ thấy lá ngửa).
-import { clone, applyMove, draw, isWon, maxRunStart, checkMove, stateKey, legalMoves, JOKER } from './engine.js?v=7a3dbfe-1790966527';
+import { clone, applyMove, draw, isWon, maxRunStart, checkMove, stateKey, legalMoves, JOKER } from './engine.js?v=a8f676a-1791561095';
 
 /** Nước đi "có ý nghĩa" để giảm nhánh: luôn nhấc cả chồng dài nhất. */
 export function candidateActions(s) {
