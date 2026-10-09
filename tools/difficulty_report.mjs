@@ -11,12 +11,15 @@ import { LEVELS } from '../prototype/stamp/src/levels.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const RUNS = Number((process.argv.find(a => a.startsWith('--runs=')) || '--runs=30').slice(7));
-const SEC_PER_MOVE = { skilled: 2.2, casual10: 3.2, casual25: 3.8 };     // [GIẢ THUYẾT] thời gian suy nghĩ + animation mỗi nước
+const SEC_PER_MOVE = { skilled: 2.2, casual10: 3.2, casual25: 3.8, casual10b: 3.2 };     // [GIẢ THUYẾT] thời gian suy nghĩ + animation mỗi nước
 const PROFILES = {
   skilled: { width: 4, depth: 22, noise: 0.8, mistake: 0 },      // giỏi, không nhìn trộm (≈ người chơi trong video)
   casual10: { width: 2, depth: 6, noise: 1.6, mistake: 0.10 },   // phổ thông: 10% nước phí
   casual25: { width: 2, depth: 6, noise: 1.6, mistake: 0.25 },   // mới chơi: 25% nước phí
+  casual10b: { width: 2, depth: 6, noise: 1.6, mistake: 0.10, boosters: true },   // phổ thông + dùng Magnet/Stamper khi kẹt (số quà khi mở khoá)
 };
+const UNLOCK = { pack: 4, stamper: 7 };   // giống main.js UNLOCK_AT
+const GIFT = { pack: 2, stamper: 2 };
 
 const pct = x => Math.round(x * 100);
 const rows = [];
@@ -26,7 +29,8 @@ for (const L of LEVELS) {
   const budget = L.moves ?? Infinity;
   const row = { level: L.id, role: L.role, special: L.special || '', budget: L.moves ?? 'inf', solverMin: min };
   for (const [name, prof] of Object.entries(PROFILES)) {
-    const r = sampleHidden(st, { runs: RUNS, seed: 100 + L.id, capMoves: 260, ...prof });
+    const b = prof.boosters ? { magnet: L.id >= UNLOCK.pack ? GIFT.pack : 0, stamper: L.id >= UNLOCK.stamper ? GIFT.stamper : 0 } : null;
+    const r = sampleHidden(st, { runs: RUNS, seed: 100 + L.id, capMoves: 260, ...prof, boosters: b });
     const won = r.dist.filter(Number.isFinite);
     const inBudget = r.dist.filter(m => m <= budget).length / RUNS;
     const plus5 = r.dist.filter(m => m <= budget + 5).length / RUNS;
@@ -45,9 +49,9 @@ for (const L of LEVELS) {
 }
 
 writeFileSync(ROOT + 'prototype/stamp/difficulty-report.json', JSON.stringify({ runs: RUNS, profiles: PROFILES, secPerMove: SEC_PER_MOVE, rows }, null, 1));
-console.log('| Level | Vai trò | Moves | Tối ưu | Giỏi: trung vị | Biên moves | Giỏi: thắng | Giỏi: kẹt | 10% phí: thắng | 10% phí: kẹt | 25% phí: thắng | 25% phí: thắng nếu +5 | Phút/ván (10% phí) |');
-console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+console.log('| Level | Vai trò | Moves | Tối ưu | Giỏi: trung vị | Biên moves | Giỏi: thắng | Giỏi: kẹt | 10% phí: thắng | 10% phí: kẹt | 10% phí + booster: thắng | 10% phí + booster: kẹt | 25% phí: thắng | 25% phí: thắng nếu +5 | Phút/ván (10% phí) |');
+console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const r of rows) {
   const head = r.budget === 'inf' ? '-' : r.skilled.medianMoves ? pct((r.budget - r.skilled.medianMoves) / r.budget) + '%' : '-';
-  console.log(`| ${r.level} | ${r.special ? r.special.toUpperCase() : r.role} | ${r.budget} | ${r.solverMin} | ${r.skilled.medianMoves ?? '-'} | ${head} | ${pct(r.skilled.win)}% | ${pct(r.skilled.deadlock)}% | ${pct(r.casual10.win)}% | ${pct(r.casual10.deadlock)}% | ${pct(r.casual25.win)}% | ${pct(r.casual25.winPlus5)}% | ${r.casual10.minutes ?? '-'} |`);
+  console.log(`| ${r.level} | ${r.special ? r.special.toUpperCase() : r.role} | ${r.budget} | ${r.solverMin} | ${r.skilled.medianMoves ?? '-'} | ${head} | ${pct(r.skilled.win)}% | ${pct(r.skilled.deadlock)}% | ${pct(r.casual10.win)}% | ${pct(r.casual10.deadlock)}% | ${pct(r.casual10b.win)}% | ${pct(r.casual10b.deadlock)}% | ${pct(r.casual25.win)}% | ${pct(r.casual25.winPlus5)}% | ${r.casual10.minutes ?? '-'} |`);
 }

@@ -41,7 +41,7 @@ Bốn booster, giá và lịch mở theo game gốc (`research/apk/com.stamp.sol
 |---|---|---|---|---|---|
 | Hint | 2 | 3 | 300 coin | Solver tìm nước tiếp theo, tô sáng lá và đích | APK giá 300, video mở L2 |
 | Pack | 4 | 2 | 500 coin | 2 lá ẩn (úp hoặc trong deck) của một ô đang mở bay vào ô, 0 move. Một ô mở thì tự áp dụng, nhiều ô thì chạm chọn | APK "Add 2 random hidden cards to a Topic", video L4 |
-| Stamper | 7 | 2 | 500 coin | Chọn một ô, 1 lá của chủ đề đó được "đóng dấu" vào, 0 move | APK "Choose a Topic to add one card", video L7 |
+| Stamper | 7 | 2 | 250 coin | **Đổi 2026-10-10:** chọn một cột, lật ngửa mọi lá úp của cột đó, 0 move (booster thông tin; bản cũ = Magnet yếu hơn, 1 lá vào ô) | Review game design 2026-10-10. Bản gốc: APK "Choose a Topic to add one card", video L7 |
 | Joker | 9 | 2 | 1200 coin | Golden Stamp đặt lên cột chọn, 0 move, mọi tem xếp lên được đến hết level. Joker kéo được (kèm chồng trên nó) sang cột khác, 1 move, không vào ô | APK, video L9 (Joker đổi cột ở 16:56-17:16) |
 | Ô phụ | 2 | – | 1000 coin hoặc 1 ad (giả lập) | Thêm 1 ô ở góc trái hàng deck cho level hiện tại | APK `GameSetting` 1000, video L2 |
 | Undo | 1 | 3 mỗi level | 50 coin | Hoàn tác, trả lại move. Không hoàn tác sau khi phong bì đã gửi hoặc sau booster | Riêng của mình |
@@ -81,7 +81,7 @@ Moves của game gốc chặt: solver full-info cần 72-91% số moves. Ngườ
 | Đủ ô | Tem gom lại, phong bì bật ra, dấu sáp đập xuống kèm rung màn hình và rung máy, tên chủ đề bay lên, phong bì bay khỏi màn hình kèm vệt sáng |
 | Lật lá | Lật 3D bằng rotateY |
 | Pack | Vòng sóng xanh ở ô, 2 lá ẩn bay theo đường cong từ deck hoặc từ dưới cột vào ô, lật giữa đường |
-| Stamper | Con dấu đập từ trên xuống ô, rung màn hình, 1 lá bay vào |
+| Stamper | Con dấu đập từ trên xuống đầu cột, rung màn hình, các lá úp của cột lật lần lượt |
 | Joker | Golden Stamp bay từ thanh booster xuống cột, vòng sáng vàng |
 | Kịch bản tutorial | Booster cần bấm nhấp nháy, bàn tay chỉ, đi sai thì lá bật về và nhắc "Follow the hand!" |
 | Rút bài | Lá bay từ deck sang waste và lật giữa đường |
@@ -117,7 +117,7 @@ Hai lớp, dựng lại theo video.
 |---|---|---|
 | 1 | Bàn dựng tay y video: cột 1 táo úp + mèo trắng; cột 2 chuối, mèo mướp úp + chủ đề Cat; cột 3 pizza, dứa, dưa hấu úp + cam; deck 7 lá (chủ đề Fruit, dâu, chủ đề Pizza, 2 lát pizza, mèo cam, mèo xám). Bảy bước: đưa Cat vào ô giữa → mèo trắng vào ô → rút bài → đưa Fruit vào ô → xếp cam lên táo → dời chồng táo+cam lên dưa hấu → kéo cả chồng 3 lá vào ô Fruit → "Clear every topic to win". Sau đó chơi tự do với moves vô hạn | `[VIDEO 00:00-00:48]` |
 | 4 | Ô Dinosaur mở sẵn. Popup Pack → bấm Pack → 2 tem Dinosaur ẩn bay vào ô | `[VIDEO 04:28-04:36]` |
-| 7 | Ô Sea life (Marine Animal) mở sẵn. Popup Stamper → bấm Stamper → chạm ô → 1 tem được đóng dấu vào | `[VIDEO 10:40-10:52]` |
+| 7 | Popup Stamper → bấm Stamper → bàn tay chỉ cột còn nhiều lá úp nhất → chạm cột → cả cột lật ngửa (bản gốc: chạm ô Sea life, 1 tem vào ô `[VIDEO 10:40-10:52]`) | Review 2026-10-10 |
 | 9 | Popup Joker → bấm Joker → chạm cột 2 → Golden Stamp đặt xuống | `[VIDEO 14:32-14:44]` |
 
 **Gợi ý theo ngữ cảnh** (không khóa màn hình, hiện một lần):

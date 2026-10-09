@@ -8,7 +8,7 @@ const STR = {
     // HUD / banner
     moves: 'MOVES', piles: '{done}/{total}', combo: 'Combo x{n}',
     goal: 'Send <b>{n} letters</b> · {moves}', goalMoves: '{n} moves', goalInf: 'unlimited moves',
-    hard: 'HARD LEVEL', superhard: 'SUPER HARD LEVEL', level: 'Level {n}',
+    hard: 'BUSY DAY', superhard: 'HOLIDAY RUSH', level: 'Level {n}', to_resident: 'to {name}',
     // kịch bản level 1 (8 bước, theo video)
     script_1_0: 'Drag the <em>crown stamp</em> to an empty slot.',
     script_1_1: 'Add a <em>matching</em> stamp to its slot.',
@@ -19,7 +19,7 @@ const STR = {
     script_1_6: 'Send the stack in <em>1 move</em>!',
     script_1_7: 'Send every letter to <em>win</em>!',
     script_pack: 'Tap <em>Magnet</em>: 2 hidden stamps jump in.',
-    script_stamper: 'Tap <em>Stamper</em>, then tap the slot.',
+    script_stamper: 'Tap <em>Stamper</em>, then tap a column.',
     script_joker: 'Tap <em>Joker</em>, then tap a column.',
     // gợi ý lần đầu (just-in-time)
     tip_moves: 'Each drag or deck tap = <em>1 move</em>.',
@@ -42,23 +42,24 @@ const STR = {
     err_no_pile: 'Find its <em>crown stamp</em> first.',
     err_slots_busy: 'No empty slot. <em>Fill a slot</em> first.',
     err_mixed: 'Only <em>same-kind</em> stacks move together.',
+    err_last_slot: 'Last free slot! <em>Drag</em> it there if you are sure.',
     err_facedown: 'Hidden stamp. Clear the ones <em>on top</em>.',
     err_no_place: 'No spot for it <em>yet</em>.',
     follow: 'Not yet! Follow the <em>hand</em>.',
     peek: '{topic}: <em>{n} more</em> to go',
     // trạng thái / booster
-    overtime_big: 'OVERTIME!', overtime: 'Out of moves… <em>keep going, free!</em>',
+    overtime_big: 'Evening shift', overtime: 'The post office stays open. <em>Finish at your pace.</em>',
     rescue: 'Stuck? Here’s a <em>free Golden Stamp</em>!', rescue_magnet: 'Stuck? Here’s a <em>free Magnet</em>. Tap it!',
     autofinish: 'Auto finish!', coins_short: 'Not enough coins', unlocks: 'Unlocks at level {n}',
     nothing_undo: 'Nothing to undo', no_hint: 'No good move. Try a booster.', try_deck: 'Try the deck',
     joker_place: 'Tap a column for the <em>Golden Stamp</em>.',
-    pick_pack: 'Tap a slot: <em>+2 hidden stamps</em>.', pick_stamper: 'Tap a slot: <em>+1 stamp</em>.',
+    pick_pack: 'Tap a slot: <em>+2 hidden stamps</em>.', pick_stamper: 'Tap a column: <em>flip its hidden stamps</em>.', no_hidden: 'No hidden stamps left on the columns.',
     open_pile_first: 'Open a slot first', none_left: 'No stamps of that kind left',
     tap_pile: 'Tap the <em>glowing</em> slot.', tap_column: 'Tap the <em>glowing</em> column.',
     // booster
     b_hint: 'Hint', b_pack: 'Magnet', b_stamper: 'Stamper', b_joker: 'Joker', b_undo: 'Undo',
     bi_hint: 'Shows a good next move.', bi_pack: 'Pulls <b>2 hidden stamps</b> into a slot.',
-    bi_stamper: 'Adds <b>1 stamp</b> to the slot you pick.', bi_joker: 'Any stamp can stack on the <b>Golden Stamp</b>.',
+    bi_stamper: 'Flips <b>every hidden stamp</b> in one column.', bi_joker: 'Any stamp can stack on the <b>Golden Stamp</b>.',
     booster: 'New: {name}', free_n: '+{n} free', claim: 'Claim',
     // panel
     howto: 'How to Play', got_it: 'Got it',
@@ -81,7 +82,7 @@ const STR = {
   vi: {
     moves: 'NƯỚC', piles: '{done}/{total}', combo: 'Combo x{n}',
     goal: 'Gửi <b>{n} lá thư</b> · {moves}', goalMoves: '{n} nước', goalInf: 'không giới hạn nước',
-    hard: 'LEVEL KHÓ', superhard: 'LEVEL SIÊU KHÓ', level: 'Level {n}',
+    hard: 'NGÀY BẬN RỘN', superhard: 'CAO ĐIỂM LỄ', level: 'Level {n}', to_resident: 'gửi {name}',
     script_1_0: 'Kéo <em>tem vương miện</em> vào ô trống.',
     script_1_1: 'Thêm tem <em>cùng loại</em> vào ô đó.',
     script_1_2: 'Chạm <em>bộ bài</em> để lấy tem mới.',
@@ -91,7 +92,7 @@ const STR = {
     script_1_6: 'Đưa cả xấp vào ô: <em>1 nước</em>!',
     script_1_7: 'Gửi hết thư để <em>thắng</em>!',
     script_pack: 'Chạm <em>Nam châm</em>: hút 2 tem ẩn vào.',
-    script_stamper: 'Chạm <em>Con dấu</em>, rồi chạm ô.',
+    script_stamper: 'Chạm <em>Con dấu</em>, rồi chạm một cột.',
     script_joker: 'Chạm <em>Tem Vàng</em>, rồi chạm một cột.',
     tip_moves: 'Mỗi lần kéo hoặc rút = <em>1 nước</em>.',
     tip_draw: 'Hết tem hợp? Chạm <em>bộ bài</em>.',
@@ -112,21 +113,22 @@ const STR = {
     err_no_pile: 'Tìm <em>tem vương miện</em> của nó trước.',
     err_slots_busy: 'Hết ô trống. <em>Lấp đầy một ô</em>.',
     err_mixed: 'Chỉ xấp tem <em>cùng loại</em> mới nhấc cùng nhau.',
+    err_last_slot: 'Ô trống cuối cùng! Chắc thì <em>kéo</em> vào nhé.',
     err_facedown: 'Tem úp. Dọn tem <em>phía trên</em> trước.',
     err_no_place: 'Tem này <em>chưa có chỗ</em>.',
     follow: 'Chưa được! Làm theo <em>bàn tay</em>.',
     peek: '{topic}: còn <em>{n} tem</em>',
-    overtime_big: 'GIỜ BÙ!', overtime: 'Hết nước… <em>chơi tiếp miễn phí!</em>',
+    overtime_big: 'Ca tối', overtime: 'Bưu điện vẫn mở. <em>Cứ thong thả gửi nốt.</em>',
     rescue: 'Bí rồi? Tặng bạn <em>Tem Vàng</em>!', rescue_magnet: 'Bí rồi? Tặng bạn <em>Nam châm</em>. Chạm vào nhé!',
     autofinish: 'Tự hoàn thành!', coins_short: 'Không đủ xu', unlocks: 'Mở ở level {n}',
     nothing_undo: 'Chưa có gì để hoàn tác', no_hint: 'Không có nước hay. Thử booster.', try_deck: 'Thử rút bài',
     joker_place: 'Chạm một cột để đặt <em>Tem Vàng</em>.',
-    pick_pack: 'Chạm một ô: <em>+2 tem ẩn</em>.', pick_stamper: 'Chạm một ô: <em>+1 tem</em>.',
+    pick_pack: 'Chạm một ô: <em>+2 tem ẩn</em>.', pick_stamper: 'Chạm một cột: <em>lật hết tem úp</em>.', no_hidden: 'Trên cột không còn tem úp nào.',
     open_pile_first: 'Mở một ô trước đã', none_left: 'Không còn tem loại này',
     tap_pile: 'Chạm ô đang <em>sáng</em>.', tap_column: 'Chạm cột đang <em>sáng</em>.',
     b_hint: 'Gợi ý', b_pack: 'Nam châm', b_stamper: 'Con dấu', b_joker: 'Tem Vàng', b_undo: 'Hoàn tác',
     bi_hint: 'Chỉ nước đi tốt tiếp theo.', bi_pack: 'Hút <b>2 tem ẩn</b> vào một ô.',
-    bi_stamper: 'Thêm <b>1 tem</b> vào ô bạn chọn.', bi_joker: 'Tem nào cũng xếp được lên <b>Tem Vàng</b>.',
+    bi_stamper: 'Lật ngửa <b>mọi tem úp</b> trong một cột.', bi_joker: 'Tem nào cũng xếp được lên <b>Tem Vàng</b>.',
     booster: 'Mới: {name}', free_n: '+{n} miễn phí', claim: 'Nhận',
     howto: 'Cách chơi', got_it: 'Hiểu rồi',
     r1: '<b>Tem vương miện</b> mở một ô.', r2: 'Thêm tem <b>cùng loại</b> vào ô.',
@@ -150,7 +152,7 @@ const STR = {
 // Tên chủ đề tiếng Việt (tên gốc tiếng Anh theo dữ liệu level)
 const TOPIC_VI = {
   Cat: 'Mèo', Fruit: 'Trái cây', Pizza: 'Pizza', Ball: 'Bóng', Dog: 'Chó', Noodle: 'Mì', Phone: 'Điện thoại', Bird: 'Chim',
-  Car: 'Ô tô', Hoofed: 'Thú móng guốc', Ship: 'Tàu thủy', Candy: 'Kẹo', Balloon: 'Bóng bay', Time: 'Đồng hồ', Hat: 'Mũ',
+  Car: 'Ô tô', Hoofed: 'Thú trang trại', Ship: 'Tàu thủy', Candy: 'Kẹo', Balloon: 'Bóng bay', Time: 'Đồng hồ', Hat: 'Mũ',
   Glasses: 'Kính', Pets: 'Thú cưng', Dinosaur: 'Khủng long', 'Fast food': 'Đồ ăn nhanh', Chess: 'Cờ vua', Flower: 'Hoa',
   Leaf: 'Lá cây', Train: 'Tàu hỏa', Tree: 'Cây', Soda: 'Nước ngọt', 'Ice cream': 'Kem', Truck: 'Xe tải', Kite: 'Diều',
   'Soft drink': 'Đồ uống', Planet: 'Hành tinh', Beast: 'Thú hoang', Notes: 'Nốt nhạc', Sauce: 'Nước sốt', Vegetable: 'Rau củ',
@@ -162,7 +164,7 @@ const TOPIC_VI = {
 };
 /** Tên chủ đề theo ngôn ngữ đang chọn. */
 const TOPIC_EN = {
-  Hoofed: 'Hoofed animals', Time: 'Clocks', Notes: 'Music notes', Float: 'Beach floats', Beast: 'Wild animals',
+  Hoofed: 'Farm animals', Time: 'Clocks', Notes: 'Music notes', Float: 'Beach floats', Beast: 'Wild animals',
   'Pet Care': 'Pet supplies', Grilled: 'BBQ', 'Soft drink': 'Drinks', 'Music Inst': 'Instruments', 'Water Plants': 'Water plants',
   Pets: 'Small pets', Tool: 'Tools', Gems: 'Gems', Leaf: 'Leaves', Glasses: 'Glasses',
 };
@@ -187,3 +189,42 @@ export function t(key, vars = {}) {
   return s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? ''));
 }
 export const has = key => !!(STR[lang] && STR[lang][key]) || !!STR.en[key];
+
+// ---- Cư dân Wren Hollow (concept-little-post-office.md mục 3.2): chủ đề -> người nhận thư, và câu nhắn ở màn thắng (mục 3.3).
+const RESIDENT_OF = {
+  Cake: 'Marigold', Desserts: 'Marigold', Candy: 'Marigold', 'Fast food': 'Marigold', Pizza: 'Marigold', 'Ice cream': 'Marigold', Fruit: 'Marigold', Noodle: 'Marigold', Grilled: 'Marigold', Vegetable: 'Marigold',
+  Time: 'Finch', Tool: 'Finch', Phone: 'Finch', Glasses: 'Finch', Chess: 'Finch', Train: 'Finch', Car: 'Finch', Truck: 'Finch', Aircraft: 'Finch',
+  Flower: 'Lina', Bouquet: 'Lina', Gardening: 'Lina', Leaf: 'Lina', Tree: 'Lina', 'Water Plants': 'Lina', Mushroom: 'Lina', Insect: 'Lina',
+  Ship: 'Bo', 'Sea life': 'Bo', Float: 'Bo', Sashimi: 'Bo', Sushi: 'Bo', Planet: 'Bo', Kite: 'Bo', Bird: 'Bo',
+  Tea: 'Ines', Coffee: 'Ines', Cocktail: 'Ines', Soda: 'Ines', 'Soft drink': 'Ines', Notes: 'Ines', 'Music Inst': 'Ines', Sculpture: 'Ines',
+  Cat: 'Pip', Pets: 'Pip', 'Pet Care': 'Pip', Dog: 'Pip',
+};
+export function residentOf(topic) { return RESIDENT_OF[topic] || 'Otto'; }
+const NOTES = {
+  en: {
+    Marigold: ['The scones are for you. The gossip is free.', 'I baked too many. Again. Take some home.', 'Tell no one about the cake. Everyone knows already.'],
+    Finch: ['Your clock is one minute fast. I fixed it. You\'re welcome.', 'Delivered on time. I checked twice.', 'Punctual. I approve, quietly.'],
+    Lina: ['I put a petal in. If it fell out, that\'s fine too.', 'Thank you. The tulips say thank you too.', 'I pressed a leaf for you. It is a nice leaf.'],
+    Bo: ['Sunny. Then not. Bring a hat.', 'The gulls say hi. I don\'t.', 'Letter arrived dry. Good work.'],
+    Ines: ['Tea\'s on. The cat may not come in.', 'I remember every letter. This one was neat.', 'Mint tea today. Pip is sulking.'],
+    Pip: ['Pip sat on your mail. Consider it approved.', 'Pip inspected the stamps. Pip is satisfied.', 'Pip would like a fish. Pip always would.'],
+    Otto: ['Pip helps when she feels like it. So did I, at your age.', 'Good sorting, new hire. I hardly noticed.', 'Another bag done. The kettle is yours.'],
+  },
+  vi: {
+    Marigold: ['Bánh nướng tặng bạn. Chuyện phiếm miễn phí.', 'Lại nướng dư rồi. Mang về ít nhé.', 'Đừng kể ai chuyện cái bánh. Cả phố biết rồi.'],
+    Finch: ['Đồng hồ bạn nhanh một phút. Tôi chỉnh rồi. Không cần cảm ơn.', 'Giao đúng giờ. Tôi kiểm hai lần.', 'Đúng giờ. Tôi hài lòng, trong im lặng.'],
+    Lina: ['Tôi kẹp một cánh hoa. Rơi mất cũng không sao.', 'Cảm ơn bạn. Mấy bông tulip cũng cảm ơn.', 'Tôi ép tặng bạn một chiếc lá. Lá đẹp lắm.'],
+    Bo: ['Nắng. Rồi hết nắng. Mang mũ.', 'Mòng biển gửi lời chào. Tôi thì không.', 'Thư tới nơi vẫn khô. Làm tốt.'],
+    Ines: ['Trà pha rồi. Mèo không được vào.', 'Thư nào tôi cũng nhớ. Thư này gọn gàng.', 'Hôm nay trà bạc hà. Pip đang dỗi.'],
+    Pip: ['Pip ngồi lên thư của bạn. Coi như đã duyệt.', 'Pip đã kiểm tem. Pip hài lòng.', 'Pip muốn một con cá. Lúc nào Pip cũng muốn.'],
+    Otto: ['Pip giúp khi nó thích. Hồi bằng tuổi bạn, tôi cũng vậy.', 'Phân loại khá lắm, bạn mới. Tôi gần như không để ý.', 'Xong thêm một bao. Ấm nước là của bạn.'],
+  },
+};
+let lastNote = '';
+export function residentNote(name) {
+  const pool = (NOTES[lang] || NOTES.en)[name] || NOTES.en.Otto;
+  let n = pool[Math.floor(Math.random() * pool.length)];
+  if (n === lastNote && pool.length > 1) n = pool[(pool.indexOf(n) + 1) % pool.length];
+  lastNote = n;
+  return n;
+}

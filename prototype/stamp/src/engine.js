@@ -286,6 +286,15 @@ export function cardsOfTopic(s, t) {
 }
 
 /** Booster: đưa tối đa `count` stamp của ô k vào ô (ưu tiên lá ẩn), 0 move. */
+/** Stamper (review game design 2026-10-10): lật ngửa toàn bộ lá úp của một cột. Booster thông tin, đánh vào nguyên nhân kẹt;
+ *  không tốn move, lá không di chuyển. */
+export function revealColumn(s, i) {
+  const col = s.cols[i];
+  if (!col || !col.some(c => !c.up)) return { ok: false, why: 'none_hidden' };
+  const events = [];
+  col.forEach(c => { if (!c.up) { c.up = true; events.push({ type: 'flip', col: i, id: c.id }); } });
+  return { ok: true, events };
+}
 export function pullToFoundation(s, k, count, rnd = Math.random) {
   const f = s.found[k];
   if (!f) return { ok: false, why: 'no_pile' };

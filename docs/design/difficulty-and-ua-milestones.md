@@ -50,20 +50,20 @@ Người chơi mô phỏng **không nhìn trộm lá úp**: mỗi lượt nó đ
 
 Mỗi level chạy 30 ván cho mỗi mức. **Biên moves** = (moves cho phép − số moves trung vị của người giỏi) / moves cho phép, tức người chơi được phí tối đa bấy nhiêu phần trăm mà vẫn thắng.
 
-| Level | Vai trò | Moves | Tối ưu | Giỏi: trung vị | Biên moves | Giỏi: thắng | Giỏi: kẹt | 10% phí: thắng | 10% phí: kẹt | 25% phí: thắng | 25% phí: thắng nếu +5 | Phút/ván (10% phí) |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | tutorial | inf | 23 | 23 | - | 100% | 0% | 100% | 0% | 100% | 100% | 1.3 |
-| 2 | teach | 66 | 48 | 50 | 24% | 100% | 0% | 100% | 0% | 100% | 100% | 2.7 |
-| 3 | teach | 75 | 56 | 59 | 21% | 100% | 0% | 100% | 0% | 100% | 100% | 3.3 |
-| 4 | normal | 82 | 66 | 68 | 17% | 100% | 0% | 100% | 0% | 93% | 100% | 3.8 |
-| 5 | HARD | 86 | 84 | 87 | -1% | 37% | 0% | 7% | 0% | 0% | 37% | 4.7 |
-| 6 | normal | 76 | 62 | 63 | 17% | 100% | 0% | 100% | 0% | 90% | 97% | 3.5 |
-| 7 | normal | 79 | 67 | 69 | 13% | 100% | 0% | 100% | 0% | 73% | 100% | 3.8 |
-| 8 | normal | 75 | 64 | 67 | 11% | 100% | 0% | 100% | 0% | 90% | 97% | 3.8 |
-| 9 | wall | 110 | 80 | 82 | 25% | 100% | 0% | 100% | 0% | 93% | 97% | 4.5 |
-| 10 | SUPERHARD | 100 | 98 | 101 | -1% | 47% | 0% | 13% | 0% | 0% | 23% | 5.5 |
+| Level | Vai trò | Moves | Tối ưu | Giỏi: trung vị | Biên moves | Giỏi: thắng | Giỏi: kẹt | 10% phí: thắng | 10% phí: kẹt | 10% phí + booster: thắng | 10% phí + booster: kẹt | 25% phí: thắng | 25% phí: thắng nếu +5 | Phút/ván (10% phí) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | tutorial | inf | 23 | 23 | - | 100% | 0% | 100% | 0% | 100% | 0% | 100% | 100% | 1.3 |
+| 2 | teach | 66 | 48 | 50 | 24% | 100% | 0% | 100% | 0% | 100% | 0% | 100% | 100% | 2.7 |
+| 3 | teach | 75 | 56 | 59 | 21% | 100% | 0% | 100% | 0% | 100% | 0% | 100% | 100% | 3.3 |
+| 4 | normal | 82 | 66 | 68 | 17% | 100% | 0% | 100% | 0% | 100% | 0% | 93% | 100% | 3.8 |
+| 5 | HARD | 86 | 84 | 87 | -1% | 37% | 0% | 7% | 0% | 7% | 0% | 0% | 37% | 4.7 |
+| 6 | normal | 76 | 62 | 64 | 16% | 97% | 0% | 100% | 0% | 100% | 0% | 80% | 100% | 3.5 |
+| 7 | normal | 79 | 67 | 69 | 13% | 100% | 0% | 100% | 0% | 100% | 0% | 73% | 100% | 3.8 |
+| 8 | normal | 75 | 63 | 65 | 13% | 100% | 0% | 100% | 0% | 100% | 0% | 97% | 100% | 3.6 |
+| 9 | breather | 110 | 78 | 79 | 28% | 100% | 0% | 100% | 0% | 100% | 0% | 97% | 97% | 4.3 |
+| 10 | SUPERHARD | 100 | 98 | 101 | -1% | 47% | 0% | 13% | 0% | 13% | 0% | 0% | 23% | 5.5 |
 
-*Cập nhật 2026-10-10 sau khi sinh lại L5 và L7 (xem mục 6).*
+*Cập nhật 2026-10-10 sau khi sinh lại L5–L9 (xem mục 6). Cột "+ booster": người chơi phổ thông dùng Magnet/Stamper khi kẹt (số quà khi mở khoá). Kết quả trùng cột thường vì sau khi sửa không level nào còn kẹt cứng.*
 
 **Đọc kết quả:**
 
@@ -113,3 +113,7 @@ Sự kiện ghi trong `localStorage` (`stampsort_events_v1`). Có SDK AppsFlyer 
 - **L7.** Zoo đổi thành Cake. Glasses 8 → 6, bỏ kính trượt tuyết và kính lặn. Moves 80 → 79.
 - **Sao** tính theo phần moves dư so với tối ưu: slack = moves − tối ưu; 3★ nếu còn ≥ 50% slack, 2★ nếu ≥ 20%. Luật cũ (còn ≥ 25% ngân sách) gần như không ai đạt 3★.
 - **Cứu khi kẹt:** Magnet trước, Joker sau (mục 3).
+- **P1 (cùng ngày):** L6 Sauce → Bird, L8 Raw meat → Ship, L9 Balloon → Candy, nhãn breather. Sinh lại L6, L8 (thêm mục tiêu người mới) và L9.
+  - L8: người mới thắng 97%.
+  - L6: generator đo được 100% nhưng báo cáo (seed mô phỏng khác) ra 80%, dưới mục tiêu 90%. Số moves giữ theo video (76). Nếu playtest thấy khó thì nới lên 78.
+- **Stamper mới** lật ngửa cả một cột. Undo giữ ngửa các lá đã lộ. Gợi ý tự động ở level khó chỉ bật sau lần kẹt hoặc Overtime đầu tiên. Overtime đổi tên thành "Evening shift", tông ấm.

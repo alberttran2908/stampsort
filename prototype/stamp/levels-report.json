@@ -87,7 +87,9 @@
   "video": 76,
   "movesPerCard": 1.9,
   "slack": 1.23,
-  "winSim": 0.91
+  "winSim": 0.98,
+  "stuckSim": 0,
+  "newbieWin": 1
  },
  {
   "L": 7,
@@ -113,27 +115,30 @@
   "topics": 7,
   "cards": 41,
   "deck": 22,
-  "solver": 64,
+  "solver": 63,
   "moves": 75,
   "video": 75,
   "movesPerCard": 1.83,
-  "slack": 1.17,
-  "winSim": 0.82
+  "slack": 1.19,
+  "winSim": 1,
+  "stuckSim": 0,
+  "newbieWin": 0.97
  },
  {
   "L": 9,
-  "role": "wall",
+  "role": "breather",
   "F": 4,
   "cols": "3-4-5-6",
   "topics": 8,
   "cards": 48,
   "deck": 30,
-  "solver": 79,
+  "solver": 78,
   "moves": 110,
   "video": 110,
   "movesPerCard": 2.29,
-  "slack": 1.39,
-  "winSim": 0.53
+  "slack": 1.41,
+  "winSim": 1,
+  "stuckSim": 0
  },
  {
   "L": 10,

@@ -36,18 +36,21 @@ const DESIGN = [
     unlock: null, avoid: { Truck: [3], Kite: [3] },
     topics: { Dog: 6, Train: 6, Tree: 5, Soda: 6, 'Ice cream': 6, Fruit: 6, Truck: 3, Kite: 4 },
     note: 'Video L5 (moves 96). MỐC UA 1: thiếu moves chứ không kẹt; hết moves vào Overtime, không thể thua.' },
-  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 76, target: 0.8, unlock: null,
-    topics: { 'Soft drink': 6, Planet: 5, Beast: 4, Notes: 5, Sauce: 3, Vegetable: 6, Insect: 4 }, note: 'Video L6.' },
+  // Review 2026-10-10: Sauce (chai) nhầm với Soft drink (chai) -> đổi sang Bird. Mục tiêu người mới >= 90%.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 76, target: 0.98, newbieTarget: 0.9, unlock: null,
+    topics: { 'Soft drink': 6, Planet: 5, Beast: 4, Notes: 5, Bird: 3, Vegetable: 6, Insect: 4 }, note: 'Video L6 (Sauce -> Bird).' },
   // Review 2026-10-10: Zoo (hải cẩu, chim cánh cụt...) nhầm với Sea life / Float, kính lặn + kính trượt tuyết nhầm với Float.
-  // Thay Zoo bằng Cake, Glasses 8 -> 6 (bỏ kính trượt tuyết, kính lặn). Moves 79: người mới (phí 25%) thắng ~80%, phổ thông ~95%.
-  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 79, target: 0.9, unlock: 'stamper', preplace: 'Sea life', avoid: { Glasses: [0, 5] },
+  // Thay Zoo bằng Cake, Glasses 8 -> 6 (bỏ kính trượt tuyết, kính lặn; 2 art này sau đó được vẽ lại thành kính cận). Moves 79: người mới ~75-80%.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 79, target: 0.9, unlock: 'stamper', preplace: 'Sea life',
     topics: { 'Sea life': 6, Glasses: 6, Float: 6, Tea: 5, Notes: 3, Car: 5, Cake: 5 },
     script: [{ text: 'Tap <em>Stamper</em>, then tap the pile.', booster: 'stamper', slot: 0 }],
     note: 'Video L7: ô Marine Animal mở sẵn để dạy Stamper.' },
-  { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: 75, target: 0.75, unlock: null,
-    topics: { Footwear: 4, 'Raw meat': 5, Outerwear: 5, Cocktail: 5, Desserts: 5, Grilled: 5, Bouquet: 5 }, note: 'Video L8.' },
-  { role: 'wall', F: 4, cols: [3, 4, 5, 6], moves: 110, target: 0.6, unlock: 'joker',
-    topics: { Zoo: 5, Sculpture: 5, Pizza: 5, Sashimi: 5, Balloon: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 },
+  // Review 2026-10-10: Raw meat nhầm với Grilled (bít tết sống/nướng) và lệch tone -> đổi sang Ship. Dango (Desserts) đã vẽ lại thành macaron.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: 75, target: 0.97, newbieTarget: 0.85, unlock: null,
+    topics: { Footwear: 4, Ship: 5, Outerwear: 5, Cocktail: 5, Desserts: 5, Grilled: 5, Bouquet: 5 }, note: 'Video L8 (Raw meat -> Ship).' },
+  // Review 2026-10-10: số liệu cho thấy L9 là level nghỉ (biên 25%) -> nhãn breather. Balloon (bóng sư tử nhầm với Zoo) -> Candy (kẹo bông đã vẽ lại).
+  { role: 'breather', F: 4, cols: [3, 4, 5, 6], moves: 110, target: 0.97, unlock: 'joker',
+    topics: { Zoo: 5, Sculpture: 5, Pizza: 5, Sashimi: 5, Candy: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 },
     script: [{ text: 'Tap <em>Joker</em>, then tap a column.', booster: 'joker', col: 1 }],
     note: 'Video L9: mở Joker, dùng ngay đầu level.' },
   // Mốc UA 2: level siêu khó cuối chương, cũng không thể thua.
@@ -138,6 +141,7 @@ const MAX_FAIL = { tutorial: 0, teach: 0.05, breather: 0.05, normal: 0.15, bump:
 // Trước 2026-10-10 generator dùng solver nhìn được lá úp nên số "thắng mô phỏng" lệch hẳn báo cáo độ khó (L5: 0.93 vs 13%).
 const CASUAL = { width: 2, depth: 6, noise: 1.6, mistake: 0.10, capMoves: 260 };
 const SKILLED = { width: 4, depth: 22, noise: 0.8, mistake: 0, capMoves: 260 };
+const NEWBIE = { width: 2, depth: 6, noise: 1.6, mistake: 0.25, capMoves: 260 };
 const sim = (lv, prof, runs, seed) => { const r = sampleHidden(createState(lv), { runs, seed, ...prof }); return { dist: r.dist, stuck: r.deadlocks / runs }; };
 
 // --only=5,10 : chỉ sinh lại các level này, giữ nguyên level khác từ levels.js / levels-report.json hiện có
@@ -197,6 +201,13 @@ for (let li = 0; li < DESIGN.length; li++) {
     // seed có tỉ lệ thắng (người chơi phổ thông, không nhìn trộm) tại ngân sách moves gần target nhất
     tries.sort((a, b) => Math.abs(winAt(a.dist, a.budget) - d.target) - Math.abs(winAt(b.dist, b.budget) - d.target) || a.stuck - b.stuck || a.solver - b.solver);
     pick = tries[0];
+    if (d.newbieTarget != null) {
+      // level thường: trong các seed phổ thông đã thắng gần target, chọn seed người mới (phí 25%) thắng cao nhất
+      const top = tries.filter(x => Math.abs(winAt(x.dist, x.budget) - d.target) <= 0.05).slice(0, 8);
+      for (const x of top) x.newbie = winAt(sim(x.lv, NEWBIE, 30, x.seed).dist, x.budget);
+      top.sort((a, b) => b.newbie - a.newbie);
+      if (top.length) pick = top[0];
+    }
     if (d.skilledTarget != null) {
       // trong vài seed tốt nhất, chọn seed có người chơi giỏi thắng gần skilledTarget nhất
       const top = tries.slice(0, 5).filter(x => Math.abs(winAt(x.dist, x.budget) - d.target) <= 0.1);
@@ -224,7 +235,7 @@ for (let li = 0; li < DESIGN.length; li++) {
     ...(d.script ? { script: d.script } : {}), ...lv });
   report.push({ L: li + 1, role: d.role, F: d.F, cols: d.cols.join('-'), topics: Object.keys(d.topics).length, cards: cardsN,
     deck: lv.deck.length, solver: solverMoves, moves: budget, video: d.moves ?? '-', movesPerCard: +(budget / cardsN).toFixed(2),
-    slack: +(budget / solverMoves).toFixed(2), winSim: +winSim.toFixed(2), stuckSim: +stuck.toFixed(2), ...(pick.skilled != null ? { skilledWin: +pick.skilled.toFixed(2) } : {}) });
+    slack: +(budget / solverMoves).toFixed(2), winSim: +winSim.toFixed(2), stuckSim: +stuck.toFixed(2), ...(pick.skilled != null ? { skilledWin: +pick.skilled.toFixed(2) } : {}), ...(pick.newbie != null ? { newbieWin: +pick.newbie.toFixed(2) } : {}) });
   console.log(JSON.stringify(report[report.length - 1]));
 }
 

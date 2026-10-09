@@ -30,6 +30,15 @@ Người dùng chọn **B**. Lý do: nền sáng và không có đồ trang trí
 - Đổi cỡ hoặc xoay màn hình thì gọi `placeChrome()`, không dựng lại lá bài.
 - Cột bài dừng ở mép kệ gỗ (`TAB_BOTTOM`). Nếu cột đã sâu tới vùng nhãn gợi ý thì gợi ý hiện dạng toast 2,6 giây, không che lá.
 
+- **Thứ tự hàng (từ 2026-10-10, theo góp ý người dùng):**
+  - HUD ở trên cùng, ngay dưới là khay đích (`FOUND_Y` = 282).
+  - Cột bài ở giữa (`TAB_Y` = 585).
+  - **Hàng rút bài (ô phụ, lá đã rút, bộ bài)** neo theo đáy, ngay trên nhãn gợi ý (`ROW_A` = 1490 + DY_BOT − CH − 36).
+  - Bộ bài là chỗ chạm nhiều nhất nên nằm trong vùng ngón cái. Cột bài dừng phía trên hàng rút bài, vùng chạm của cột cũng không lấn xuống hàng này.
+  - Toast hiện ngay trên hàng rút bài.
+  - Các hàng được tính trong `layoutRows()`, gọi lại khi đổi cỡ lá.
+- **Cỡ lá theo số cột:** level có ≤ 4 cột/ô thì lá to hơn khoảng 11% (CK = 184/165). Lá dựng trong DOM ở cỡ gốc rồi phóng bằng `translate + scale`. Ô chứa (`.slot`) được tính kích thước bằng `calc(... * var(--ck))`, không dùng `transform`, vì `transform` tạo stacking context khiến mép khay không đè được lên lá.
+
 ## 3. Review UI/UX (agent chuyên UI/UX, trên 8 ảnh chụp ở khung 375×812)
 
 Quy đổi: 1 px stage ≈ 0,347 pt. 44 pt = 127 px, 12 pt = 35 px.

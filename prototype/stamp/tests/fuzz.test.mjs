@@ -676,8 +676,15 @@ function runScript(L, s, { onlyBoosters = false } = {}) {
     const tag = `bước ${n + 1}`;
     if (st.info) return;
     if (st.draw) { ok(E.draw(s).ok, `${tag} draw`); return; }
-    if (st.booster === 'pack' || st.booster === 'stamper') {
-      const cnt = st.booster === 'pack' ? 2 : 1;
+    if (st.booster === 'stamper') {          // Stamper mới: lật ngửa mọi lá úp của cột còn nhiều lá úp nhất
+      const ci = s.cols.map((c, i) => [c.filter(x => !x.up).length, i]).sort((x, y) => y[0] - x[0])[0][1];
+      const hidden = s.cols[ci].filter(c => !c.up).length;
+      const r = E.revealColumn(s, ci); ok(r.ok, `${tag} stamper ${r.why}`);
+      eq(r.events.length, hidden, `${tag} số lá lật`); ok(s.cols[ci].every(c => c.up), `${tag} cột còn lá úp`);
+      return;
+    }
+    if (st.booster === 'pack') {
+      const cnt = 2;
       const f = s.found[st.slot]; ok(f, `${tag} ô ${st.slot} chưa mở`);
       const had = f.cards.length;
       const r = E.pullToFoundation(s, st.slot, cnt, rng(7)); ok(r.ok, `${tag} ${st.booster} ${r.why}`);
@@ -696,6 +703,14 @@ function runScript(L, s, { onlyBoosters = false } = {}) {
     // bước ép phải khớp với đích tap-to-move? (chỉ cảnh báo, không fail)
   });
 }
+test('Stamper: revealColumn lật hết lá úp của 1 cột, không đổi vị trí lá, không tốn move', () => {
+  const s = E.createState(LEVELS[3]);
+  const i = s.cols.findIndex(c => c.some(x => !x.up));
+  const ids = s.cols[i].map(c => c.id), used = s.used;
+  const r = E.revealColumn(s, i);
+  ok(r.ok, 'ok'); ok(s.cols[i].every(c => c.up), 'hết lá úp'); eq(JSON.stringify(s.cols[i].map(c => c.id)), JSON.stringify(ids), 'thứ tự lá'); eq(s.used, used, 'không tốn move');
+  ok(!E.revealColumn(s, i).ok, 'lần 2 trên cùng cột phải báo không còn lá úp');
+});
 test('script level 1 thực thi tuần tự hợp lệ và còn giải được sau đó', () => {
   const s = E.createState(LEVELS[0]);
   runScript(LEVELS[0], s);

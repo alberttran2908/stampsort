@@ -27,6 +27,20 @@
 >
 > Số liệu mới ở `difficulty-and-ua-milestones.md` mục 4 và 6. Câu hỏi mở "solverHint có đọc lá úp không": **có**, Hint gọi `solve()` trên trạng thái thật, nên gợi ý đang biết trước bài.
 
+> **Trạng thái P1 (cập nhật cùng ngày):** đã làm 7–15, mục 16 làm theo phương án (a) và chờ PO chốt.
+> - **#7** Màu khung lá theo chủ đề, cố định trong level.
+> - **#8** Stamper mới lật ngửa toàn bộ lá úp của 1 cột (`engine.revealColumn`). Kịch bản L7 tự chỉ vào cột còn nhiều lá úp nhất.
+> - **#9** Undo giữ ngửa các lá đã lộ trên cột.
+> - **#10** Gợi ý tự động ở level khó chỉ bật sau lần kẹt hoặc Overtime đầu tiên, chờ 20 giây.
+> - **#11** Chạm không tự mở ô trống cuối cùng. Thêm sự kiện `slot_open` (via tap/drag/auto) và `last_slot_tap_blocked`.
+> - **#12** Vẽ lại kẹo bông → kẹo gói, dango → macaron, rùa (Pets) → chuột lang, 2 đồng hồ cát (Time) → đồng hồ treo tường và đồng hồ quả quýt, kính trượt tuyết và kính lặn → 2 kính cận. L6 Sauce → Bird, L8 Raw meat → Ship, L9 Balloon → Candy và nhãn breather. Sinh lại L6, L8 (thêm mục tiêu người mới) và L9.
+> - **#13** Icon mới: Phone (quay số), Insect (bọ rùa), Hoofed (đầu ngựa, tên EN "Farm animals"), Float (phao bơi sọc), Zoo (voi).
+> - **#14** Phong bì bay vào đúng đoạn của thanh tiến độ. Mỗi chủ đề gắn một cư dân ("Clocks · to Finch"). Màn thắng có câu nhắn của cư dân. Overtime đổi thành "Evening shift", tông vàng ấm. Banner level khó thành "BUSY DAY" / "HOLIDAY RUSH".
+> - **#15** `difficulty_report.mjs` có profile phổ thông biết dùng Magnet/Stamper khi kẹt. Hiện không level nào kẹt nên kết quả trùng profile thường.
+> - **#16 (phương án a, [GIẢ THUYẾT])** Hạ giá theo thu nhập: hint 150, Magnet/Stamper 250, Joker 500, ô phụ 400, +5 moves 300, Undo 30. Quà Joker ở L9: 2 → 1. Giữ "Claim x2".
+>
+> **Ngoài review:** theo góp ý người dùng, hàng ô phụ, lá đã rút và bộ bài chuyển xuống dưới (vùng ngón cái), khay đích lên trên.
+
 ## 0. Tóm tắt cho người bận
 
 1. **Core loop và gamefeel đã tốt.** Người chơi mô phỏng mức "giỏi" khớp với video gốc gần như từng level, sai lệch chỉ 1–3 moves `[DATA]` so với `[VIDEO]`. Juice cho lúc gửi phong bì đã đủ. Prototype đạt mục tiêu "dựng lại baseline ABI".

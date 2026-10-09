@@ -1,5 +1,5 @@
 // Solver (beam search, full information) + người chơi mô phỏng (chỉ thấy lá ngửa).
-import { clone, applyMove, draw, isWon, maxRunStart, checkMove, stateKey, legalMoves, JOKER } from './engine.js';
+import { clone, applyMove, draw, isWon, maxRunStart, checkMove, stateKey, legalMoves, JOKER, pullToFoundation, revealColumn, cardsOfTopic } from './engine.js';
 
 /** Nước đi "có ý nghĩa" để giảm nhánh: luôn nhấc cả chồng dài nhất. */
 export function candidateActions(s) {
@@ -173,14 +173,29 @@ function determinize(s, rnd) {
 
 /** Một ván của người chơi không nhìn trộm: lập kế hoạch ngắn trên bản đoán, đi nước đầu, lập lại khi lộ thông tin.
  *  Trả về { moves (Infinity nếu không thắng), deadlock (kẹt cứng), deadlockAt (số move lúc kẹt) }. */
-export function playHidden(state, { width = 4, depth = 22, noise = 0.8, capMoves = 300, rnd = Math.random, mistake = 0 } = {}) {
+export function playHidden(state, { width = 4, depth = 22, noise = 0.8, capMoves = 300, rnd = Math.random, mistake = 0, boosters = null } = {}) {
+  const left = boosters ? { magnet: boosters.magnet || 0, stamper: boosters.stamper || 0 } : null;
+  let used = 0;
   const s = clone(state);
   s.moves = Infinity;
   let plan = [];
   let guard = 0;
   const seen = new Map();
   while (!isWon(s) && s.used < capMoves && guard++ < capMoves * 3) {
-    if (isDeadlocked(s)) return { moves: Infinity, deadlock: true, deadlockAt: s.used };
+    if (isDeadlocked(s)) {
+      // người chơi biết dùng booster: kẹt thì Magnet (hút 2 tem ẩn vào ô có tem ẩn), rồi Stamper (lật cột nhiều lá úp nhất). Không tốn move.
+      let saved = false;
+      if (left && left.magnet > 0) {
+        const k = s.found.findIndex(f => f && cardsOfTopic(s, f.t).hidden.length > 0);
+        if (k >= 0 && pullToFoundation(s, k, 2, rnd).ok) { left.magnet--; used++; saved = true; }
+      }
+      if (!saved && left && left.stamper > 0) {
+        const ci = s.cols.map((c, i) => [c.filter(x => !x.up).length, i]).sort((a, b) => b[0] - a[0])[0];
+        if (ci && ci[0] > 0 && revealColumn(s, ci[1]).ok) { left.stamper--; used++; saved = true; }
+      }
+      if (saved) { plan = []; continue; }
+      return { moves: Infinity, deadlock: true, deadlockAt: s.used, boostersUsed: used };
+    }
     if (!plan.length) {
       const det = determinize(s, rnd);
       const r = solve(det, { width, maxMoves: depth, noise, rnd, partial: true });
@@ -206,7 +221,7 @@ export function playHidden(state, { width = 4, depth = 22, noise = 0.8, capMoves
     seen.set(k, c);
     if (c > 6) plan = [];                             // lặp vòng: bỏ kế hoạch cũ
   }
-  return { moves: isWon(s) ? s.used : Infinity, deadlock: false };
+  return { moves: isWon(s) ? s.used : Infinity, deadlock: false, boostersUsed: used };
 }
 
 /** Nhiều ván không nhìn trộm: { dist (số move thắng, Infinity = không thắng), deadlocks, deadlockAt[] } */
