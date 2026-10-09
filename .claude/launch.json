@@ -4,8 +4,30 @@
     {
       "name": "stamp-proto",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8766", "--bind", "0.0.0.0", "--directory", "prototype/stamp"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--bind",
+        "0.0.0.0",
+        "--directory",
+        "prototype/stamp"
+      ],
       "port": 8766
+    },
+    {
+      "name": "stamp-dist",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8767",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "dist/web"
+      ],
+      "port": 8767
     }
   ]
 }

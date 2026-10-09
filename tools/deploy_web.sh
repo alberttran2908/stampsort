@@ -18,6 +18,13 @@ touch "$OUT/.nojekyll"
 VER="$(git rev-parse --short HEAD)-$(date +%s)"
 sed -i '' "s#src/main.js\"#src/main.js?v=$VER\"#" "$OUT/index.html"
 for f in "$OUT"/src/*.js; do sed -i '' -E "s#from '\./([a-z]+)\.js'#from './\1.js?v=$VER'#g" "$f"; done
+# Cloudflare trước GitHub Pages cache ảnh/âm thanh 4 giờ theo URL: đổi tên assets/ và sfx/ theo mã băm nội dung
+# (chỉ đổi khi art/âm thanh đổi) rồi sửa mọi đường dẫn 'assets/... (assets/... `sfx/... trong index.html và src/*.js
+for d in assets sfx; do
+  H="$(cd "$OUT/$d" && find . -type f | LC_ALL=C sort | xargs shasum | shasum | cut -c1-8)"
+  mv "$OUT/$d" "$OUT/$d-$H"
+  for f in "$OUT/index.html" "$OUT"/src/*.js; do sed -i '' -E "s#([\"'\`(])$d/#\1$d-$H/#g" "$f"; done
+done
 echo "build: $(du -sh "$OUT" | cut -f1) -> $OUT"
 [ "${1:-}" = "--build-only" ] && exit 0
 
