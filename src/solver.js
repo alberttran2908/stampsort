@@ -1,5 +1,5 @@
 // Solver (beam search, full information) + người chơi mô phỏng (chỉ thấy lá ngửa).
-import { clone, applyMove, draw, isWon, maxRunStart, checkMove, stateKey, legalMoves, JOKER, pullToFoundation, revealColumn, cardsOfTopic } from './engine.js?v=e8b9f14-1791579888';
+import { clone, applyMove, draw, isWon, maxRunStart, checkMove, stateKey, legalMoves, JOKER, pullToFoundation, revealColumn, cardsOfTopic } from './engine.js?v=8668ca8-1791580348';
 
 /** Nước đi "có ý nghĩa" để giảm nhánh: luôn nhấc cả chồng dài nhất. */
 export function candidateActions(s) {

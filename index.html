@@ -229,6 +229,9 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .lvl .pts{position:absolute;left:0;right:0;bottom:-16px;display:flex;justify-content:center;gap:2px}
 .lvl .pts i{width:42px;height:42px;background:url(assets-e4fb3f19/ui/tem_diem.png) center/contain no-repeat}
 .lvl.cur{animation:pulse 1.2s ease-in-out infinite}
+.ch2-tile{grid-column:2/5;height:84px;white-space:nowrap;margin-top:-6px;border-radius:42px;background:rgba(255,248,234,.82);box-shadow:0 0 0 4px rgba(90,58,38,.55) inset;
+  display:flex;align-items:center;justify-content:center;gap:14px;font-size:38px;color:var(--ink);cursor:pointer}
+.ch2-tile i{width:46px;height:46px;background:url(assets-e4fb3f19/ui/lock.png) center/contain no-repeat}
 .home .play{position:absolute;left:0;right:0;width:520px;white-space:nowrap;margin:0 auto;text-align:center;top:calc(1640px + var(--bot,0px))}  /* nút Play trên kệ, vùng ngón cái */
 .home .foot{position:absolute;bottom:40px;font-size:24px;opacity:.85;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
 /* ---------- Chương 2 sắp mở (teaser Bến Cảng, concept mục 3.1) ---------- */
@@ -269,9 +272,9 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .dc.new{animation:decorin .7s cubic-bezier(.3,1.6,.5,1)}
 @keyframes decorin{0%{transform:scale(.2) translateY(60px);opacity:0}100%{transform:none;opacity:1}}
 .dc-bunting{left:30px;width:1020px;top:calc(var(--hud,0px) + 6px)}
-.dc-frame{left:230px;width:200px;bottom:480px}
-.dc-clock{right:84px;width:176px;bottom:490px}
-.dc-board{left:462px;width:236px;bottom:476px}
+.dc-frame{left:230px;width:200px;bottom:456px}
+.dc-clock{right:84px;width:176px;bottom:470px}
+.dc-board{left:462px;width:236px;bottom:452px}
 .dc-postbox{left:30px;width:160px;bottom:330px}
 .dc-cat{right:18px;width:200px;bottom:326px}
 .album{position:absolute;left:30px;right:30px;top:calc(40px + var(--hud,0px));bottom:30px;z-index:46;display:flex;flex-direction:column;align-items:center;
@@ -341,6 +344,6 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
     <div class="foot">Prototype</div>
   </div>
 </div>
-<script type="module" src="src/main.js?v=e8b9f14-1791579888"></script>
+<script type="module" src="src/main.js?v=8668ca8-1791580348"></script>
 </body>
 </html>
