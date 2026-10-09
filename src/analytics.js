@@ -18,6 +18,10 @@ if (!installTs) {
   try { localStorage.setItem('stampsort_install_ts', String(installTs)); } catch (e) { /* ignore */ }
 }
 
+let common = {};
+/** Trường gắn vào mọi sự kiện (vd. { variant: 'b' } cho A/B bộ level). */
+export function setCommon(obj) { common = { ...common, ...obj }; }
+
 function persist() {
   try { localStorage.setItem(KEY, JSON.stringify(buffer.slice(-MAX))); } catch (e) { /* ignore */ }
 }
@@ -29,6 +33,7 @@ export function track(name, params = {}) {
     t: Date.now(),
     sinceInstallMin: Math.round((Date.now() - installTs) / 6000) / 10,
     session: session.id,
+    ...common,
     ...params,
   };
   buffer.push(ev);

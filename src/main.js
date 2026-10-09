@@ -1,11 +1,12 @@
-import { LEVELS } from './levels.js?v=320c939-1791576239';
-import * as E from './engine.js?v=320c939-1791576239';
-import { hint as solverHint, solve } from './solver.js?v=320c939-1791576239';
-import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=320c939-1791576239';
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=320c939-1791576239';
-import { candidateActions, isDeadlocked } from './solver.js?v=320c939-1791576239';
-import { track, events as allEvents, funnelSummary, clearEvents } from './analytics.js?v=320c939-1791576239';
-import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js?v=320c939-1791576239';
+import { LEVELS as LEVELS_A } from './levels.js?v=35b4998-1791578264';
+import { LEVELS as LEVELS_B } from './levels_b.js';
+import * as E from './engine.js?v=35b4998-1791578264';
+import { hint as solverHint, solve } from './solver.js?v=35b4998-1791578264';
+import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=35b4998-1791578264';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=35b4998-1791578264';
+import { candidateActions, isDeadlocked } from './solver.js?v=35b4998-1791578264';
+import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js?v=35b4998-1791578264';
+import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js?v=35b4998-1791578264';
 
 // ============================================================ constants
 // Lá dựng trong DOM ở kích thước gốc 165x214 rồi phóng to bằng CK khi đặt vị trí (applyTransform, .slot dùng --ck).
@@ -35,6 +36,16 @@ const AB = (() => {
   const sf = location.search.match(/safety=(overtime|retry|none)/);
   return { hard: h ? h[1].split(',').filter(Boolean).map(Number) : null, safety: sf ? sf[1] : null };
 })();
+// Bộ level: ?variant=a (Baseline A, clone ABI) | ?variant=b (luật riêng: ≤ 6 chủ đề, không cặp dễ nhầm; tools/gen_proto_levels.mjs --variant=b).
+// Nhớ theo máy (A/B gán cố định cho mỗi người chơi), mặc định A. Mọi sự kiện analytics mang thêm trường variant.
+const VARIANT = (() => {
+  const q = location.search.match(/variant=([ab])/);
+  let v = q ? q[1] : null;
+  try { v = v || localStorage.getItem('stampsort_variant'); if (v) localStorage.setItem('stampsort_variant', v); } catch (e) { /* ignore */ }
+  return v === 'b' ? 'b' : 'a';
+})();
+const LEVELS = VARIANT === 'b' ? LEVELS_B : LEVELS_A;
+setCommon({ variant: VARIANT });
 const specialOf = lv => ((AB.hard ? AB.hard.includes(lv.id) : !!lv.special) ? (lv.special || 'hard') : null);
 const safetyOf = lv => (specialOf(lv) ? (AB.safety || lv.safety || 'overtime') : 'none');
 const BOOSTERS = [
@@ -66,7 +77,7 @@ const LITE = (() => {
 document.body.classList.toggle('lite', LITE);
 
 // ============================================================ save
-const SAVE_KEY = 'stampsort_proto_v1';
+const SAVE_KEY = 'stampsort_proto_v1' + (VARIANT === 'b' ? '_b' : '');   // tiến trình riêng cho từng bộ level
 const defaultSave = () => ({ unlocked: 1, coins: 500, stars: {}, hint: 0, pack: 0, stamper: 0, joker: 0, slot: 0, seen: {}, attempts: {} });
 let save = defaultSave();
 try { save = { ...defaultSave(), ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') }; } catch (e) { /* ignore */ }
@@ -384,6 +395,7 @@ function buildChrome() {
     (slotUnlocked ? `<div class="plus"></div><div class="lv">${t('extra_label')}</div>` : `<div class="lv">Lv ${UNLOCK_AT.slot}</div>`);
   extraEl.addEventListener('pointerup', onExtraSlot);
   board.append(extraEl);
+  if (levelIdx === 0) extraEl.style.display = 'none';       // màn đầu sạch: chưa cần ô phụ
   // vùng cột
   S.cols.forEach((_, i) => {
     const z = document.createElement('div');
@@ -514,6 +526,9 @@ function renderBoosters() {
     const locked = lv < UNLOCK_AT[d.id];
     const count = save[d.id];
     b.classList.toggle('locked', locked);
+    // chỉ hiện booster khoá KẾ TIẾP (biết cái gì sắp mở), các booster khoá xa hơn ẩn đi cho thanh dưới gọn
+    const nextLock = BOOSTERS.map(x => x.id).find(id => lv < UNLOCK_AT[id]);
+    b.style.visibility = locked && d.id !== nextLock ? 'hidden' : '';
     const st = scriptStep();
     const scriptWants = st && st.booster === d.id && !(d.id === 'joker' ? jokerMode : pickMode === d.id);
     b.classList.toggle('active', (d.id === 'joker' && jokerMode) || pickMode === d.id || !!scriptWants);
@@ -1441,6 +1456,16 @@ function playEvents(events, fromDrag) {
         haptic(5);
         combo = 0;
       }
+      // dọn sạch một cột (cột trống là tài nguyên): phản hồi riêng, 3 lần đầu kèm chữ
+      if (ev.src && ev.src.from === 'col' && S.cols[ev.src.i] && !S.cols[ev.src.i].length) {
+        const zx = colX(ev.src.i) + CW / 2, zy = TAB_Y + CH / 2;
+        setTimeout(() => {
+          sparkle(zx, zy, 12, { colors: ['#8cc8ff', '#ffffff', '#ffd84a'] });
+          sfx('sparkle', { vol: 0.4 });
+          save.colFreeShown = (save.colFreeShown || 0) + 1;
+          if (save.colFreeShown <= 3) floatText(t('col_free'), zx, zy, '#5a3a26');
+        }, 200);
+      }
     } else if (ev.type === 'open') {
       const el = slotEl(ev.slot);
       const p = slotPos(ev.slot);
@@ -1478,7 +1503,15 @@ function playEvents(events, fromDrag) {
     } else if (ev.type === 'flip') {
       const v = views.get(ev.id);
       setTimeout(() => sfx('flip', { vol: 0.7 }), 120);
-      void v;
+      // lật ra TEM VƯƠNG MIỆN = sự kiện thông tin quan trọng nhất (mở được ô mới): loé + âm riêng + rung nhẹ
+      const c = v && v.card;
+      if (c && c.k === 'topic') setTimeout(() => {
+        const tt = T.get(ev.id) || { x: v.x, y: v.y };
+        ring(tt.x + CW / 2, tt.y + CH / 2, { color: '#ffd84a', r1: 170, width: 10 });
+        sparkle(tt.x + CW / 2, tt.y + 30, 14, { colors: ['#ffd84a', '#fff4a0', '#ffffff'] });
+        sfx('open', { vol: 0.6, rate: 1.25 });
+        haptic([8, 30, 8]);
+      }, 260);
     } else if (ev.type === 'draw') {
       const v = views.get(ev.id);
       special.add(ev.id);
@@ -1543,6 +1576,12 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   const cx = p.x + CW / 2, cy = p.y + CH / 2;
   const vs = ids.map(id => views.get(id)).filter(Boolean);
   vs.forEach(v => { v.gone = true; clearTimeout(v.hideT); v.el.style.visibility = ''; });
+  // album: tem đã gửi thì được sưu tầm (theo chủ đề + art)
+  save.album = save.album || {};
+  const got = new Set(save.album[topic] || []);
+  vs.forEach(v => { if (v.card && v.card.k === 'stamp') got.add(v.card.art); });
+  save.album[topic] = [...got];
+  persist();
   await wait(delay);
   if (token !== levelToken) return;
   // gom
@@ -1765,9 +1804,9 @@ async function winSequence() {
       { label: t('claim2'), cls: 'orange', act: () => fakeAd(() => {
         coinsTo(reward, 540, 900);
         const tk = levelToken;
-        setTimeout(() => { if (tk === levelToken) (last ? goHome() : startLevel(levelIdx + 1)); }, 1300);
+        setTimeout(() => { if (tk === levelToken) (last ? chapterReward() : startLevel(levelIdx + 1)); }, 1300);
       }) },
-      { label: last ? t('home') : t('cont'), act: () => (last ? goHome() : startLevel(levelIdx + 1)) },
+      { label: last ? t('home') : t('cont'), act: () => (last ? chapterReward() : startLevel(levelIdx + 1)) },
     ],
     onOpen: pEl => {
       const ss = pEl.querySelectorAll('.stars i');
@@ -1776,6 +1815,45 @@ async function winSequence() {
     },
   });
 }
+// Cuối chương (L10): thưởng một lần + mời mở album -> lý do quay lại (đo D1)
+function chapterReward() {
+  if (save.chapter1) { goHome(); return; }
+  save.chapter1 = 1;
+  save.coins += 200;
+  persist();
+  track('chapter_complete', { chapter: 1 });
+  sfx('feature');
+  panel({ title: t('chapter_title'), radial: true,
+    body: `<div class="feature-icon" style="background-image:url(assets/ui/envelope_closed.png)"></div><p>${t('chapter_body')}</p><div class="coins-line"><i></i><span>+200</span></div>`,
+    buttons: [{ label: t('open_album'), act: () => { goHome(); openAlbum(); } }, { label: t('home'), cls: 'orange', act: () => goHome() }],
+    onOpen: () => setTimeout(() => coinsTo(200, 540, 1000), 500) });
+}
+// Album tem: mọi chủ đề trong 10 level, tem đã gửi hiện ra, tem chưa có hiện mặt sau lá
+function openAlbum() {
+  const topics = [];
+  const arts = {};
+  for (const lvd of LEVELS) for (const c of [...lvd.columns.flat(), ...lvd.deck, ...(lvd.preplaced || []).flat()]) {
+    if (!arts[c.t]) { arts[c.t] = new Set(); topics.push(c.t); }
+    if (c.k === 'stamp') arts[c.t].add(c.art);
+  }
+  const al = save.album || {};
+  let have = 0, total = 0;
+  const rows = topics.map(tp => {
+    const all = [...arts[tp]].sort((a, b) => a - b);
+    const got = new Set(al[tp] || []);
+    have += all.filter(a => got.has(a)).length; total += all.length;
+    const cells = all.map(a => got.has(a)
+      ? `<div class="al-st"><img src="${artUrl({ t: tp, art: a })}"></div>`
+      : `<div class="al-st miss"></div>`).join('');
+    return `<div class="al-row"><img class="al-ic" src="${iconUrl(tp)}"><div class="al-info"><b>${topicName(tp)}</b><span>${all.filter(a => got.has(a)).length}/${all.length} · ${t('to_resident', { name: residentOf(tp) })}</span><div class="al-cells">${cells}</div></div></div>`;
+  }).join('');
+  $('albumBody').innerHTML = rows;
+  $('albumCount').textContent = t('album_count', { n: have, total });
+  $('album').classList.remove('off');
+  track('album_open', { have, total });
+}
+$('albumBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); openAlbum(); });
+$('albumClose').addEventListener('pointerup', () => { sfx('close'); $('album').classList.add('off'); });
 function outOfMoves() {
   ended = true;
   sfx('lose');
@@ -2094,7 +2172,7 @@ async function autoplay(stepMs = 380) {
     await wait(stepMs);
   }
 }
-window.__game = { get S() { return S; }, get level() { return levelIdx + 1; }, startLevel, autoplay, doMove, onDeck, E, goHome,
+window.__game = { variant: VARIANT, get S() { return S; }, get level() { return levelIdx + 1; }, startLevel, autoplay, doMove, onDeck, E, goHome,
   // cho harness test kéo thả (tests/naive-drag.browser.js)
   geo: () => ({ CW, CH, TAB_Y, scale, stageLeft, stageTop, slots: S.found.map((_, k) => slotPos(k)), cols: S.cols.map((_, i) => colX(i)) }),
   layout: () => computeLayout(), views: () => views,
@@ -2106,6 +2184,9 @@ window.__game = { get S() { return S; }, get level() { return levelIdx + 1; }, s
 function applyStaticCopy() {
   movesEl.querySelector('.lbl').textContent = t('moves');
   document.documentElement.lang = getLang();
+  $('albumBtn').textContent = t('album');
+  $('albumTitle').textContent = t('album_title');
+  $('albumClose').textContent = t('close');
 }
 (async function boot() {
   applyStaticCopy();
