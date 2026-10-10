@@ -1,7 +1,9 @@
 // WebAudio: nạp trước toàn bộ sfx, phát không trễ, hỗ trợ pitch/volume.
-// SFX tự tổng hợp bằng tools/synth_sfx.py (sfx-348b9adf/<tên>.mp3), không dùng âm thanh của APK.
+// SFX tự tổng hợp bằng tools/synth_sfx.py (sfx-44f7327c/<tên>.mp3), không dùng âm thanh của APK.
 const NAMES = ['pick', 'place', 'open', 'complete', 'flip', 'back', 'draw', 'hint', 'joker', 'magnet', 'feature',
-  'slot', 'win', 'lose', 'coin', 'coins', 'claim', 'click', 'close', 'whoosh', 'sparkle', 'boom'];
+  'slot', 'win', 'lose', 'coin', 'coins', 'claim', 'click', 'close', 'whoosh', 'sparkle', 'boom',
+  // thêm sau review SFX (docs/design/sfx-review.md): từ chối, chạm lá úp, con dấu, Overtime, decor, chương, lật lại bộ bài, popup
+  'deny', 'facedown', 'stamp', 'overtime', 'decor', 'chapter', 'recycle', 'popup'];
 for (let i = 1; i <= 11; i++) NAMES.push('combo' + i);
 
 let ctx = null;
@@ -19,7 +21,7 @@ export async function initAudio() {
   master.connect(ctx.destination);
   await Promise.all(NAMES.map(async (k) => {
     try {
-      const res = await fetch(`sfx-348b9adf/${k}.mp3`);
+      const res = await fetch(`sfx-44f7327c/${k}.mp3`);
       buffers[k] = await ctx.decodeAudioData(await res.arrayBuffer());
     } catch (e) { /* thiếu file: im lặng */ }
   }));
