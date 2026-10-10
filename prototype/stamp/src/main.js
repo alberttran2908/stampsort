@@ -298,7 +298,7 @@ function makeView(card) {
   back.className = 'side back';
   if (card.k === 'topic') {
     el.classList.add('topic');
-    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${lineIconUrl(card.t)}" draggable="false"><div class="tag" style="font-size:${fitSize(topicName(card.t), 34, 8)}px">${topicName(card.t)}</div>`;
+    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${lineIconUrl(card.t)}" draggable="false"><div class="tag" style="${tagStyle(topicName(card.t))}">${topicName(card.t)}</div>`;
   } else if (card.k === E.JOKER) {
     el.classList.add('joker');
   } else {
@@ -467,6 +467,13 @@ function fitSize(text, base, fitChars) {
   const n = String(text).length;
   return n <= fitChars ? base : Math.max(24, Math.floor(base * fitChars / n));
 }
+// Nhãn tên trên lá vương miện: tên ngắn 1 dòng 34px; tên dài có dấu cách thì xuống 2 dòng 30px (không co còn 24px)
+function tagStyle(name) {
+  const n = String(name).length;
+  if (n <= 8) return 'font-size:34px';
+  if (/\s/.test(name) && Math.max(...String(name).split(/\s+/).map(w => w.length)) <= 9) return 'font-size:29px;white-space:normal;line-height:.95;bottom:22px';
+  return `font-size:${fitSize(name, 34, 8)}px`;
+}
 function updateSlotLabels() {
   S.found.forEach((f, k) => {
     const el = slotEl(k);
@@ -606,7 +613,7 @@ function onBooster(id) {
   if (id !== 'undo' && lv < UNLOCK_AT[id]) { toast(t('unlocks', { n: UNLOCK_AT[id] })); sfx('deny'); return; }
   if (id !== 'undo' && L.unlock === id && !save.seen['unlock_' + id]) { toast(t('gift_soon')); sfx('deny'); return; }
   if (!scriptStep() && !(id === 'hint' && hintActive)) clearHint();                // bàn tay cũ (gợi ý, cứu trợ) không đứng lại trên nút
-  if (scriptStep() && scriptStep().booster !== id) { toast(t('follow'), 1000); return; }
+  if (scriptStep() && scriptStep().booster !== id) { toast(t('follow'), 1000); sfx('deny'); return; }
   sfx('click', { vol: 0.6 });
   if (id !== 'joker' && jokerMode) toggleJoker();
   if (id !== 'pack' && id !== 'stamper' && pickMode) cancelPick();
@@ -624,9 +631,11 @@ function pushUndo() {
   if (undoStack.length > 60) undoStack.shift();
 }
 function doUndo() {
+  if (tooSoon()) return;
   if (!undoStack.length) { toast(t(undoBlockedBySend ? 'undo_sent' : 'nothing_undo')); sfx('deny'); return; }
   if (!spend('undo')) return;
   const snap = undoStack.pop();
+  lastActAt = performance.now();
   // Undo không xoá thông tin: lá đã lộ trên cột vẫn ngửa sau khi hoàn tác (bỏ lỗ hổng "đi thử, nhìn lá úp, Undo")
   const seen = new Set(S.cols.flat().filter(c => c.up).map(c => c.id));
   S = snap.s;
@@ -929,11 +938,15 @@ function handDrag(x0, y0, x1, y1) {
   };
   cycle();
 }
-function handTap(x, y) {
+function handTap(x, y, { side = false } = {}) {
   const token = {};
   handAnim = token;
   const h = { x, y, o: 1, s: 1 };
-  const draw = () => { if (handAnim !== token) return; handEl.style.opacity = h.o; handEl.style.transform = `translate(${h.x - 30}px,${h.y - 10}px) scale(${h.s})`; };
+  // side: bàn tay xoay ngang, ngón trỏ chỉ sang trái, thân tay nằm bên phải và hơi cao hơn điểm chạm
+  // -> không che nhãn tên dưới nút/lá và không với tới ô chữ gợi ý (QA #15). Đầu ngón trong .hand ở (21,8),
+  // transform-origin (30,17) => sau khi xoay -90° đầu ngón ở (21,26).
+  const draw = () => { if (handAnim !== token) return; handEl.style.opacity = h.o;
+    handEl.style.transform = side ? `translate(${h.x - 21}px,${h.y - 26}px) rotate(-90deg) scale(${h.s})` : `translate(${h.x - 30}px,${h.y - 10}px) scale(${h.s})`; };
   const cycle = async () => {
     while (handAnim === token) {
       await tween(h, { s: 0.82 }, { dur: 200, onUpdate: draw });
@@ -1019,18 +1032,18 @@ function runScript() {
 function boosterCenter(id) {
   // vị trí thật trên stage (thanh booster neo theo đáy màn hình, dàn đều)
   const b = $('boosters').querySelector(`[data-id=${id}]`);
-  return { x: b.parentElement.offsetLeft + b.offsetLeft + b.offsetWidth / 2, y: b.parentElement.offsetTop + b.offsetTop + b.offsetHeight * 0.32 };   // chỉ vào đồng xu, không che nhãn tên
+  return { x: b.parentElement.offsetLeft + b.offsetLeft + b.offsetWidth / 2, y: b.parentElement.offsetTop + b.offsetTop + b.offsetHeight * 0.5, r: b.parentElement.offsetLeft + b.offsetLeft + b.offsetWidth * 0.86 };   // r: mép phải đồng xu (bàn tay chỉ ngang)
 }
 function showBoosterStep(step) {
   clearHint();
   const inMode = (step.booster === 'joker' && jokerMode) || pickMode === step.booster;
   $('boosters').querySelectorAll('.booster').forEach(b => b.classList.toggle('active', b.dataset.id === step.booster && !inMode));
-  if (!inMode) { const c = boosterCenter(step.booster); handTap(c.x, c.y); return; }
+  if (!inMode) { const c = boosterCenter(step.booster); handTap(c.r, c.y, { side: true }); return; }
   const glowCol = ci => {
     const col = S.cols[ci]; const ys = colOffsets(col);
     if (col.length) views.get(col[col.length - 1].id).el.classList.add('hintglow');
     colZones[ci].classList.add('target');
-    handTap(colX(ci) + CW / 2, (col.length ? ys[ys.length - 1] : TAB_Y) + CH * 0.35);
+    handTap(colX(ci) + CW * 0.88, (col.length ? ys[ys.length - 1] : TAB_Y) + CH * 0.4, { side: true });
   };
   if (step.booster === 'stamper') glowCol(stamperCol(step));
   else if (step.slot != null) { const p = slotPos(step.slot); slotEl(step.slot).classList.add('target'); handTap(p.x + CW / 2, p.y + CH * 0.35); }
@@ -1102,6 +1115,7 @@ function findAction(pred) {
   return acts.find(a => pred(a) && (a.src.from === 'waste' || a.src.idx === E.maxRunStart(S, a.src.i))) || null;
 }
 function tutorialCheck(events = []) {
+  if (!tutorial && (panelOpen || (deferredIntro && S.used >= 6))) return;   // đừng bật gợi ý mới đè lên popup (QA v2 N1: L2 "Tem vương miện" + popup Gợi ý)
   if (tutorial) {
     const step = TUTS.find(t => t.id === tutorial.id);
     if (step.info ? events.length : step.done && step.done(events)) {
@@ -1125,10 +1139,21 @@ function tutorialCheck(events = []) {
     tutorial = { id: step.id };
     track('tip_shown', { level: levelIdx + 1, key: step.id });
     tut(typeof step.text === 'function' ? step.text() : step.text);
-    if (!step.info) showAction(step.action ? step.action() : a);
+    if (!step.info) { showAction(step.action ? step.action() : a); tutorialNag(); }
     else setTimeout(() => { if (tutorial && tutorial.id === step.id) { tutorial = null; tut(null); } }, 3800);
     return;
   }
+}
+// Gợi ý ngữ cảnh đang hiện mà bàn tay bị huỷ (thả hụt, bấm Gợi ý...) thì vài giây sau vẽ lại; hết 12 giây thì tự kết thúc
+let tutNagTimer = 0;
+function tutorialNag() {
+  clearInterval(tutNagTimer);
+  const started = Date.now(), id = tutorial && tutorial.id;
+  tutNagTimer = setInterval(() => {
+    if (!tutorial || tutorial.id !== id || ended) { clearInterval(tutNagTimer); return; }
+    if (Date.now() - started > 12000) { clearInterval(tutNagTimer); tutorial = null; tut(null); if (!hintActive) clearHint(); return; }
+    if (!handAnim && !drag && !panelOpen && !busyInput && !hintActive && !jokerMode && !pickMode) tutorialCheck([]);
+  }, 3500);
 }
 function resetIdleHint(n = 0) {
   clearTimeout(idleTimer);
@@ -1177,6 +1202,7 @@ function panel({ title, body = '', buttons = [], radial = false, onOpen }) {
   overlay.append(scrim, p);
   requestAnimationFrame(() => { scrim.classList.add('on'); p.classList.add('on'); });
   panelOpen = { scrim, p };
+  if (!radial) sfx('popup', { vol: 0.8 });
   onOpen && onOpen(p);
   return p;
 }
@@ -1215,6 +1241,8 @@ function colAt(p) {
   }
   return -1;
 }
+let lastActAt = 0;          // thời điểm thao tác gần nhất (nước đi, rút bài, hoàn tác)
+const tooSoon = () => performance.now() - lastActAt < 250;   // chạm đúp do run tay: bỏ cú thứ hai (QA v2 N7)
 function onDown(e) {
   unlockAudio();
   if (ended || busyInput || panelOpen || drag) return;
@@ -1244,7 +1272,7 @@ function onDown(e) {
     const st = scriptStep();
     if (st && st.booster && i !== jokerCol(st)) { toast(t('tap_column')); sfx('deny'); return; }
     if (i >= 0) placeJokerAt(i);
-    else if (jokerFree) toast(t('tap_column'));       // Tem Vàng cứu trợ: phải đặt, không huỷ được
+    else if (jokerFree) { toast(t('tap_column')); sfx('deny'); }       // Tem Vàng cứu trợ: phải đặt, không huỷ được
     else toggleJoker();
     return;
   }
@@ -1323,6 +1351,7 @@ function onUp(e) {
   drag = null;
   unhighlight();
   d.vs.forEach(v => { if (v.dragAnim) { v.dragAnim = false; animOff(v); } });
+  if (!d.moved && tooSoon()) return;          // chạm đúp do run tay: bỏ cú chạm thứ hai (kéo thì vẫn nhận)
   if (!d.moved) {
     // chạm: tự tìm đích
     if (scriptStep()) {
@@ -1507,14 +1536,20 @@ function doMove(src, dst, fromDrag) {
   undoStack.push({ s: before, combo });
   if (undoStack.length > 60) undoStack.shift();
   undoBlockedBySend = false;
+  lastActAt = performance.now();
   clearHint();
   resetIdleHint();
   playEvents(res.events, fromDrag);
 }
 function onDeck() {
   if (ended || busyInput || panelOpen) return;
+  if (tooSoon()) return;
   if (jokerMode) { toast(t('tap_column')); sfx('deny'); return; }
-  if (pickMode) { if (!(scriptStep() && scriptStep().booster)) cancelPick(); return; }
+  if (pickMode) {
+    if (!(scriptStep() && scriptStep().booster)) cancelPick();
+    else { toast(t(pickMode === 'stamper' ? 'tap_column' : 'tap_pile')); sfx('deny'); }
+    return;
+  }
   if (!S.deck.length && !S.waste.length) {
     if (isStuck() && safetyOf(L) === 'none') stuckPanel(); else { toast(t('deck_empty')); sfx('deny'); }
     return;
@@ -1525,6 +1560,7 @@ function onDeck() {
   if (!res.ok) { if (res.why === 'no_moves') outOfMoves(); return; }
   undoStack.push({ s: before, combo });
   undoBlockedBySend = false;
+  lastActAt = performance.now();
   clearHint();
   resetIdleHint();
   playEvents(res.events, false);
@@ -1841,7 +1877,7 @@ function rescue() {
     toast(t('rescue_magnet'), 3200);
     sfx('feature');
     $('boosters').querySelector('[data-id=pack]').classList.add('active');
-    { const c = boosterCenter('pack'); handTap(c.x, c.y); }
+    { const c = boosterCenter('pack'); handTap(c.r, c.y, { side: true }); }
     return;
   }
   rescueJoker();
@@ -1857,7 +1893,7 @@ function rescueJoker() {
   tut(t('rescue_joker_how'));
   const ci = jokerCol({});
   const col = S.cols[ci]; const ys = colOffsets(col);
-  handTap(colX(ci) + CW / 2, (col.length ? ys[ys.length - 1] : TAB_Y) + CH * 0.35);
+  handTap(colX(ci) + CW * 0.88, (col.length ? ys[ys.length - 1] : TAB_Y) + CH * 0.4, { side: true });
 }
 // Deck hết và không còn lá úp: tự dọn bàn nếu solver chắc chắn thắng trong số moves còn lại.
 let autoFinishing = false;
@@ -2026,7 +2062,7 @@ function outOfMoves(again = false) {
   if (canFree) buttons.push({ label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) });
   const short = save.coins < COSTS.moves;
   buttons.push({ cls: short ? 'off' : '', label: t('more_coins', { n: COSTS.moves }) + (short ? `<br><small>${t('coins_need', { n: COSTS.moves - save.coins })}</small>` : ''), act: () => {
-    if (save.coins < COSTS.moves) { toast(t('coins_short')); outOfMoves(true); return; }
+    if (save.coins < COSTS.moves) { outOfMoves(true); toast(t('coins_short')); sfx('deny'); return; }
     save.coins -= COSTS.moves; persist(); bumpCoins(); addMoves(5, false, 'coins');
   } });
   buttons.push({ label: t('retry'), cls: 'brown', act: () => startLevel(levelIdx) });
@@ -2250,7 +2286,7 @@ function featureIntro(force = false) {
         updateHUD();
         if (L.script) { res(); return; }          // kịch bản ép bước sẽ tự chỉ tay
         // chỉ bàn tay, không thêm chữ: popup vừa giải thích rồi, nhường lượt gợi ý cho khái niệm của level
-        { const c = boosterCenter(u); handTap(c.x, c.y); }
+        { const c = boosterCenter(u); handTap(c.r, c.y, { side: true }); }
         setTimeout(() => { hideHand(); res(); }, 1800);
       } }],
     });
@@ -2444,7 +2480,7 @@ window.__game = { variant: VARIANT, get S() { return S; }, get level() { return 
 function relabelCards() {
   for (const v of views.values()) {
     const tag = v.card && v.card.k === 'topic' && v.el.querySelector('.tag');
-    if (tag) { tag.textContent = topicName(v.card.t); tag.style.fontSize = fitSize(topicName(v.card.t), 34, 8) + 'px'; }
+    if (tag) { tag.textContent = topicName(v.card.t); tag.style.cssText = tagStyle(topicName(v.card.t)); }
   }
 }
 // ============================================================ boot

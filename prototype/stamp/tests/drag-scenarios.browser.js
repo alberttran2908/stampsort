@@ -18,9 +18,14 @@ let POOL = null;      // lá của level 3 theo topic
 let A, B, C, D, E, F; // topic xếp theo số tem giảm dần
 async function initPool() {
   const g = G();
-  await g.startLevel(2);
+  g.startLevel(2);   // không await: trên save trống startLevel chờ người chơi đóng bảng luật -> treo
   await settle(6000);
-  for (let k = 0; k < 4 && document.querySelector('.panel:not(.off) .btn'); k++) { document.querySelector('.panel:not(.off) .btn').click(); await settle(); }
+  // save trống: bảng luật / quà booster hiện SAU khi chia bài -> đóng mọi bảng xuất hiện trong 9 giây đầu (nút chỉ nghe pointerup)
+  for (const t0 = performance.now(); performance.now() - t0 < 9000;) {
+    const b = [...document.querySelectorAll('.panel .btn')].find(x => x.offsetParent);
+    if (b) b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    await sleep(300);
+  }
   const all = [...g.S.cols.flat(), ...g.S.deck, ...g.S.waste].map(c => ({ ...c }));
   POOL = all;
   const cnt = {};

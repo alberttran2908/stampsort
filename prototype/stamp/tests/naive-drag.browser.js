@@ -88,8 +88,13 @@ function strays(g, G) {
 export async function run({ level = 3, actions = 40, seed = 1, hasty = false, legalBias = 0.6, restart = true, verbose = false } = {}) {
   const g = window.__game;
   const rnd = rng(seed);
-  if (restart) { await g.startLevel(level - 1); await settle(g); }
-  for (let k = 0; k < 4 && document.querySelector('.panel:not(.off) .btn'); k++) { document.querySelector('.panel:not(.off) .btn').click(); await settle(g); }
+  if (restart) { g.startLevel(level - 1); await settle(g); }   // không await: save trống thì startLevel chờ đóng bảng luật
+  // save trống: bảng luật / quà booster hiện SAU khi chia bài -> đóng mọi bảng xuất hiện trong 9 giây đầu (nút chỉ nghe pointerup)
+  for (const t0 = performance.now(); performance.now() - t0 < 9000;) {
+    const b = [...document.querySelectorAll('.panel .btn')].find(x => x.offsetParent);
+    if (b) b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 300));
+  }
   const board = document.getElementById('board') || document.querySelector('.board');
   const log = [], counts = {};
   const bug = (kind, msg) => { counts[kind] = (counts[kind] || 0) + 1; if (log.length < 40) log.push(`[${kind}] ${msg}`); };
