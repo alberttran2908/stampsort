@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SFX Preview · Little Post Office</title>
+<style>
+  :root {
+    --bg: #f6efe2; --card: #fffaf1; --ink: #4a3426; --muted: #8a7260; --line: #e6d8c2;
+    --accent: #d9603b; --accent2: #3f7f8c; --new: #6a9a3a; --old: #9a8a7a; --chip: #f1e4cf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #221a15; --card: #2e241d; --ink: #f2e6d6; --muted: #b9a48f; --line: #43362c;
+      --accent: #f08a62; --accent2: #7cc0cc; --new: #9ccc6a; --old: #a89888; --chip: #3a2e25; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1100px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  header p { margin: 4px 0; color: var(--muted); }
+  .bar { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .bar .in { max-width: 1100px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  .bar label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+  .bar .status { color: var(--muted); font-size: 13px; margin-left: auto; }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 60px; }
+  h2 { font-size: 17px; margin: 26px 0 4px; }
+  h2 + .gdesc { color: var(--muted); margin: 0 0 10px; font-size: 13.5px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .card.playing { outline: 2px solid var(--accent); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .name { font-weight: 700; font-family: ui-monospace, Menlo, monospace; font-size: 14.5px; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--new); color: #fff; font-weight: 600; }
+  .stats { margin-left: auto; font-size: 11.5px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+  .when { margin: 6px 0 4px; font-size: 13.5px; }
+  .meta { font-size: 12px; color: var(--muted); }
+  .note { font-size: 12.5px; margin-top: 4px; color: var(--accent2); }
+  button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+    border-radius: 8px; padding: 5px 10px; cursor: pointer; min-height: 32px; }
+  button.play { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.oldb { color: var(--old); }
+  button:active { transform: translateY(1px); }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .combo { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .combo button { min-width: 38px; }
+  .seq .card { grid-column: span 1; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; background: var(--card); border-radius: 10px; overflow: hidden; }
+  th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: right; font-family: ui-monospace, Menlo, monospace; }
+  th:first-child, td:first-child { text-align: left; }
+  .tablewrap { overflow-x: auto; }
+  .decode { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>SFX Preview: Little Post Office</h1>
+  <p>Nghe thử 41 âm (bản v3: chill cho người lớn tuổi, mềm, ấm, nhỏ và đều), chia theo vai trò. Toàn bộ do <code>tools/synth_sfx.py</code> tổng hợp bằng code, không dùng sample ngoài. Báo cáo đầy đủ: <code>docs/design/sfx-review.md</code>.</p>
+  <p>Nút <b>Play</b> phát đúng vol/rate như lúc <code>main.js</code> gọi, nhân master 0.8. Nút <b>Bản cũ</b> phát bản đầu tiên (v1, <code>sfx/_old/</code>) để so sánh A/B. Nên nghe bằng loa điện thoại và tai nghe.</p>
+</header>
+<div class="bar"><div class="in">
+  <label><input type="checkbox" id="gameMix" checked> Như trong game (vol × master 0.8)</label>
+  <label><input type="checkbox" id="phone"> Giả lập loa điện thoại (cắt dưới 400 Hz, trên 8 kHz)</label>
+  <button id="stopAll">Dừng hết</button>
+  <span class="status" id="status">Chạm một nút bất kỳ để nạp âm thanh</span>
+</div></div>
+<main id="main"></main>
+
+<script>
+// ---- dữ liệu: khi nào phát, tần suất ước lượng trong 1 ván thường (L4-L10: ~43 lá, 7-8 bộ, ~24 lá chồng bài, ~70-80 nước)
+const GROUPS = [
+  { id: 'op', title: 'Thao tác lặp nhiều', desc: 'Nghe hàng chục lần mỗi ván: phải ngắn (≤150 ms), mềm, không chói 2-5 kHz, nhỏ hơn hẳn âm thưởng. Thử nút "×12" để kiểm tra mệt tai.' },
+  { id: 'core', title: 'Phản hồi cốt lõi', desc: 'Tem vào ô (combo), mở ô, lá thư hoàn thành và bay đi. Đây là cảm giác "đã tay" chính của game.' },
+  { id: 'ui', title: 'UI và từ chối', desc: 'Nút bấm, Undo, đóng bảng. "deny" là một tiếng "phù" gỗ/giấy trầm, rất nhẹ, không mang cảm giác lỗi.' },
+  { id: 'boost', title: 'Booster và gợi ý', desc: '' },
+  { id: 'reward', title: 'Thưởng và tiền', desc: '' },
+  { id: 'mile', title: 'Mốc lớn', desc: 'Hộp nhạc thong thả, chuông xa và nền ấm cho các mốc (tính năng mới, Overtime, chương, thắng). Không kèn, không fanfare.' },
+];
+const S = [
+  // thao tác
+  { k: 'pick', g: 'op', when: 'Bắt đầu kéo tem (sau khi kéo quá 12 px). Chạm để tự đi thì không phát.', freq: '20-40 lần/ván (người kéo)', calls: [{ vol: 0.8 }], rep: true },
+  { k: 'place', g: 'op', when: 'Tem đặt xuống cột (không phải vào ô).', freq: '10-20 lần/ván', calls: [{ vol: 0.55, rr: [0.95, 1.05] }], rep: true, },
+  { k: 'draw', g: 'op', when: 'Rút lá từ chồng bài. Lúc chia bài đầu ván phát mỗi 3 lá (vol 0.35, rate 1.1-1.3).', freq: '25-35 lần/ván + ~15 lúc chia', calls: [{ vol: 0.7 }, { vol: 0.35, rr: [1.1, 1.3], label: 'chia bài' }], rep: true },
+  { k: 'flip', g: 'op', when: 'Lá úp trên cột tự lật ngửa (trễ 120 ms sau nước đi).', freq: '12-15 lần/ván', calls: [{ vol: 0.7 }], rep: true },
+  { k: 'facedown', g: 'op', isNew: true, when: 'MỚI: chạm vào lá còn úp.', freq: '0-5 lần/ván', calls: [{ vol: 1 }], rep: true },
+  { k: 'recycle', g: 'op', isNew: true, when: 'MỚI: lật lại chồng bài khi hết lá.', freq: '1-3 lần/ván', calls: [{ vol: 1 }] },
+  // cốt lõi
+  { k: 'open', g: 'core', when: 'Đặt tem vương miện, mở ô mới. Lật trúng lá vương miện: vol 0.6, rate 1.25.', freq: '7-8 lần + 3-5 lần lật trúng', calls: [{ vol: 1 }, { vol: 0.6, rate: 1.2599, label: 'lật trúng' }] },
+  { k: 'complete', g: 'core', when: 'Ô đầy, niêm sáp đóng xuống lá thư (kèm boom 0.35). Booster Stamper: vol 0.8, rate 1.2.', freq: '7-8 lần/ván', calls: [{ vol: 1 }, { vol: 0.8, rate: 1.1225, label: 'stamper' }] },
+  { k: 'boom', g: 'core', when: 'Lớp "phụp" dưới complete (vol 0.35), và banner level khó (vol 0.5). Rất nhẹ, không chuông, để chồng với complete không bị dồn.', freq: '7-8 lần/ván', calls: [{ vol: 0.35 }, { vol: 0.5, label: 'banner' }] },
+  { k: 'whoosh', g: 'core', when: 'Lá thư gom lại (vol 0.5, rate 1.3) và bay lên thanh tiến độ (vol 0.8).', freq: '14-16 lần/ván', calls: [{ vol: 0.5, rate: 1.3, label: 'gom' }, { vol: 0.8, label: 'bay' }] },
+  { k: 'sparkle', g: 'core', when: 'Dọn sạch một cột (cột trống là tài nguyên).', freq: '2-4 lần/ván', calls: [{ vol: 0.4 }] },
+  // ui
+  { k: 'click', g: 'ui', when: 'Mọi nút UI, nút booster (0.6), nút trong panel (0.7), xem trước ô (0.5).', freq: '5-15 lần/ván', calls: [{ vol: 1 }, { vol: 0.6, label: 'booster' }], rep: true },
+  { k: 'back', g: 'ui', when: 'Undo thành công.', freq: '0-5 lần/ván', calls: [{ vol: 1 }] },
+  { k: 'close', g: 'ui', when: 'Đóng album và màn Chương 2.', freq: '2-10 lần/ván', calls: [{ vol: 1 }] },
+  { k: 'deny', g: 'ui', isNew: true, when: 'Nước đi chưa hợp lệ, thả hụt, thiếu xu, booster chưa mở, ô level còn khoá (25 chỗ gọi). Người chơi lớn tuổi đi sai nhiều nên phải rất nhẹ.', freq: '2-10 lần/ván', calls: [{ vol: 1 }], rep: true },
+  { k: 'popup', g: 'ui', isNew: true, when: 'MỚI (tuỳ chọn): panel/bảng mở ra.', freq: '1-3 lần/ván', calls: [{ vol: 1 }] },
+  // booster
+  { k: 'hint', g: 'boost', when: 'Dùng gợi ý.', freq: '0-3', calls: [{ vol: 1 }] },
+  { k: 'joker', g: 'boost', when: 'Bật Tem Vàng, chọn booster Stamper/Pack.', freq: '0-2', calls: [{ vol: 1 }] },
+  { k: 'magnet', g: 'boost', when: 'Tem Vàng bay vào bàn; booster Pack kéo tem về ô.', freq: '0-2', calls: [{ vol: 1 }] },
+  { k: 'slot', g: 'boost', when: 'Mở khoá ô phụ.', freq: '0-1', calls: [{ vol: 1 }] },
+  // thưởng
+  { k: 'coin', g: 'reward', when: 'Lá thư tới thanh tiến độ; mỗi đồng xu bay vào ví cuối ván (tối đa 12 lần liên tiếp, rate ngẫu nhiên 1 / 1.1225 / 1.2599).', freq: '8 + tới 12 lần', calls: [{ vol: 0.5, rs: [1, 1.1225, 1.2599] }], rep: true },
+  { k: 'coins', g: 'reward', when: 'Hiện KHÔNG được gọi trong main.js. Gợi ý: thưởng chương +200 xu.', freq: '0', calls: [{ vol: 1 }] },
+  { k: 'claim', g: 'reward', when: 'Thưởng combo +5 (0.7), Tem Điểm ở bảng thắng (0.4, rate 1 / 1.1225 / 1.2599), +moves (1).', freq: '1-6', calls: [{ vol: 0.7, label: 'combo +5' }, { vol: 0.4, label: 'Tem Điểm' }, { vol: 1, label: '+moves' }] },
+  { k: 'stamp', g: 'reward', isNew: true, when: 'Con dấu cao su "cộp" cho Tem Điểm ở bảng thắng (rate 0.94/1/1.06) và màn Chương 2 (rate 0.9).', freq: '1-3 lần/ván', calls: [{ vol: 1 }, { vol: 1, rate: 0.9, label: 'rate 0.9' }] },
+  // mốc
+  { k: 'feature', g: 'mile', when: 'Mở tính năng/booster mới, giới thiệu bộ tem (0.5), cứu trợ.', freq: '0-2', calls: [{ vol: 1 }, { vol: 0.5, label: 'bộ tem mới' }] },
+  { k: 'overtime', g: 'mile', isNew: true, when: 'Vào Overtime: chuông chiều trầm ấm.', freq: '0-1', calls: [{ vol: 1 }] },
+  { k: 'decor', g: 'mile', isNew: true, when: 'Đặt đồ trang trí ở màn hình chính.', freq: 'ngoài ván', calls: [{ vol: 1 }] },
+  { k: 'chapter', g: 'mile', isNew: true, when: 'Hoàn thành chương.', freq: 'theo chương', calls: [{ vol: 1 }] },
+  { k: 'win', g: 'mile', when: 'Thắng ván (cùng confetti).', freq: '1', calls: [{ vol: 1 }] },
+  { k: 'lose', g: 'mile', when: 'Hết moves.', freq: '0-1', calls: [{ vol: 1 }] },
+];
+const OLD = new Set(['pick', 'place', 'open', 'complete', 'flip', 'back', 'draw', 'hint', 'joker', 'magnet', 'feature', 'slot', 'win', 'lose',
+  'coin', 'coins', 'claim', 'click', 'close', 'whoosh', 'sparkle', 'boom', ...Array.from({ length: 11 }, (_, i) => 'combo' + (i + 1))]);
+
+// ---- chuỗi phát như trong game (thời điểm lấy từ main.js)
+const SEQ = [
+  { title: 'Gửi một lá thư (kéo tem cuối vào ô)', desc: 'pick → combo3 → whoosh 0.5 → complete + boom 0.35 → whoosh 0.8 → coin 0.5. Lặp 7-8 lần mỗi ván. Bản v3: complete trội, các lớp khác lùi xuống.',
+    steps: [[0, 'pick', 0.8], [110, 'combo3', 0.9], [430, 'whoosh', 0.5, 1.3], [880, 'complete', 1], [880, 'boom', 0.35], [1260, 'whoosh', 0.8], [1820, 'coin', 0.5]] },
+  { title: 'Combo 1 → 11', desc: 'Mỗi lần đưa tem vào ô liên tiếp. Mộc cầm dùi mềm, ngũ cung G4 → C6 (không vượt C6); combo9-11 giữ C6 và thêm bè ấm bên dưới.',
+    steps: Array.from({ length: 11 }, (_, i) => [i * 420, 'combo' + (i + 1), 0.9]) },
+  { title: 'Một nhịp chơi thường', desc: 'draw → combo1 → draw → pick/place → flip → draw → combo1 → combo2.',
+    steps: [[0, 'draw', 0.7], [450, 'combo1', 0.9], [1100, 'draw', 0.7], [1700, 'pick', 0.8], [2050, 'place', 0.55], [2170, 'flip', 0.7], [2800, 'draw', 0.7], [3250, 'combo1', 0.9], [3900, 'combo2', 0.9]] },
+  { title: 'Mưa xu cuối ván (12 đồng)', desc: 'coin vol 0.5, rate ngẫu nhiên theo thang âm, nối nhau.',
+    steps: Array.from({ length: 12 }, (_, i) => [i * 85, 'coin', 0.5, [1, 1.1225, 1.2599][Math.floor(Math.random() * 3)]]) },
+  { title: 'Bảng thắng 3 Tem Điểm: cách gọi cũ', desc: 'place rate 0.9 + claim 0.4 rate tăng dần (trước khi nối stamp).',
+    steps: [0, 1, 2].flatMap(k => [[k * 300, 'place', 1, 0.9], [k * 300 + 50, 'claim', 0.4, 1 + k * 0.12]]) },
+  { title: 'Bảng thắng 3 Tem Điểm: hiện tại', desc: 'stamp rate 0.94/1/1.06 + claim 0.4 rate theo thang âm.',
+    steps: [0, 1, 2].flatMap(k => [[k * 300, 'stamp', 1, [0.94, 1, 1.06][k]], [k * 300 + 50, 'claim', 0.4, [1, 1.1225, 1.2599][k]]]) },
+  { title: 'Từ chối nước đi: cũ và mới', desc: 'close vol 0.5 (cách gọi cũ) rồi deny (hiện tại).',
+    steps: [[0, 'close', 0.5], [900, 'deny', 1]] },
+];
+
+// ---- audio
+let ctx, master, phoneIn, buffers = {}, loading = null, playing = [];
+const $ = s => document.querySelector(s);
+const gameMix = () => $('#gameMix').checked;
+
+function ensure() {
+  if (loading) return loading;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctx = new AC();
+  master = ctx.createGain();
+  master.connect(ctx.destination);
+  // giả lập loa điện thoại: highpass 400 + lowpass 8k
+  const hpf = ctx.createBiquadFilter(); hpf.type = 'highpass'; hpf.frequency.value = 400; hpf.Q.value = 0.7;
+  const lpf = ctx.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 8000;
+  hpf.connect(lpf).connect(master);
+  phoneIn = hpf;
+  const names = [...S.map(s => s.k), ...Array.from({ length: 11 }, (_, i) => 'combo' + (i + 1))];
+  const jobs = [];
+  for (const n of names) {
+    jobs.push(load(n, `sfx/${n}.mp3`));
+    if (OLD.has(n)) jobs.push(load('old:' + n, `sfx/_old/${n}.mp3`));
+  }
+  $('#status').textContent = 'Đang nạp…';
+  loading = Promise.all(jobs).then(() => { $('#status').textContent = `Đã nạp ${Object.keys(buffers).length} file`; decodeCheck(); });
+  return loading;
+}
+async function load(key, url) {
+  try {
+    const r = await fetch(url, { cache: 'no-cache' });   // luôn lấy bản mới nhất sau khi chạy lại synth_sfx.py
+    if (!r.ok) return;
+    buffers[key] = await ctx.decodeAudioData(await r.arrayBuffer());
+  } catch (e) { /* thiếu file */ }
+}
+async function play(key, vol = 1, rate = 1, when = 0) {
+  await ensure();
+  if (ctx.state === 'suspended') await ctx.resume();
+  const b = buffers[key];
+  if (!b) return;
+  const src = ctx.createBufferSource();
+  src.buffer = b;
+  src.playbackRate.value = rate;
+  const g = ctx.createGain();
+  g.gain.value = gameMix() ? vol * 0.8 : 1;
+  src.connect(g).connect($('#phone').checked ? phoneIn : master);
+  src.start(ctx.currentTime + when);
+  playing.push(src);
+  src.onended = () => { playing = playing.filter(p => p !== src); };
+}
+function stopAll() { playing.forEach(p => { try { p.stop(); } catch (e) { } }); playing = []; }
+function pickRate(c) { return c.rs ? c.rs[Math.floor(Math.random() * c.rs.length)] : c.rr ? c.rr[0] + Math.random() * (c.rr[1] - c.rr[0]) : (c.rate || 1); }
+function flash(el, ms = 600) { el.classList.add('playing'); setTimeout(() => el.classList.remove('playing'), ms); }
+
+// kiểm tra trình duyệt có bỏ encoder delay của MP3 không (khoảng lặng đầu file sau khi giải mã)
+function decodeCheck() {
+  const leads = [];
+  for (const s of S) {
+    const b = buffers[s.k]; if (!b) continue;
+    const d = b.getChannelData(0); let pk = 0;
+    for (let i = 0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i]));
+    let i = 0; while (i < d.length && Math.abs(d[i]) < pk * 0.03) i++;
+    leads.push(i / b.sampleRate * 1000);
+  }
+  const avg = leads.reduce((a, b) => a + b, 0) / leads.length;
+  const el = $('#decode');
+  if (el) el.innerHTML = `Khoảng lặng đầu file sau khi trình duyệt này giải mã: trung bình <b>${avg.toFixed(1)} ms</b> (lớn nhất ${Math.max(...leads).toFixed(1)} ms). ` +
+    (avg > 10 ? 'Trình duyệt này KHÔNG bỏ encoder delay của MP3, mọi âm trễ khoảng 25 ms.' : 'Trình duyệt bỏ encoder delay, âm bắt đầu ngay.');
+}
+
+// ---- dựng trang
+function fmtStats(m) { return m ? `${m.ms} ms · ${m.file_lufs} LUFS · TP ${m.true_peak_db}` : ''; }
+function render(meta) {
+  const main = $('#main');
+  for (const g of GROUPS) {
+    const h = document.createElement('h2'); h.textContent = g.title; main.append(h);
+    const d = document.createElement('p'); d.className = 'gdesc'; d.textContent = g.desc; main.append(d);
+    const grid = document.createElement('div'); grid.className = 'grid'; main.append(grid);
+    if (g.id === 'core') grid.append(comboCard(meta));
+    for (const s of S.filter(x => x.g === g.id)) grid.append(card(s, meta));
+  }
+  const h = document.createElement('h2'); h.textContent = 'Chuỗi phát như trong game'; main.append(h);
+  const d = document.createElement('p'); d.className = 'gdesc'; d.textContent = 'Đúng thời điểm và vol trong main.js, để nghe các âm chồng lên nhau có bị đục không.'; main.append(d);
+  const grid = document.createElement('div'); grid.className = 'grid seq'; main.append(grid);
+  for (const q of SEQ) grid.append(seqCard(q));
+  const h3 = document.createElement('h2'); h3.textContent = 'Số liệu đo'; main.append(h3);
+  const dc = document.createElement('p'); dc.className = 'decode'; dc.id = 'decode'; dc.textContent = 'Chạm một nút để đo khoảng lặng đầu file sau khi giải mã.'; main.append(dc);
+  if (meta) main.append(table(meta));
+}
+function card(s, meta) {
+  const el = document.createElement('div'); el.className = 'card';
+  const m = meta && meta[s.k];
+  el.innerHTML = `<div class="row"><span class="name">${s.k}</span>${s.isNew ? '<span class="badge">MỚI</span>' : ''}<span class="stats">${fmtStats(m)}</span></div>
+    <div class="when">${s.when}</div><div class="meta">Tần suất: ${s.freq}</div>${s.note ? `<div class="note">${s.note}</div>` : ''}<div class="btns"></div>`;
+  const btns = el.querySelector('.btns');
+  s.calls.forEach((c, i) => {
+    const b = document.createElement('button'); b.className = i === 0 ? 'play' : '';
+    b.textContent = (i === 0 ? '▶ Play' : '▶ ' + c.label) + (i === 0 && c.label ? ` (${c.label})` : '');
+    b.title = `vol ${c.vol}${c.rate ? ', rate ' + c.rate : ''}${c.rr ? ', rate ' + c.rr.join('-') : ''}`;
+    b.onclick = () => { play(s.k, c.vol, pickRate(c)); flash(el); };
+    btns.append(b);
+  });
+  if (s.rep) {
+    const b = document.createElement('button'); b.textContent = '×12';
+    b.title = 'Phát 12 lần liên tiếp (mỗi 280 ms) để thử mệt tai';
+    b.onclick = () => { const c = s.calls[0]; for (let i = 0; i < 12; i++) play(s.k, c.vol, pickRate(c), i * 0.28); flash(el, 3400); };
+    btns.append(b);
+  }
+  if (OLD.has(s.k)) {
+    const b = document.createElement('button'); b.className = 'oldb'; b.textContent = 'Bản cũ';
+    b.onclick = () => { const c = s.calls[0]; play('old:' + s.k, c.vol, pickRate(c)); flash(el); };
+    btns.append(b);
+  }
+  return el;
+}
+function comboCard(meta) {
+  const el = document.createElement('div'); el.className = 'card';
+  const m1 = meta && meta.combo1, m11 = meta && meta.combo11;
+  el.innerHTML = `<div class="row"><span class="name">combo1…combo11</span><span class="stats">${m1 ? `${m1.file_lufs}→${m11.file_lufs} LUFS` : ''}</span></div>
+    <div class="when">Tem vào ô đúng (mỗi nước vào ô). comboSfx(step), vol 0.9. Combo reset khi đặt lên cột hoặc rút bài.</div>
+    <div class="meta">Tần suất: 20-30 lần/ván (combo1-2 chiếm phần lớn). Âm nghe nhiều nhất game.</div>
+    <div class="combo"></div><div class="combo old"></div>`;
+  const row = el.querySelector('.combo'), rowOld = el.querySelector('.combo.old');
+  for (let i = 1; i <= 11; i++) {
+    const b = document.createElement('button'); b.className = 'play'; b.textContent = i;
+    b.onclick = () => { play('combo' + i, 0.9); flash(el); };
+    row.append(b);
+    const o = document.createElement('button'); o.className = 'oldb'; o.textContent = 'cũ ' + i;
+    o.onclick = () => { play('old:combo' + i, 0.9); flash(el); };
+    rowOld.append(o);
+  }
+  const r = document.createElement('button'); r.textContent = 'combo1 ×12';
+  r.onclick = () => { for (let i = 0; i < 12; i++) play('combo1', 0.9, 1, i * 0.4); flash(el, 5000); };
+  row.append(r);
+  return el;
+}
+function seqCard(q) {
+  const el = document.createElement('div'); el.className = 'card';
+  el.innerHTML = `<div class="row"><span class="name" style="font-family:inherit">${q.title}</span></div><div class="when">${q.desc}</div><div class="btns"></div>`;
+  const run = prefix => () => {
+    const span = Math.max(...q.steps.map(s => s[0])) + 800;
+    for (const [at, k, vol, rate] of q.steps) {
+      const key = prefix && OLD.has(k) ? prefix + k : k;
+      play(key, vol, rate || 1, at / 1000);
+    }
+    flash(el, span);
+  };
+  const b = document.createElement('button'); b.className = 'play'; b.textContent = '▶ Bản mới'; b.onclick = run('');
+  el.querySelector('.btns').append(b);
+  if (q.steps.every(s => OLD.has(s[1]))) {
+    const o = document.createElement('button'); o.className = 'oldb'; o.textContent = 'Bản cũ'; o.onclick = run('old:');
+    el.querySelector('.btns').append(o);
+  }
+  return el;
+}
+function table(meta) {
+  const wrap = document.createElement('div'); wrap.className = 'tablewrap';
+  const rows = Object.entries(meta).sort((a, b) => a[1].group.localeCompare(b[1].group) || a[0].localeCompare(b[0], 'en', { numeric: true }));
+  wrap.innerHTML = `<table><thead><tr><th>file</th><th>nhóm</th><th>ms</th><th>LUFS file</th><th>vol gọi</th><th>LUFS trong game</th><th>true peak</th></tr></thead><tbody>${
+    rows.map(([k, m]) => `<tr><td>${k}${m.new ? ' *' : ''}</td><td>${m.group}</td><td>${m.ms}</td><td>${m.file_lufs}</td><td>${m.vol}</td><td>${m.target_lufs}</td><td>${m.true_peak_db}</td></tr>`).join('')
+  }</tbody></table><p class="meta">LUFS = momentary max (BS.1770, cửa sổ 400 ms), đo trước khi nén MP3. "Trong game" = LUFS file + 20·log10(vol gọi), chưa tính master 0.8. * = âm mới.</p>`;
+  return wrap;
+}
+
+$('#stopAll').onclick = stopAll;
+document.addEventListener('pointerdown', () => { ensure(); }, { once: true });
+fetch('sfx/meta.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null).then(render);
+</script>
+</body>
+</html>

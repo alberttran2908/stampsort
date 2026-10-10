@@ -31,6 +31,7 @@ Dự án nghiên cứu và thiết kế game puzzle mobile, lấy **Stamp Solita
 
 ## Hướng concept hiện tại (cập nhật 2026-09-28)
 - Core: template Solitaire Associations (4 category ẩn, tableau, moves limit) như Stamp Solitaire.
+- **Đối tượng: người chơi lớn tuổi, tone chill** (chốt 2026-10-10). Âm thanh mềm và nhỏ, chữ to, nhịp chậm, độ khó hào phóng. Xem `docs/design/older-players-pass.md`.
 - Theme: **tem / bưu điện**, sub-fantasy **"Little Post Office"** (người chơi là nhân viên bưu điện nhỏ), tone **cozy, cute, chill**. **Không có cốt truyện**: chỉ bối cảnh thị trấn và nhân vật dễ thương, thư giao xong là flavor text ngắn, không nối tiếp, không có bí ẩn hay tuyến chính.
 - Postcard vẫn là phương án dự phòng nếu creative test cho CPI xấu. Xem `docs/design/theme-options.md`, `docs/design/theme-stamp.md`, `docs/product/positioning-stamp-vs-alt.md`.
 - Concept pitch: `docs/design/concept-little-post-office.md`.

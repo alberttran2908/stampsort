@@ -198,13 +198,13 @@
   "cards": 41,
   "deck": 23,
   "solver": 64,
-  "moves": 73,
+  "moves": 76,
   "video": "-",
-  "movesPerCard": 1.78,
-  "slack": 1.14,
-  "winSim": 0.92,
+  "movesPerCard": 1.85,
+  "slack": 1.19,
+  "winSim": 1,
   "stuckSim": 0,
-  "newbieWin": 0.7
+  "newbieWin": 0.85
  },
  {
   "L": 14,
@@ -265,13 +265,13 @@
   "cards": 44,
   "deck": 25,
   "solver": 70,
-  "moves": 81,
+  "moves": 82,
   "video": "-",
-  "movesPerCard": 1.84,
-  "slack": 1.16,
+  "movesPerCard": 1.86,
+  "slack": 1.17,
   "winSim": 1,
   "stuckSim": 0,
-  "newbieWin": 0.68
+  "newbieWin": 0.82
  },
  {
   "L": 18,
@@ -282,13 +282,13 @@
   "cards": 46,
   "deck": 28,
   "solver": 75,
-  "moves": 87,
+  "moves": 90,
   "video": "-",
-  "movesPerCard": 1.89,
-  "slack": 1.16,
+  "movesPerCard": 1.96,
+  "slack": 1.2,
   "winSim": 1,
   "stuckSim": 0,
-  "newbieWin": 0.63
+  "newbieWin": 0.85
  },
  {
   "L": 19,
@@ -299,13 +299,13 @@
   "cards": 50,
   "deck": 31,
   "solver": 83,
-  "moves": 94,
+  "moves": 96,
   "video": "-",
-  "movesPerCard": 1.88,
-  "slack": 1.13,
-  "winSim": 0.9,
+  "movesPerCard": 1.92,
+  "slack": 1.16,
+  "winSim": 0.97,
   "stuckSim": 0,
-  "newbieWin": 0.68
+  "newbieWin": 0.8
  },
  {
   "L": 20,

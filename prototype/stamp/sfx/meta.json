@@ -1,0 +1,371 @@
+{
+ "back": {
+  "group": "UI",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -27,
+  "file_lufs": -27.0,
+  "true_peak_db": -6.2,
+  "ms": 124
+ },
+ "boom": {
+  "group": "Cốt lõi",
+  "new": false,
+  "vol": 0.35,
+  "target_lufs": -30,
+  "file_lufs": -20.9,
+  "true_peak_db": -1.5,
+  "ms": 617
+ },
+ "chapter": {
+  "group": "Mốc lớn",
+  "new": true,
+  "vol": 1,
+  "target_lufs": -19.5,
+  "file_lufs": -19.5,
+  "true_peak_db": -8.6,
+  "ms": 3668
+ },
+ "claim": {
+  "group": "Thưởng",
+  "new": false,
+  "vol": 0.7,
+  "target_lufs": -21.5,
+  "file_lufs": -18.4,
+  "true_peak_db": -7.5,
+  "ms": 1553
+ },
+ "click": {
+  "group": "UI",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -27,
+  "file_lufs": -27.0,
+  "true_peak_db": -3.6,
+  "ms": 54
+ },
+ "close": {
+  "group": "UI",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -27,
+  "file_lufs": -27.0,
+  "true_peak_db": -5.3,
+  "ms": 120
+ },
+ "coin": {
+  "group": "Thưởng",
+  "new": false,
+  "vol": 0.5,
+  "target_lufs": -26.5,
+  "file_lufs": -20.5,
+  "true_peak_db": -5.9,
+  "ms": 740
+ },
+ "coins": {
+  "group": "Thưởng",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -22.5,
+  "file_lufs": -22.5,
+  "true_peak_db": -11.0,
+  "ms": 1572
+ },
+ "combo1": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -24.0,
+  "file_lufs": -23.1,
+  "true_peak_db": -8.2,
+  "ms": 767
+ },
+ "combo10": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -22.65,
+  "file_lufs": -21.7,
+  "true_peak_db": -8.0,
+  "ms": 749
+ },
+ "combo11": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -22.5,
+  "file_lufs": -21.6,
+  "true_peak_db": -7.1,
+  "ms": 803
+ },
+ "combo2": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -23.85,
+  "file_lufs": -22.9,
+  "true_peak_db": -11.5,
+  "ms": 841
+ },
+ "combo3": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -23.7,
+  "file_lufs": -22.8,
+  "true_peak_db": -10.5,
+  "ms": 712
+ },
+ "combo4": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -23.55,
+  "file_lufs": -22.6,
+  "true_peak_db": -8.9,
+  "ms": 786
+ },
+ "combo5": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -23.4,
+  "file_lufs": -22.5,
+  "true_peak_db": -6.0,
+  "ms": 762
+ },
+ "combo6": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -23.25,
+  "file_lufs": -22.3,
+  "true_peak_db": -8.2,
+  "ms": 717
+ },
+ "combo7": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -23.1,
+  "file_lufs": -22.2,
+  "true_peak_db": -5.5,
+  "ms": 658
+ },
+ "combo8": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -22.95,
+  "file_lufs": -22.0,
+  "true_peak_db": -8.3,
+  "ms": 714
+ },
+ "combo9": {
+  "group": "Combo",
+  "new": false,
+  "vol": 0.9,
+  "target_lufs": -22.8,
+  "file_lufs": -21.9,
+  "true_peak_db": -8.5,
+  "ms": 726
+ },
+ "complete": {
+  "group": "Cốt lõi",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -20.5,
+  "file_lufs": -20.5,
+  "true_peak_db": -11.5,
+  "ms": 1603
+ },
+ "decor": {
+  "group": "Mốc lớn",
+  "new": true,
+  "vol": 1,
+  "target_lufs": -21,
+  "file_lufs": -21.0,
+  "true_peak_db": -9.7,
+  "ms": 1456
+ },
+ "deny": {
+  "group": "UI",
+  "new": true,
+  "vol": 1,
+  "target_lufs": -29.5,
+  "file_lufs": -29.5,
+  "true_peak_db": -8.2,
+  "ms": 117
+ },
+ "draw": {
+  "group": "Thao tác",
+  "new": false,
+  "vol": 0.7,
+  "target_lufs": -28.5,
+  "file_lufs": -25.4,
+  "true_peak_db": -5.9,
+  "ms": 111
+ },
+ "facedown": {
+  "group": "Thao tác",
+  "new": true,
+  "vol": 1,
+  "target_lufs": -30.5,
+  "file_lufs": -30.5,
+  "true_peak_db": -7.1,
+  "ms": 48
+ },
+ "feature": {
+  "group": "Mốc lớn",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -20.5,
+  "file_lufs": -20.5,
+  "true_peak_db": -9.8,
+  "ms": 2341
+ },
+ "flip": {
+  "group": "Thao tác",
+  "new": false,
+  "vol": 0.7,
+  "target_lufs": -28.5,
+  "file_lufs": -25.4,
+  "true_peak_db": -6.9,
+  "ms": 122
+ },
+ "hint": {
+  "group": "Booster",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -23,
+  "file_lufs": -23.0,
+  "true_peak_db": -11.9,
+  "ms": 1320
+ },
+ "joker": {
+  "group": "Booster",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -22.5,
+  "file_lufs": -22.5,
+  "true_peak_db": -11.3,
+  "ms": 1118
+ },
+ "lose": {
+  "group": "Mốc lớn",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -22.5,
+  "file_lufs": -22.5,
+  "true_peak_db": -11.9,
+  "ms": 2698
+ },
+ "magnet": {
+  "group": "Booster",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -22.5,
+  "file_lufs": -22.5,
+  "true_peak_db": -12.2,
+  "ms": 1702
+ },
+ "open": {
+  "group": "Cốt lõi",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -22.5,
+  "file_lufs": -22.5,
+  "true_peak_db": -8.4,
+  "ms": 1221
+ },
+ "overtime": {
+  "group": "Mốc lớn",
+  "new": true,
+  "vol": 1,
+  "target_lufs": -20.5,
+  "file_lufs": -20.5,
+  "true_peak_db": -10.3,
+  "ms": 2704
+ },
+ "pick": {
+  "group": "Thao tác",
+  "new": false,
+  "vol": 0.8,
+  "target_lufs": -28,
+  "file_lufs": -26.1,
+  "true_peak_db": -2.4,
+  "ms": 91
+ },
+ "place": {
+  "group": "Thao tác",
+  "new": false,
+  "vol": 0.55,
+  "target_lufs": -28,
+  "file_lufs": -23.1,
+  "true_peak_db": -1.5,
+  "ms": 99
+ },
+ "popup": {
+  "group": "UI",
+  "new": true,
+  "vol": 1,
+  "target_lufs": -28.5,
+  "file_lufs": -28.5,
+  "true_peak_db": -9.7,
+  "ms": 130
+ },
+ "recycle": {
+  "group": "Thao tác",
+  "new": true,
+  "vol": 1,
+  "target_lufs": -27.5,
+  "file_lufs": -27.5,
+  "true_peak_db": -11.7,
+  "ms": 400
+ },
+ "slot": {
+  "group": "Booster",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -22,
+  "file_lufs": -22.0,
+  "true_peak_db": -8.6,
+  "ms": 1420
+ },
+ "sparkle": {
+  "group": "Cốt lõi",
+  "new": false,
+  "vol": 0.4,
+  "target_lufs": -28,
+  "file_lufs": -20.0,
+  "true_peak_db": -9.2,
+  "ms": 1140
+ },
+ "stamp": {
+  "group": "Thưởng",
+  "new": true,
+  "vol": 1,
+  "target_lufs": -24,
+  "file_lufs": -24.0,
+  "true_peak_db": -2.3,
+  "ms": 463
+ },
+ "whoosh": {
+  "group": "Cốt lõi",
+  "new": false,
+  "vol": 0.5,
+  "target_lufs": -28,
+  "file_lufs": -22.0,
+  "true_peak_db": -8.3,
+  "ms": 450
+ },
+ "win": {
+  "group": "Mốc lớn",
+  "new": false,
+  "vol": 1,
+  "target_lufs": -19.5,
+  "file_lufs": -19.5,
+  "true_peak_db": -8.5,
+  "ms": 3752
+ }
+}

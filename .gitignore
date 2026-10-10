@@ -36,3 +36,6 @@ research/ui-review/*.png
 research/art-redo/ui2/*.png
 research/art-redo/ui2/*.jpg
 research/gd-review/*.jpg
+
+# bản SFX cũ chỉ để nghe A/B trên sfx-preview.html (không commit, không deploy)
+prototype/stamp/sfx/_old/

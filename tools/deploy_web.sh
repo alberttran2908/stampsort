@@ -12,7 +12,8 @@ cd "$ROOT"
 rm -rf "$OUT" && mkdir -p "$OUT"
 cp prototype/stamp/index.html "$OUT/"
 cp -R prototype/stamp/src prototype/stamp/assets prototype/stamp/sfx "$OUT/"
-rm -rf "$OUT/assets/audio"          # âm thanh APK cũ: không còn dùng (đã thay bằng sfx/ tự tổng hợp)
+rm -rf "$OUT/assets/audio"
+rm -rf "$OUT/sfx/_old"                # bản SFX cũ chỉ để so sánh trên sfx-preview.html          # âm thanh APK cũ: không còn dùng (đã thay bằng sfx/ tự tổng hợp)
 touch "$OUT/.nojekyll"
 # Chống cache JS cũ (GitHub Pages cache 10 phút): gắn ?v=<phiên bản> vào script và mọi import nội bộ
 VER="$(git rev-parse --short HEAD)-$(date +%s)"

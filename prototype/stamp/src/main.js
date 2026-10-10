@@ -197,7 +197,7 @@ let colZones = [];
 let extraEl = null;
 let deckHit = null, deckCount = null, recycleEl = null;
 let undoStack = [];
-let undoLeft = 3;
+let undoLeft = 5;
 let combo = 0;
 let busyInput = false;
 let pending = [];         // promise của các animation hoàn thành ô
@@ -298,7 +298,7 @@ function makeView(card) {
   back.className = 'side back';
   if (card.k === 'topic') {
     el.classList.add('topic');
-    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${lineIconUrl(card.t)}" draggable="false"><div class="tag" style="font-size:${fitSize(topicName(card.t), 30, 9)}px">${topicName(card.t)}</div>`;
+    front.innerHTML = `<div class="crown"></div><div class="cnt">0/${card.n}</div><img class="art" src="${lineIconUrl(card.t)}" draggable="false"><div class="tag" style="font-size:${fitSize(topicName(card.t), 34, 8)}px">${topicName(card.t)}</div>`;
   } else if (card.k === E.JOKER) {
     el.classList.add('joker');
   } else {
@@ -465,7 +465,7 @@ function slotEl(k) { return k >= L.foundations ? extraEl : slotEls[k]; }
 // cỡ chữ theo độ dài (không đo DOM): đủ chỗ thì giữ cỡ chuẩn, dài thì co dần tới tối thiểu 22px rồi mới cắt "..."
 function fitSize(text, base, fitChars) {
   const n = String(text).length;
-  return n <= fitChars ? base : Math.max(22, Math.floor(base * fitChars / n));
+  return n <= fitChars ? base : Math.max(24, Math.floor(base * fitChars / n));
 }
 function updateSlotLabels() {
   S.found.forEach((f, k) => {
@@ -477,7 +477,7 @@ function updateSlotLabels() {
       const nm = topicName(f.t);
       const rb = el.querySelector('.ribbon');
       rb.textContent = nm;
-      rb.style.fontSize = fitSize(nm, 30, 9) + 'px';
+      rb.style.fontSize = fitSize(nm, 34, 8) + 'px';
       el.querySelector('.count').textContent = `${f.cards.length}/${f.n}`;
     }
   });
@@ -528,7 +528,7 @@ function coinsTo(n, fromX, fromY) {
     const add = Math.min(per, left);
     left -= add;
     save.coins += add;
-    sfx('coin', { vol: 0.5, rate: 1 + Math.random() * 0.2 });
+    sfx('coin', { vol: 0.5, rate: [1, 1.1225, 1.2599][Math.floor(Math.random() * 3)] });
     bumpCoins();
     if (left > 0 && count === 1) { save.coins += left; left = 0; }
     persist();
@@ -596,15 +596,15 @@ function spend(kind) {
     return used(true);
   }
   toast(t('coins_short'));
-  sfx('close');
+  sfx('deny');
   return false;
 }
 function onBooster(id) {
   if (ended || busyInput) return;
   const lv = levelIdx + 1;
   if (id === 'joker' && jokerFree && !jokerMode) { toggleJoker(); return; }         // Tem Vàng cứu trợ: bật lại được kể cả khi booster còn khoá
-  if (id !== 'undo' && lv < UNLOCK_AT[id]) { toast(t('unlocks', { n: UNLOCK_AT[id] })); sfx('close'); return; }
-  if (id !== 'undo' && L.unlock === id && !save.seen['unlock_' + id]) { toast(t('gift_soon')); sfx('close'); return; }
+  if (id !== 'undo' && lv < UNLOCK_AT[id]) { toast(t('unlocks', { n: UNLOCK_AT[id] })); sfx('deny'); return; }
+  if (id !== 'undo' && L.unlock === id && !save.seen['unlock_' + id]) { toast(t('gift_soon')); sfx('deny'); return; }
   if (!scriptStep() && !(id === 'hint' && hintActive)) clearHint();                // bàn tay cũ (gợi ý, cứu trợ) không đứng lại trên nút
   if (scriptStep() && scriptStep().booster !== id) { toast(t('follow'), 1000); return; }
   sfx('click', { vol: 0.6 });
@@ -624,7 +624,7 @@ function pushUndo() {
   if (undoStack.length > 60) undoStack.shift();
 }
 function doUndo() {
-  if (!undoStack.length) { toast(t(undoBlockedBySend ? 'undo_sent' : 'nothing_undo')); sfx('close'); return; }
+  if (!undoStack.length) { toast(t(undoBlockedBySend ? 'undo_sent' : 'nothing_undo')); sfx('deny'); return; }
   if (!spend('undo')) return;
   const snap = undoStack.pop();
   // Undo không xoá thông tin: lá đã lộ trên cột vẫn ngửa sau khi hoàn tác (bỏ lỗ hổng "đi thử, nhìn lá úp, Undo")
@@ -682,12 +682,12 @@ function showAction(a, { loopHand = true } = {}) {
 function doHint() {
   if (hintActive) return;                 // đang hiện đúng gợi ý này rồi (QA: bấm 4 lần mất 2 lượt + 300 xu)
   const a = computeHint();
-  if (!a) { toast(t('no_hint')); sfx('close'); return; }
+  if (!a) { toast(t('no_hint')); sfx('deny'); return; }
   if (!spend('hint')) return;
   sfx('hint');
   if (!showAction(a)) toast(t('try_deck'));
   hintActive = true;
-  hintTimer = setTimeout(clearHint, 4000);
+  hintTimer = setTimeout(clearHint, 6000);
   updateHUD();
 }
 function targetCenter(dst) {
@@ -704,7 +704,7 @@ function toggleJoker() {
     if (scriptStep() || jokerFree) return;
     jokerMode = false; clearHint(); tut(null); updateDeckUI(); renderBoosters(); recheckStuck(); return;
   }
-  if (!jokerFree && save.joker <= 0 && save.coins < COSTS.joker) { toast(t('coins_short')); sfx('close'); return; }
+  if (!jokerFree && save.joker <= 0 && save.coins < COSTS.joker) { toast(t('coins_short')); sfx('deny'); return; }
   jokerMode = true;
   sfx('joker');
   colZones.forEach((z, i) => { z.style.opacity = 1; z.classList.add('target'); });
@@ -769,8 +769,8 @@ function startPick(kind) {
   if (pickMode === kind) { cancelPick(); return; }
   if (kind === 'stamper') {
     const cols = S.cols.map((_, i) => i).filter(hasHidden);
-    if (!cols.length) { toast(t('no_hidden')); sfx('close'); return; }
-    if (save[kind] <= 0 && save.coins < COSTS[kind]) { toast(t('coins_short')); sfx('close'); return; }
+    if (!cols.length) { toast(t('no_hidden')); sfx('deny'); return; }
+    if (save[kind] <= 0 && save.coins < COSTS[kind]) { toast(t('coins_short')); sfx('deny'); return; }
     pickMode = kind;
     sfx('joker');
     cols.forEach(i => { const c = S.cols[i][S.cols[i].length - 1]; if (c) views.get(c.id).el.classList.add('hintglow'); });
@@ -779,8 +779,8 @@ function startPick(kind) {
     return;
   }
   const piles = S.found.map((_, k) => k).filter(pullable);
-  if (!piles.length) { toast(t('open_pile_first')); sfx('close'); return; }
-  if (save[kind] <= 0 && save.coins < COSTS[kind]) { toast(t('coins_short')); sfx('close'); return; }
+  if (!piles.length) { toast(t('open_pile_first')); sfx('deny'); return; }
+  if (save[kind] <= 0 && save.coins < COSTS[kind]) { toast(t('coins_short')); sfx('deny'); return; }
   if (kind === 'pack' && piles.length === 1) { applyPull(piles[0], kind); return; }
   pickMode = kind;
   sfx('joker');
@@ -848,7 +848,7 @@ function applyReveal(i) {
 }
 function applyPull(k, kind) {
   cancelPick(true);
-  if (!pullable(k)) { toast(t('none_left')); sfx('close'); return; }
+  if (!pullable(k)) { toast(t('none_left')); sfx('deny'); return; }
   if (!spend(kind)) return;
   const res = E.pullToFoundation(S, k, kind === 'pack' ? 2 : 1);
   if (!res.ok) return;
@@ -868,7 +868,7 @@ function stampSlam(x, y) {
   const draw = () => { el.style.transform = `translate(${x - 100}px,${o.y - 150}px) scale(${o.s})`; el.style.opacity = o.a; };
   draw();
   tween(o, { y, a: 1, s: 1 }, { dur: 260, easing: ease.inCubic, onUpdate: draw }).then(() => {
-    sfx('complete', { vol: 0.8, rate: 1.2 });
+    sfx('complete', { vol: 0.8, rate: 1.1225 });   // giữ đúng thang C ngũ cung (sfx-review.md)
     shake(7);
     sparkle(x, y, 14, { colors: ['#ff7a59', '#fff', '#ffd84a'] });
     return wait(120);
@@ -881,7 +881,7 @@ function onExtraSlot(e) {
   if (ended || S.extraSlot) return;
   unlockAudio();
   if (scriptStep()) { toast(t('follow'), 1000); return; }
-  if (levelIdx + 1 < UNLOCK_AT.slot) { toast(t('unlocks', { n: UNLOCK_AT.slot })); sfx('close'); return; }
+  if (levelIdx + 1 < UNLOCK_AT.slot) { toast(t('unlocks', { n: UNLOCK_AT.slot })); sfx('deny'); return; }
   panel({
     title: t('extra_title'),
     body: `<div class="feature-icon" style="background-image:url(assets/ui/slot_tray.png);width:230px;height:224px"></div><p>${t('extra_body')}</p>`,
@@ -945,6 +945,7 @@ function handTap(x, y) {
 }
 let toastTimer = null;
 function toast(msg, ms = 1500) {
+  ms = Math.max(2200, ms * 1.5);      // người lớn tuổi đọc chậm hơn: chữ hiện lâu hơn
   const t = $('toast');
   const deepest = S && S.cols ? Math.max(0, ...S.cols.map(col => (col.length ? colOffsets(col)[col.length - 1] : TAB_Y) + CH)) : 0;
   t.classList.toggle('high', !!S && $('home').classList.contains('off') && deepest > ROW_A - 170);
@@ -963,7 +964,7 @@ function tut(html) {
   if (!script && deepest > 1490 + DY_BOT) { t.classList.remove('on'); toast(html, 2600); return; }
   t.innerHTML = html;
   t.classList.add('on');
-  if (!script) tutTimer = setTimeout(() => t.classList.remove('on'), 6000);   // gợi ý tự ẩn, không nằm mãi trên màn
+  if (!script) tutTimer = setTimeout(() => t.classList.remove('on'), 9000);   // gợi ý tự ẩn, không nằm mãi trên màn
 }
 let tutTimer = 0;
 
@@ -1045,7 +1046,7 @@ function scriptAllows(src, dst) {
 }
 function scriptReject(vs) {
   if (vs) nudge(vs);
-  sfx('close', { vol: 0.5 });
+  sfx('deny');
   const st = scriptStep();
   // nói rõ bước này cần gì (review FTUE #2: "Not yet!" chung chung mâu thuẫn với điều vừa học)
   const msg = st && st.booster ? t('script_tap_booster', { name: t('b_' + st.booster) })
@@ -1140,7 +1141,7 @@ function resetIdleHint(n = 0) {
     if (ended || panelOpen || drag) { resetIdleHint(n); return; }
     if (!(tutorial || jokerMode || pickMode || hintActive)) {
       showAction(computeHint());
-      hintTimer = setTimeout(clearHint, 3500);
+      hintTimer = setTimeout(clearHint, 5000);
     }
     resetIdleHint(n + 1);
   }, delays[Math.min(n, delays.length - 1)]);
@@ -1225,23 +1226,23 @@ function onDown(e) {
   if (pickMode === 'stamper') {                  // Stamper: chọn một CỘT có lá úp
     const i = colAt(p);
     const st = scriptStep();
-    if (st && st.booster === 'stamper' && i !== stamperCol(st)) { toast(t('tap_column')); sfx('close', { vol: 0.5 }); return; }
+    if (st && st.booster === 'stamper' && i !== stamperCol(st)) { toast(t('tap_column')); sfx('deny'); return; }
     if (i >= 0 && hasHidden(i)) applyReveal(i);
-    else if (i >= 0) { toast(t('no_hidden_col')); sfx('close', { vol: 0.5 }); }
+    else if (i >= 0) { toast(t('no_hidden_col')); sfx('deny'); }
     else cancelPick();
     return;
   }
   if (pickMode) {
     const k = slotAt(p);
     const st = scriptStep();
-    if (st && st.booster && k !== st.slot) { toast(t('tap_pile')); sfx('close', { vol: 0.5 }); return; }
+    if (st && st.booster && k !== st.slot) { toast(t('tap_pile')); sfx('deny'); return; }
     if (k >= 0 && S.found[k] && pullable(k)) applyPull(k, pickMode); else cancelPick();
     return;
   }
   if (jokerMode) {
     const i = colAt(p);
     const st = scriptStep();
-    if (st && st.booster && i !== jokerCol(st)) { toast(t('tap_column')); sfx('close', { vol: 0.5 }); return; }
+    if (st && st.booster && i !== jokerCol(st)) { toast(t('tap_column')); sfx('deny'); return; }
     if (i >= 0) placeJokerAt(i);
     else if (jokerFree) toast(t('tap_column'));       // Tem Vàng cứu trợ: phải đặt, không huỷ được
     else toggleJoker();
@@ -1251,14 +1252,14 @@ function onDown(e) {
   if (!cardEl) return;
   const v = cardEl._view;
   const loc = locate(v.id);
-  if (!loc && S.waste.some(c => c.id === v.id)) { nudge([v]); sfx('close', { vol: 0.5 }); toast(t('err_waste_top'), 1500); return; }
+  if (!loc && S.waste.some(c => c.id === v.id)) { nudge([v]); sfx('deny'); toast(t('err_waste_top'), 1500); return; }
   if (!loc || (loc.from === 'col' && !E.runAt(S, loc.i, loc.idx))) {
     // lá úp, hoặc lá bị tem khác loại đè lên: rung nhẹ và nói lý do
     if (loc && loc.from === 'col') {
       const col = S.cols[loc.i];
       nudge(col.slice(loc.idx).map(c => views.get(c.id)));
-      if (!col[loc.idx].up) { toast(t('err_facedown'), 1400); teachOnError('facedown'); }
-      else { toast(t('err_mixed'), 1700); teachOnError('mixed'); }
+      if (!col[loc.idx].up) { sfx('facedown'); toast(t('err_facedown'), 1400); teachOnError('facedown'); }
+      else { sfx('deny'); toast(t('err_mixed'), 1700); teachOnError('mixed'); }
     }
     return;
   }
@@ -1332,7 +1333,7 @@ function onUp(e) {
     const pick = bestTapFor(d.cands);
     // chạm không tự mở ô trống CUỐI CÙNG (quyết định dễ gây kẹt): phải kéo vào nếu chắc chắn
     if (pick && pick.dst.to === 'found' && !S.found[pick.dst.i] && lastSlotRisky()) {
-      nudge(d.vs); sfx('close', { vol: 0.5 }); toast(t('err_last_slot'), 2000);
+      nudge(d.vs); sfx('deny'); toast(t('err_last_slot'), 2000);
       track('last_slot_tap_blocked', { level: levelIdx + 1 });
     } else if (pick) doMove(pick.src, pick.dst, false);
     else rejectTap(d.src, d.vs);
@@ -1353,7 +1354,7 @@ function onUp(e) {
   else {
     const why = dropReason(d.cands[d.cands.length - 1], p);   // lý do theo lá đang cầm
     if (why) { toast(why, 1600); teachOnError('drop'); }
-    sfx('close', { vol: 0.5 });
+    sfx('deny');
     const T = computeLayout();
     d.vs.forEach(v => { moveView(v, T.get(v.id), { dur: 260, easing: ease.outBackSoft }).then(() => setZ(v, T.get(v.id).z)); });
   }
@@ -1423,7 +1424,7 @@ function dropReason(src, p) {
 function rejectTap(src, vs) {
   const run = E.sourceCards(S, src);
   nudge(vs);
-  sfx('close', { vol: 0.5 });
+  sfx('deny');
   haptic(4);
   if (!run) return;
   let msg;
@@ -1445,7 +1446,7 @@ function teachOnError(reason = 'other') {
   setTimeout(() => {
     if (ended || script || jokerMode || pickMode) return;
     const a = computeHint();
-    if (a) { showAction(a); hintTimer = setTimeout(clearHint, 3500); }
+    if (a) { showAction(a); hintTimer = setTimeout(clearHint, 5000); }
   }, 700);
 }
 // Nhịp gợi ý: mỗi lần một khái niệm, cách nhau >= 4 nước và 7 giây, tối đa 3 gợi ý mỗi level (chống quá tải).
@@ -1456,7 +1457,7 @@ function canTip() {
 }
 function markTip() { tipGate = { used: S.used, t: Date.now(), count: tipGate.count + 1 }; }
 // Gợi ý một lần cho mỗi khái niệm, đúng lúc nó xảy ra (just-in-time).
-function onceTip(key, vars = {}, ms = 3200) {
+function onceTip(key, vars = {}, ms = 4800) {
   if (save.seen['tip_' + key] || !canTip()) return false;
   markTip();
   save.seen['tip_' + key] = 1;
@@ -1512,10 +1513,10 @@ function doMove(src, dst, fromDrag) {
 }
 function onDeck() {
   if (ended || busyInput || panelOpen) return;
-  if (jokerMode) { toast(t('tap_column')); sfx('close', { vol: 0.5 }); return; }
+  if (jokerMode) { toast(t('tap_column')); sfx('deny'); return; }
   if (pickMode) { if (!(scriptStep() && scriptStep().booster)) cancelPick(); return; }
   if (!S.deck.length && !S.waste.length) {
-    if (isStuck() && safetyOf(L) === 'none') stuckPanel(); else { toast(t('deck_empty')); sfx('close', { vol: 0.5 }); }
+    if (isStuck() && safetyOf(L) === 'none') stuckPanel(); else { toast(t('deck_empty')); sfx('deny'); }
     return;
   }
   if (scriptStep() && !scriptStep().draw) { scriptReject(); return; }
@@ -1633,7 +1634,7 @@ function playEvents(events, fromDrag) {
         const tt = T.get(ev.id) || { x: v.x, y: v.y };
         ring(tt.x + CW / 2, tt.y + CH / 2, { color: '#ffd84a', r1: 170, width: 10 });
         sparkle(tt.x + CW / 2, tt.y + 30, 14, { colors: ['#ffd84a', '#fff4a0', '#ffffff'] });
-        sfx('open', { vol: 0.6, rate: 1.25 });
+        sfx('open', { vol: 0.6, rate: 1.2599 });
         haptic([8, 30, 8]);
       }, 260);
     } else if (ev.type === 'draw') {
@@ -1646,7 +1647,7 @@ function playEvents(events, fromDrag) {
       moveView(v, T.get(ev.id), { dur: 260, easing: ease.outCubic, arc: 30 }).then(() => setZ(v, T.get(ev.id).z));
       setUp(v, true, { delay: 30 });
     } else if (ev.type === 'recycle') {
-      sfx('whoosh');
+      sfx('recycle');
       onceTip('recycle');
       [...S.deck].reverse().forEach((c, k) => {
         const v = views.get(c.id);
@@ -1774,7 +1775,10 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   sparkle(tx + 115, ty + 96, 10, { colors: ['#ffd84a', '#ffffff', '#8cc8ff'] });
   bar.classList.remove('bump'); void bar.offsetWidth; bar.classList.add('bump');
 }
+const reduceMotion = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 function shake(px) {
+  if (reduceMotion) return;
+  px *= 0.5;                          // người lớn tuổi: rung nhẹ, không giật
   const o = { k: 0 };
   tween(o, { k: 1 }, { dur: 260, key: 'shake', onUpdate: () => {
     const a = px * (1 - o.k);
@@ -1815,7 +1819,7 @@ function startOvertime() {
   S.moves = Infinity;
   movesEl.classList.add('overtime');
   updateHUD();
-  sfx('feature');
+  sfx('overtime');
   haptic([20, 40, 20]);
   floatText(t('overtime_big'), 540, 420, '#ffd36b');
   toast(t('overtime'), 2800);
@@ -1938,9 +1942,9 @@ async function winSequence() {
     radial: true,
     body: `<div class="stars"><i></i><i></i><i></i></div>
       <div class="pts-line">${gain ? t('pts_gain', { n: gain }) : t('pts_best', { n: save.stars[lv] })}</div>
-      ${explainPts ? `<p style="font-size:30px;margin:0 0 6px">${t('pts_explain')}</p>` : ''}
+      ${explainPts ? `<p style="font-size:36px;margin:0 0 6px">${t('pts_explain')}</p>` : ''}
       ${S.moves === Infinity ? '' : `<p>${t('moves_left', { n: S.moves })}</p>`}
-      ${L.moves != null && !overtime && st < 3 ? `<p style="font-size:32px;margin:0">${t('stars_hint')}</p>` : ''}
+      ${L.moves != null && !overtime && st < 3 ? `<p style="font-size:36px;margin:0">${t('stars_hint')}</p>` : ''}
       ${last ? `<p>${t('win_end')}</p>` : ''}
       ${lastDelivered ? `<p class="note"><b>${residentOf(lastDelivered)}:</b> “${residentNote(residentOf(lastDelivered))}”</p>` : ''}
       <div class="coins-line"><i></i><span>+${reward}</span></div>`,
@@ -1956,7 +1960,7 @@ async function winSequence() {
     onOpen: pEl => {
       const ss = pEl.querySelectorAll('.stars i');
       // Tem Điểm "đóng cộp" từng cái (tiếng con dấu + chuông nhỏ lên dần)
-      for (let k = 0; k < st; k++) setTimeout(() => { ss[k].classList.add('on'); sfx('place', { rate: 0.9 }); sfx('claim', { vol: 0.4, rate: 1 + k * 0.12, delay: 0.05 }); haptic(14); }, 380 + k * 300);
+      for (let k = 0; k < st; k++) setTimeout(() => { ss[k].classList.add('on'); sfx('stamp', { rate: [0.94, 1, 1.06][k] }); sfx('claim', { vol: 0.4, rate: [1, 1.1225, 1.2599][k], delay: 0.05 }); haptic(14); }, 380 + k * 300);
       setTimeout(() => coinsTo(reward, 540, 1000), 380 + st * 260 + 200);
     },
   });
@@ -1970,7 +1974,7 @@ function chapterReward(ch = CHAPTERS[0]) {
   save.coins += 200;
   persist();
   track('chapter_complete', { chapter: ch.id });
-  sfx('feature');
+  sfx('chapter');
   panel({ title: t('chapter_title', { n: ch.id }), radial: true,
     body: `<div class="feature-icon" style="background-image:url(assets/ui/envelope_closed.png)"></div><p>${t('chapter_body_' + ch.id)}</p><div class="coins-line"><i></i><span>+200</span></div>`,
     buttons: next
@@ -2078,7 +2082,7 @@ async function startLevel(i) {
   L = LEVELS[levelIdx];
   S = E.createState(L);
   undoStack = [];
-  undoLeft = 3;
+  undoLeft = 5;                       // người lớn tuổi đi sai nhiều hơn: 5 lần hoàn tác miễn phí mỗi level
   combo = 0;
   ended = false;
   pending = [];
@@ -2196,7 +2200,7 @@ function levelBanner() {
   draw();
   if (sp) { sfx('boom', { vol: 0.5 }); shake(8); }
   return tween(o, { y: 0, a: 1, s: 1 }, { dur: 380, easing: ease.outBack, onUpdate: draw })
-    .then(() => wait(sp ? 1900 : 1300))
+    .then(() => wait(sp ? 2300 : 1700))
     .then(() => tween(o, { y: -40, a: 0 }, { dur: 260, onUpdate: draw }))
     .then(() => { el.remove(); if (bannerEl === el) bannerEl = null; });
 }
@@ -2218,7 +2222,7 @@ function rulesHtml() {
   const row = (fig, txt) => `<div style="display:flex;align-items:center;gap:24px;margin:0 0 14px;text-align:left">${fig}
     <div style="font-size:38px;line-height:1.22;color:#5a3a26">${txt}</div></div>`;
   return `<div>${row(crownCard, t('r1'))}${row(stampCard, t('r2'))}${row(env, t('r3'))}${row(moves, t('r4'))}${row(undo, t('r6'))}
-    <p style="font-size:32px;margin:4px 0 0">${t('r5')}</p></div>`;
+    <p style="font-size:36px;margin:4px 0 0">${t('r5')}</p></div>`;
 }
 function showRules(onClose) {
   panel({ title: t('howto'), body: rulesHtml(), buttons: [{ label: t('got_it'), act: () => onClose && onClose() }] });
@@ -2276,7 +2280,7 @@ function goHome(chId) {
     const el = document.createElement('div');
     el.className = 'lvl' + (lv > save.unlocked ? ' locked' : '') + (save.stars[lv] ? ' done' : '') + (lv === save.unlocked ? ' cur' : '');
     el.innerHTML = `${lv}${save.stars[lv] ? `<span class="pts">${'<i></i>'.repeat(save.stars[lv])}</span>` : ''}`;
-    el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('close'); });
+    el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('deny'); });
     grid.append(el);
   });
   // Ô chuyển chương ngay dưới lưới level. Chương 2 chưa mở: có khoá, bấm xem teaser (luôn thấy "thị trấn còn gì", concept mục 7).
@@ -2322,14 +2326,14 @@ function decorPanel() {
     body: `<div class="feature-icon" style="background-image:url(assets/decor/${d.id}.png)"></div>
       <p><b>${t('decor_' + d.id)}</b> · ${n + 1}/${DECOR.length}</p>
       <div class="pts-line">${t('pts_have', { n: left })}</div>
-      ${ok ? '' : `<p style="font-size:32px;margin:0">${pointsEarned() ? t('pts_need', { n: d.cost - left }) : t('pts_first')}</p>`}`,
+      ${ok ? '' : `<p style="font-size:36px;margin:0">${pointsEarned() ? t('pts_need', { n: d.cost - left }) : t('pts_first')}</p>`}`,
     buttons: [
       { label: t('decor_place', { n: d.cost }), cls: ok ? '' : 'off', act: () => {
         if (!ok) { decorPanel(); return; }
         save[homeCh.key] = n + 1;
         persist();
         track('decor_place', { chapter: homeCh.id, id: d.id, index: n + 1, cost: d.cost, points_left: pointsLeft() });
-        sfx('slot');
+        sfx('decor');
         haptic([15, 40, 15]);
         renderDecor(n);
       } },
@@ -2359,7 +2363,7 @@ function openCh2(source) {
   $('ch2').classList.remove('off');
   const soon = $('ch2Soon');
   soon.style.animation = 'none'; void soon.offsetWidth; soon.style.animation = '';   // chạy lại hiệu ứng đóng dấu
-  setTimeout(() => sfx('place', { rate: 0.85 }), 280);
+  setTimeout(() => sfx('stamp', { rate: 0.9 }), 280);
   track('chapter2_teaser_open', { source, open, points_left: pointsLeft(), decor: save.decor || 0 });
 }
 const ch2Level = () => Math.min(CHAPTERS[1].to, LEVELS.length, Math.max(CHAPTERS[1].from, save.unlocked));
@@ -2440,7 +2444,7 @@ window.__game = { variant: VARIANT, get S() { return S; }, get level() { return 
 function relabelCards() {
   for (const v of views.values()) {
     const tag = v.card && v.card.k === 'topic' && v.el.querySelector('.tag');
-    if (tag) { tag.textContent = topicName(v.card.t); tag.style.fontSize = fitSize(topicName(v.card.t), 30, 9) + 'px'; }
+    if (tag) { tag.textContent = topicName(v.card.t); tag.style.fontSize = fitSize(topicName(v.card.t), 34, 8) + 'px'; }
   }
 }
 // ============================================================ boot
