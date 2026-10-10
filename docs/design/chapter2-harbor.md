@@ -53,11 +53,31 @@ Nhận xét:
 - **Bản B:** L20 ban đầu có 5 khay cho 6 chủ đề nên quá dễ (phổ thông 67%). Đã giảm còn 4 khay, xuống 32%.
 - **Thời gian một ván** ở mức phổ thông: 3.4–5.6 phút, dài hơn chương 1 vì mỗi level có 38–59 lá.
 
+### 3.1 Thiết kế lại sau review FTUE (2026-10-10)
+
+- Mỗi level mở đầu chỉ giới thiệu **1 chủ đề mới** (`introduce`). Tem vương miện của nó ngửa sẵn trên cột hoặc nằm trong 3 lá rút đầu (generator kiểm tra trong `fair()`). Đầu level có câu "Tem mới: …".
+- Moves được nâng tới khi **người mới (phí 25%) thắng ≥ `newbieMin`**: L11 80%, L12 75%, L13 65%, L14/L17/L18 60%, L19 55%, L16 90%. Đây là mặc định do tôi chọn, PO chưa chốt.
+- **Seafood và Shells không chung level** (thêm vào `CONFUSE`, test kiểm tra). L15 bỏ Shells, L20 bỏ Seafood.
+- Số liệu từ generator (`levels-report.json`, `levels-report_b.json`: phổ thông 24–60 ván, người mới 40 ván, không nhìn trộm). Bảng ở mục 3 phía trên là bản trước khi sửa.
+
+| Level | Vai trò | Chủ đề mới | A: chủ đề / lá | A: moves (solver) | A: phổ thông thắng | A: người mới thắng | B: chủ đề / lá | B: moves (solver) | B: người mới thắng |
+|---|---|---|---|---|---|---|---|---|---|
+| 11 | breather | Thuyền buồm | 6 / 34 | 64 (51) | 100% | 100% | 6 / 34 | 64 (51) | 100% |
+| 12 | normal | Vỏ ốc | 7 / 38 | 70 (59) | 100% | 100% | 6 / 34 | 61 (51) | 100% |
+| 13 | normal | Hải sản | 7 / 41 | 73 (64) | 92% | 70% | 6 / 36 | 63 (55) | 80% |
+| 14 | bump | Hàng hải | 8 / 48 | 87 (79) | 100% | 100% | 6 / 39 | 70 (61) | 63% |
+| 15 | hard |  | 8 / 52 | 89 (87) | 20% | Overtime | 6 / 41 | 69 (65) | Overtime |
+| 16 | breather |  | 7 / 40 | 84 (64) | 100% | 100% | 6 / 36 | 73 (55) | 100% |
+| 17 | normal |  | 7 / 44 | 81 (70) | 100% | 68% | 6 / 39 | 70 (59) | 68% |
+| 18 | normal |  | 7 / 46 | 87 (75) | 100% | 63% | 6 / 41 | 76 (65) | 95% |
+| 19 | bump |  | 8 / 50 | 94 (83) | 90% | 68% | 6 / 41 | 73 (64) | 57% |
+| 20 | superhard |  | 9 / 58 | 100 (92) | 33% | Overtime | 6 / 40 | 58 (56) | Overtime |
+
 ## 4. Màn hình chính chia theo chương
 
 - Lưới chỉ hiện 10 level của chương đang xem. Mặc định là chương chứa level đang chơi.
 - Ô dưới lưới dùng để chuyển chương: "Chương 2 · Bến Cảng →" (có khoá và mở teaser nếu chưa mở), hoặc "← Chương 1 · Phố Chính".
 - Decor hiện theo chương đang xem. Tem Điểm là một quỹ chung cho cả hai chương.
-- Hết L10: popup "Xong chương 1!" (+200 xu), nút "Chương 2 →" mở màn giới thiệu Bến Cảng (dấu "ĐÃ MỞ", nút chơi L11).
+- Hết L10: popup "Xong chương 1!" (+200 xu), nút "Chương 2 →" vào thẳng L11. Màn giới thiệu Bến Cảng xem lại được từ ô chương ở màn hình chính.
 - Hết L20: popup "Xong chương 2!" (+200 xu), báo Đồi Trà sắp mở. Nút Play đổi thành "Sắp có level mới".
 - Save của bản 10 level (dừng ở `unlocked = 10` dù đã thắng L10) được tự nâng lên L11.

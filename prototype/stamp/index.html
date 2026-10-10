@@ -162,8 +162,9 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 /* ---------- toast / tutorial ---------- */
 .toast{position:absolute;left:100px;right:100px;top:calc(var(--rowa,1212px) - 130px);   /* ngay trên hàng rút bài */padding:18px 24px;border-radius:24px;background:var(--cream);color:var(--ink);
   border:4px solid var(--ink);box-shadow:0 5px 0 rgba(90,58,38,.25);
-  text-align:center;font-size:38px;line-height:1.25;opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none;z-index:20}
+  text-align:center;font-size:38px;line-height:1.25;opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none;z-index:40}   /* z 40: nằm trên lớp mờ và panel khi toast được chuyển vào #overlay */
 .toast.on{opacity:1;transform:none}
+.toast.high{top:calc(var(--bd,0px) + 160px)}   /* cột dài chạm hàng rút bài: toast lên phía trên khay đích, không che lá trên cùng */
 .toast em{font-style:normal;color:var(--red)}
 .tut{position:absolute;left:70px;right:70px;top:calc(1490px + var(--bot,0px));padding:8px 26px;color:var(--ink);
   border:34px solid transparent;border-image:url(assets/ui/tipbox.png) 70 fill / 36px stretch;text-align:center;font-size:40px;line-height:1.25;opacity:0;transform:scale(.9);
@@ -211,6 +212,10 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
   opacity:.45;animation:spin 12s linear infinite;pointer-events:none;z-index:29}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* màn ngang trên điện thoại: bàn chơi quá nhỏ -> nhắc xoay máy */
+#rotate{display:none}
+@media (orientation: landscape) and (max-height: 520px){#rotate{display:flex;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;text-align:center;
+  background:#d1d9c3;color:#5a3a26;font:28px/1.4 inherit;font-family:inherit}}
 /* ---------- home ---------- */
 .home{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;color:var(--ink);padding-top:var(--hud,0px);
   background:#d1d9c3 url(assets/ui/bg_game.jpg) center bottom/1080px 1920px no-repeat;transition:opacity .35s}
@@ -271,7 +276,7 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 /* ---------- Bưu điện nhỏ: decor đặt trên ảnh nền (nền neo đáy nên neo theo bottom, cờ dây neo theo đỉnh) ---------- */
 .decor{position:absolute;inset:0;pointer-events:none}
 .dc{position:absolute;transition:opacity .3s}
-.dc.ghost{filter:brightness(0);opacity:.1}
+.dc.ghost{filter:grayscale(1) contrast(.6) brightness(1.15);opacity:.4}   /* bóng món kế tiếp: nhìn ra hình, nhưng rõ là chưa có */
 .dc.new{animation:decorin .7s cubic-bezier(.3,1.6,.5,1)}
 @keyframes decorin{0%{transform:scale(.2) translateY(60px);opacity:0}100%{transform:none;opacity:1}}
 .dc-bunting{left:30px;width:1020px;top:calc(var(--hud,0px) + 6px)}
@@ -355,5 +360,6 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
   </div>
 </div>
 <script type="module" src="src/main.js"></script>
+<div id="rotate"><div><div style="font-size:64px">📱↻</div><div id="rotateTxt">Please rotate your phone</div></div></div>
 </body>
 </html>
