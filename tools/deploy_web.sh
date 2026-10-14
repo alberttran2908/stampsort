@@ -10,9 +10,12 @@ cd "$ROOT"
 
 [ -d prototype/stamp/assets ] || .venv/bin/python tools/build_proto_assets.py
 rm -rf "$OUT" && mkdir -p "$OUT"
-cp prototype/stamp/index.html "$OUT/"
+cp prototype/stamp/index.html prototype/stamp/privacy.html prototype/stamp/support.html "$OUT/"   # 2 trang tĩnh cho App Store (Support URL, Privacy Policy URL)
 cp -R prototype/stamp/src prototype/stamp/assets prototype/stamp/sfx "$OUT/"
 rm -rf "$OUT/assets/audio"
+# 40 level L21-L60 lấy từ APK (thiết kế của ABI): chỉ cho bản iOS TestFlight nội bộ (KEEP_APK_LEVELS=1, xem mobile/package.json).
+# Web công khai mặc định bỏ, chỉ còn 20 level tự làm.
+[ "${KEEP_APK_LEVELS:-0}" = "1" ] || printf 'export const LEVELS_APK = [];\n' > "$OUT/src/levels_apk.js"
 rm -rf "$OUT/sfx/_old"                # bản SFX cũ chỉ để so sánh trên sfx-preview.html          # âm thanh APK cũ: không còn dùng (đã thay bằng sfx/ tự tổng hợp)
 touch "$OUT/.nojekyll"
 # Chống cache JS cũ (GitHub Pages cache 10 phút): gắn ?v=<phiên bản> vào script và mọi import nội bộ

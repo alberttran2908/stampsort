@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Vỏ iOS (Capacitor) cho prototype Stamp Sort / Little Post Office. Web build lấy từ tools/deploy_web.sh --build-only.",
   "scripts": {
-    "web": "cd .. && tools/deploy_web.sh --build-only && rm -rf mobile/www && cp -R dist/web mobile/www",
+    "web": "cd .. && KEEP_APK_LEVELS=1 tools/deploy_web.sh --build-only && rm -rf mobile/www && cp -R dist/web mobile/www",
     "sync": "npm run web && npx cap sync ios"
   },
   "dependencies": {
