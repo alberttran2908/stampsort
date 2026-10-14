@@ -1,0 +1,12 @@
+{
+  "appId": "games.notbad.stampsort",
+  "appName": "Stamp Sort",
+  "webDir": "www",
+  "backgroundColor": "#d1d9c3",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#d1d9c3",
+    "allowsLinkPreview": false
+  }
+}

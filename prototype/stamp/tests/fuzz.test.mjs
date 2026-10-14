@@ -9,6 +9,7 @@ import * as E from '../src/engine.js';
 import { solve, hint, candidateActions } from '../src/solver.js';
 import { LEVELS } from '../src/levels.js';
 import { LEVELS as LEVELS_B } from '../src/levels_b.js';
+import { LEVELS_APK } from '../src/levels_apk.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGS = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
@@ -672,6 +673,24 @@ for (const L of LEVELS) {
     ok(h && (h.draw || E.checkMove(E.createState(L), h.src, h.dst) === null), 'hint không hợp lệ');
   });
 }
+// L21-L60 lấy từ APK (tools/import_apk_levels.mjs): kiểm cấu trúc, art, moves >= số nước tối ưu. Cho phép lặp art trong chủ đề
+// (APK có chủ đề cần tới 12 tem, nhiều hơn số art đang có). Không chạy solve ở đây vì level lớn (tới 96 lá); tool đã giải từng level.
+test('levels APK: 40 level L21-L60, id liên tục, chương 3-6, cấu trúc và art hợp lệ, moves đủ', () => {
+  eq(LEVELS_APK.length, 40, 'số level APK');
+  LEVELS_APK.forEach((L, k) => {
+    eq(L.id, 21 + k, 'id'); eq(L.chapter, 3 + Math.floor(k / 10), `L${L.id} chapter`);
+    const all = [...L.columns.flat(), ...L.deck, ...(L.preplaced || []).flat()];
+    eq(new Set(all.map(c => c.id)).size, all.length, `L${L.id} id trùng`);
+    for (const t of new Set(all.map(c => c.t))) {
+      const tc = all.filter(c => c.t === t && c.k === 'topic');
+      eq(tc.length, 1, `L${L.id} topic ${t} số lá topic`);
+      eq(all.filter(c => c.t === t && c.k === 'stamp').length, tc[0].n, `L${L.id} topic ${t} số stamp vs n`);
+      ok(existsSync(join(ROOT, 'assets/cards', slug(t), 'icon_line.png')), `L${L.id} thiếu icon_line ${t}`);
+    }
+    for (const c of all.filter(x => x.k === 'stamp')) ok(existsSync(join(ROOT, 'assets/cards', slug(c.t), c.art + '.png')), `L${L.id} thiếu ${slug(c.t)}/${c.art}.png`);
+    ok(Number.isInteger(L.moves) && L.moves >= Math.ceil(L.solverMoves * 1.3), `L${L.id} moves ${L.moves} < 1.3 x ${L.solverMoves}`);
+  });
+});
 test('candidateActions đều thực thi được trên các level', () => {
   for (const L of LEVELS) {
     const s = E.createState(L);

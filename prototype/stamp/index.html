@@ -238,6 +238,15 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .ch2-tile{grid-column:2/5;height:104px;white-space:nowrap;margin-top:-6px;border-radius:42px;background:rgba(255,248,234,.82);box-shadow:0 0 0 4px rgba(90,58,38,.55) inset;
   display:flex;align-items:center;justify-content:center;gap:14px;font-size:38px;color:var(--ink);cursor:pointer}
 .ch2-tile i{width:46px;height:46px;background:url(assets/ui/lock.png) center/contain no-repeat}
+/* thanh chương: ‹ tên chương › (3 cột giữa của lưới để không chạm decor trên tường) */
+.ch-nav{grid-column:2/5;height:104px;margin-top:-6px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ch-arrow{flex:0 0 104px;height:104px;border-radius:52px;background:rgba(255,248,234,.9);box-shadow:0 0 0 4px rgba(90,58,38,.55) inset;
+  display:grid;place-items:center;font-size:70px;line-height:1;color:var(--ink);cursor:pointer}
+.ch-arrow.none{visibility:hidden}
+.ch-arrow.locked i{width:50px;height:50px;background:url(assets/ui/lock.png) center/contain no-repeat}
+.ch-lbl{flex:1;text-align:center;font-size:38px;line-height:1.05;color:var(--cream);white-space:nowrap;
+  text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
+.ch-lbl small{display:block;font-size:30px}
 .home .play{position:absolute;left:0;right:0;width:520px;white-space:nowrap;margin:0 auto;text-align:center;top:calc(1640px + var(--bot,0px))}  /* nút Play trên kệ, vùng ngón cái */
 .home .foot{position:absolute;bottom:40px;font-size:24px;opacity:.85;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
 /* ---------- Chương 2 sắp mở (teaser Bến Cảng, concept mục 3.1) ---------- */

@@ -1,5 +1,6 @@
 import { LEVELS as LEVELS_A } from './levels.js';
 import { LEVELS as LEVELS_B } from './levels_b.js';
+import { LEVELS_APK } from './levels_apk.js';   // L21-L60: level APK 0.9.5 (tools/import_apk_levels.mjs)
 import * as E from './engine.js';
 import { hint as solverHint, solve } from './solver.js';
 import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js';
@@ -42,6 +43,11 @@ const CHAPTERS = [
   { id: 2, from: 11, to: 20, key: 'decor2', decor: [
     { id: 'fan', cost: 2 }, { id: 'porthole', cost: 3 }, { id: 'buoy', cost: 4 },
     { id: 'lantern', cost: 4 }, { id: 'chart', cost: 5 }, { id: 'boatbed', cost: 6 }] },
+  // Chương 3-6: level lấy từ APK (concept mục 3.1: Đồi Trà, Vườn Táo, Ga Tàu, Đảo Xa). Chưa có decor riêng.
+  { id: 3, from: 21, to: 30, key: 'decor3', decor: [] },
+  { id: 4, from: 31, to: 40, key: 'decor4', decor: [] },
+  { id: 5, from: 41, to: 50, key: 'decor5', decor: [] },
+  { id: 6, from: 51, to: 60, key: 'decor6', decor: [] },
 ];
 const chapterOf = lv => CHAPTERS.find(c => lv >= c.from && lv <= c.to) || CHAPTERS[CHAPTERS.length - 1];
 let homeCh = CHAPTERS[0];     // chương đang xem ở màn hình chính
@@ -60,7 +66,7 @@ const VARIANT = (() => {
   try { v = v || localStorage.getItem('stampsort_variant'); if (v) localStorage.setItem('stampsort_variant', v); } catch (e) { /* ignore */ }
   return v === 'b' ? 'b' : 'a';
 })();
-const LEVELS = VARIANT === 'b' ? LEVELS_B : LEVELS_A;
+const LEVELS = (VARIANT === 'b' ? LEVELS_B : LEVELS_A).concat(LEVELS_APK);   // L21+ dùng chung cho A và B
 setCommon({ variant: VARIANT });
 const specialOf = lv => ((AB.hard ? AB.hard.includes(lv.id) : !!lv.special) ? (lv.special || 'hard') : null);
 const safetyOf = lv => (specialOf(lv) ? (AB.safety || lv.safety || 'overtime') : 'none');
@@ -2319,17 +2325,26 @@ function goHome(chId) {
     el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('deny'); });
     grid.append(el);
   });
-  // Ô chuyển chương ngay dưới lưới level. Chương 2 chưa mở: có khoá, bấm xem teaser (luôn thấy "thị trấn còn gì", concept mục 7).
-  const ch = document.createElement('div');
-  ch.className = 'ch2-tile';
-  if (homeCh.id === 1) {
-    ch.innerHTML = ch2Open() ? `${t('ch_name_2')} →` : `<i></i>${t('ch_name_2')}`;
-    ch.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); if (ch2Open()) goHome(2); else openCh2('home_tile'); });
-  } else {
-    ch.innerHTML = `← ${t('ch_name_1')}`;
-    ch.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); goHome(1); });
-  }
-  grid.append(ch);
+  // Thanh chương ngay dưới lưới level: [← chương trước] tên chương đang xem [chương sau →].
+  // Chương sau còn khoá: nút có ổ khoá, bấm xem giới thiệu (chương 2: teaser Bến Cảng) -> luôn thấy "thị trấn còn gì" (concept mục 7).
+  const nav = document.createElement('div');
+  nav.className = 'ch-nav';
+  const prev = CHAPTERS.find(c => c.id === homeCh.id - 1);
+  const next = CHAPTERS.find(c => c.id === homeCh.id + 1 && c.from <= LEVELS.length);
+  const nextOpen = next && save.unlocked >= next.from;
+  nav.innerHTML = `<div class="ch-arrow${prev ? '' : ' none'}">‹</div>
+    <div class="ch-lbl"><small>${t('ch_word', { n: homeCh.id })}</small>${t('ch_place_' + homeCh.id)}</div>
+    <div class="ch-arrow${next ? '' : ' none'}${next && !nextOpen ? ' locked' : ''}">${next && !nextOpen ? '<i></i>' : '›'}</div>`;
+  const [aPrev, , aNext] = nav.children;
+  if (prev) aPrev.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); goHome(prev.id); });
+  if (next) aNext.addEventListener('pointerup', () => {
+    unlockAudio(); sfx('click');
+    if (nextOpen) goHome(next.id);
+    else if (next.id === 2) openCh2('home_tile');
+    else panel({ title: t('ch_name_' + next.id), body: `<p>${t('ch_locked', { n: next.from - 1 })}</p>`,
+      buttons: [{ label: t('play', { n: save.unlocked }), act: () => startLevel(save.unlocked - 1) }, { label: t('close'), cls: 'orange', act: () => {} }] });
+  });
+  grid.append(nav);
   $('playBtn').textContent = allDone() ? t('more_soon') : t('play', { n: save.unlocked });
   renderDecor();
   $('home').classList.remove('off');
@@ -2352,6 +2367,7 @@ function decorPanel() {
   const d = DECOR[n];
   const left = pointsLeft();
   track('decor_open', { chapter: homeCh.id, placed: n, points: left });
+  if (!DECOR.length) { panel({ title: t('decorate'), body: `<p>${t('decor_soon')}</p>`, buttons: [{ label: t('close'), act: () => {} }] }); return; }
   if (!d) {
     panel({ title: t('decorate'), body: `<p>${t('decor_done')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
     return;
@@ -2380,7 +2396,7 @@ function decorPanel() {
 $('undoBtn').addEventListener('pointerup', () => { unlockAudio(); onBooster('undo'); });
 $('playBtn').addEventListener('pointerup', () => {
   unlockAudio(); sfx('click');
-  if (allDone()) panel({ title: t('more_soon'), body: `<p>${t('chapter_body_2')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
+  if (allDone()) panel({ title: t('more_soon'), body: `<p>${t('more_soon_body')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
   else startLevel(save.unlocked - 1);
 });
 // Chương 2 "Bến Cảng" sắp mở (concept-little-post-office.md mục 3.1): teaser khu mới + tem mới + cư dân + decor.
