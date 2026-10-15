@@ -1064,3 +1064,59 @@ python3 research/art-redo/decor_boxcut.py research/art-redo/gen/lpo_season.png \
 | `decor/rare_sakura_postbox.png` (xuân), `rare_shell_lantern.png` (hè), `rare_maple_mailbox.png` (thu), `rare_snow_mailbox.png` (đông) | Xong, cạnh dài 600 | Vẽ đủ 4 mùa (tech notes ghi "4 decor hiếm theo mùa"); người điều phối yêu cầu 3, món thứ 4 dư để chọn |
 
 **Feature Dev:** đổi `motifUrl()` trong `main.js` từ `season_*.svg` sang `season_*.png` (cùng tên gốc, chỉ khác đuôi); đổi phần thưởng 100 xu (E-7) thành `decor/rare_*` theo mùa.
+
+---
+
+## 10. Đợt 7 (6 ảnh): món kỷ niệm Sổ dấu ngày và chương 14
+
+**Nguồn nhu cầu:** người điều phối 2026-10-15. Vẽ chung một chat (6 ảnh); đính kèm `REF-CAT` + `REF-TOPIC` ở lệnh đầu, `REF-DECOR` + `REF-PIP` trước lưới decor, `REF-CARD` trước bưu thiếp.
+
+### Chương 14: Làng Ven Sông / Riverside Village (hè)
+
+Mùa theo vòng trong `chapters.js` (`(id − 3) % 4`, chương 13 là xuân nên 14 là hè). Không trùng 13 khu đã có. Tên "Làng Gốm Ven Sông" được đề xuất nhưng chủ đề Pottery đã có ở chương 7, nên bỏ chữ "Gốm" để khỏi gợi tem cũ. Đã thêm 3 khoá vào `manifest.json` và `grid_map.json`. **Level Dev** thêm chương 14 vào `CHAPTER_TOPICS`.
+
+| Mã | Chủ đề (EN / VI) | slug | Cặp dễ nhầm cần xem |
+|---|---|---|---|
+| T34 | Bridges / Cây cầu | `bridges` | Không có chủ đề cầu hay công trình; cấm tàu hoả, thuyền |
+| T35 | Mailboxes / Hòm thư | `mailboxes` | Hợp chủ đề bưu điện. Có thể gần Birdhouse (decor, không phải tem) |
+| T36 | Fans / Quạt | `fans` | Quạt giấy gấp có thể gần Origami (giả thuyết); cấm hình vỏ sò để né Shells |
+
+Lệnh cắt: `tools/art_take.sh <slug>` (thêm `--fixed` khi báo `THIẾU`), nén pngquant.
+
+Danh sách món (thay Row 1–3 của prompt T02; mở đầu và layout như T02):
+- **T34 Bridges:** mỗi cây cầu là một vật đứng riêng, chỉ có dải nước xanh nhỏ bên dưới. (1) cầu đá 3 vòm; (2) cầu gỗ nhỏ có lan can; (3) cầu gỗ có mái đỏ; (4) cầu treo dây thừng ván gỗ; (5) cầu vòng đỏ kiểu vườn phương Đông; (6) cầu vòm sắt trắng; (7) đá kê bước qua suối; (8) cầu đá cổ có cột đèn nhỏ; (9) icon: cầu một vòm đơn giản. Cấm: tàu, đường ray, ô tô, thuyền, người, thú, lâu đài, chữ.
+- **T35 Mailboxes:** (1) hòm thư trụ tròn đỏ kiểu Anh; (2) hòm thư nông thôn bạc có cờ đỏ; (3) hòm thư gỗ trên cọc; (4) khe thư đồng gắn tường; (5) hòm thư xanh dương đứng chân; (6) hòm thư treo tường màu xanh lá; (7) hòm thư hình ngôi nhà nhỏ; (8) hòm thư sơn hoa; (9) icon: hòm thư đơn giản có phong bì. Cấm: chim, nhà chim, chữ hay số trên hòm, người.
+- **T36 Fans:** (1) quạt giấy gấp đỏ; (2) quạt tròn lụa có cán tre; (3) quạt lá cọ; (4) quạt điện bàn cổ màu bạc hà; (5) quạt cây đứng; (6) quạt tre đan; (7) quạt ren trắng; (8) quạt giấy tròn xếp; (9) icon: quạt gấp đơn giản. Cấm: hình vỏ sò, lá cây rời, người, tay, chữ.
+
+### Decor chương 14 (D14)
+
+Tải về `lpo_decor_ch14.png`. Row 1: dây cờ thuyền giấy nhỏ xen cờ đuôi nheo xanh. Row 2: (4) mũ rơm treo móc; (5) tranh làng ven sông có bánh xe nước và cầu đá; (6) kệ nhỏ với lọ thuỷ tinh đựng sỏi suối. Row 3: (7) bình gốm cao cắm cỏ lau; (8) Pip ngủ trên đệm hình lá súng; (9) Pip thức trên cùng đệm (dự phòng).
+
+```
+mv ~/Downloads/lpo_decor_ch14.png research/art-redo/gen/
+python3 research/art-redo/decor_autosplit.py research/art-redo/gen/lpo_decor_ch14.png decor/boat_garland@1200 decor/sun_hat_peg decor/river_painting decor/pebble_jars decor/reed_vase decor/lilypad_bed decor/lilypad_bed_b
+```
+
+Gợi ý `CHAPTERS[13].decor`: `boat_garland 2, sun_hat_peg 3, pebble_jars 4, reed_vase 4, river_painting 5, lilypad_bed 6`.
+
+### Bưu thiếp C14
+
+Scene "Riverside Village" in summer: làng nhỏ bên dòng sông hiền, cầu đá vòm, bánh xe nước gỗ, nhà mái ngói đỏ có hoa trên cửa sổ, liễu rủ, thuyền con buộc ở bến, trời hè trong. → `python3 tools/art_slice.py postcard research/art-redo/gen/lpo_postcard_ch14.png ch14 --apply`
+
+### Món kỷ niệm Sổ dấu ngày (K1–K9)
+
+Tải về `lpo_keepsakes.png`. Một lưới 9 món (3 món chính theo yêu cầu, 6 món dư cho các trang sau), không trùng decor đã có (`brass_scale`, `door_bell` đã có nên không dùng). Cắt theo ô bằng `decor_boxcut.py`, cạnh dài 600.
+
+### Nhật ký đợt 7
+
+| Mã | Kết quả | Ghi chú duyệt |
+|---|---|---|
+| T34 Bridges | Xong | Cắt `--fixed`. Cầu đá 3 vòm (ô 1) và cầu đá có đèn (ô 8) cùng màu xám nhưng khác dáng |
+| T35 Mailboxes | Xong | Không chữ số trên hòm |
+| T36 Fans | Xong | Cắt `--fixed`. Quạt lá cọ (ô 3) xanh có gân, có thể gần Shells hoặc Leaf (giả thuyết). Icon quạt gấp có chấm đỏ tròn |
+| D14 decor ch14 | Xong: `decor/boat_garland, sun_hat_peg, river_painting, pebble_jars, reed_vase, lilypad_bed, lilypad_bed_b` | Tách bằng `decor_autosplit.py` |
+| K1–K9 món kỷ niệm | Xong: `decor/keepsake_stamp_box`, `keepsake_postmark`, `keepsake_cap` (3 món chính), thêm `keepsake_stamp_jar`, `keepsake_letters`, `keepsake_watch` (đồng hồ quả quýt chỉ có vạch, không số), `keepsake_van`, `keepsake_postcard`, `keepsake_trophy` (6 món dư cho các trang sau) | Ảnh gốc `gen/lpo_keepsakes.png`, cắt theo ô 418 px bằng `decor_boxcut.py` |
+| Winter/2, Winter/3 (vẽ lại) | Xong: ghi đè `cards/winter/2.png` (người tuyết đeo bịt tai → dải băng nhũ trên mép mái tuyết) và `cards/winter/3.png` (hai người tuyết → nhà gỗ phủ tuyết có ống khói) | Theo yêu cầu người điều phối (ngoại lệ được ghi đè). Lưới mới `gen/lpo_winter_fix.png` có 9 món mùa đông thay thế (bịt tai, ca cao, cột đèn, hồ đóng băng, tường tuyết, thỏ tuyết, cành quả đỏ) để dùng sau nếu cần. Không chọn găng len, mũ len vì trùng Knitting/3 và Knitting/4; không chọn ủng vì gần Footwear. Bộ Winter giờ: 0 và 1 người tuyết (khác nhau ở mũ, chổi), 2 băng nhũ, 3 nhà gỗ, 4 quả cầu tuyết, 5 xe trượt, 6 lều tuyết, 7 đống bóng tuyết |
+| C14 bưu thiếp | Xong: `assets/ch14/postcard.jpg` | Chat riêng, đính kèm `REF-CARD`. Prompt chèn bằng `execCommand('insertText')` vì ô nhập không nhận phím ở lần đó |
+
+**Tổng kết đợt 7:** 7 ảnh (3 chủ đề, D14, 9 món kỷ niệm, lưới vẽ lại Winter, C14), không ảnh nào bị loại. **Level Dev:** thêm chương 14 "Làng Ven Sông / Riverside Village" (hè) với Bridges / Cây cầu, Mailboxes / Hòm thư, Fans / Quạt vào `CHAPTER_TOPICS`; Winter/2–3 đã đổi hình (giữ chỉ số). **Feature Dev:** `CHAPTERS[13].decor` theo gợi ý D14, bưu thiếp `ch14`, món kỷ niệm `decor/keepsake_*` cho Sổ dấu ngày.

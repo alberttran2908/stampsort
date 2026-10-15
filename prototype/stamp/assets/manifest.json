@@ -382,5 +382,17 @@
  "Playground": {
   "dir": "cards/playground",
   "arts": 8
+ },
+ "Bridges": {
+  "dir": "cards/bridges",
+  "arts": 8
+ },
+ "Mailboxes": {
+  "dir": "cards/mailboxes",
+  "arts": 8
+ },
+ "Fans": {
+  "dir": "cards/fans",
+  "arts": 8
  }
 }
