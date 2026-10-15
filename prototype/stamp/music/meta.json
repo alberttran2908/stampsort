@@ -1,0 +1,38 @@
+{
+ "ambience": {
+  "loop_s": 40.0,
+  "xfade_s": 2.0,
+  "file_lufs_i": -26.0,
+  "in_game_lufs": -38.0,
+  "gain": 0.2512,
+  "true_peak_db": -5.1,
+  "seam_db": -92.5,
+  "kb": 247,
+  "seconds": 40.0,
+  "gain_play": 0.1585
+ },
+ "home": {
+  "loop_s": 75.789478,
+  "xfade_s": 2.0,
+  "file_lufs_i": -24.0,
+  "in_game_lufs": -31.0,
+  "gain": 0.4467,
+  "true_peak_db": -6.1,
+  "seam_db": -173.9,
+  "kb": 608,
+  "bpm": 76,
+  "bars": 24
+ },
+ "play": {
+  "loop_s": 72.727279,
+  "xfade_s": 2.0,
+  "file_lufs_i": -24.0,
+  "in_game_lufs": -31.5,
+  "gain": 0.4217,
+  "true_peak_db": -6.0,
+  "seam_db": -71.8,
+  "kb": 585,
+  "bpm": 66,
+  "bars": 20
+ }
+}

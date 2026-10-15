@@ -11,7 +11,7 @@ cd "$ROOT"
 [ -d prototype/stamp/assets ] || .venv/bin/python tools/build_proto_assets.py
 rm -rf "$OUT" && mkdir -p "$OUT"
 cp prototype/stamp/index.html prototype/stamp/privacy.html prototype/stamp/support.html "$OUT/"   # 2 trang tĩnh cho App Store (Support URL, Privacy Policy URL)
-cp -R prototype/stamp/src prototype/stamp/assets prototype/stamp/sfx "$OUT/"
+cp -R prototype/stamp/src prototype/stamp/assets prototype/stamp/sfx prototype/stamp/music "$OUT/"   # music/: nhạc nền + ambience (tools/synth_music.py)
 rm -rf "$OUT/assets/audio"
 # 40 level L21-L60 lấy từ APK (thiết kế của ABI): chỉ cho bản iOS TestFlight nội bộ (KEEP_APK_LEVELS=1, xem mobile/package.json).
 # Web công khai mặc định bỏ, chỉ còn 20 level tự làm.
@@ -22,9 +22,9 @@ touch "$OUT/.nojekyll"
 VER="$(git rev-parse --short HEAD)-$(date +%s)"
 sed -i '' "s#src/main.js\"#src/main.js?v=$VER\"#" "$OUT/index.html"
 for f in "$OUT"/src/*.js; do sed -i '' -E "s#from '\./([a-z]+)\.js'#from './\1.js?v=$VER'#g" "$f"; done
-# Cloudflare trước GitHub Pages cache ảnh/âm thanh 4 giờ theo URL: đổi tên assets/ và sfx/ theo mã băm nội dung
-# (chỉ đổi khi art/âm thanh đổi) rồi sửa mọi đường dẫn 'assets/... (assets/... `sfx/... trong index.html và src/*.js
-for d in assets sfx; do
+# Cloudflare trước GitHub Pages cache ảnh/âm thanh 4 giờ theo URL: đổi tên assets/, sfx/, music/ theo mã băm nội dung
+# (chỉ đổi khi art/âm thanh đổi) rồi sửa mọi đường dẫn 'assets/... (assets/... `sfx/... `music/... trong index.html và src/*.js
+for d in assets sfx music; do
   H="$(cd "$OUT/$d" && find . -type f | LC_ALL=C sort | xargs shasum | shasum | cut -c1-8)"
   mv "$OUT/$d" "$OUT/$d-$H"
   for f in "$OUT/index.html" "$OUT"/src/*.js; do sed -i '' -E "s#([\"'\`(])$d/#\1$d-$H/#g" "$f"; done

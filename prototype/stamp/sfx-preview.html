@@ -63,6 +63,19 @@
   <button id="stopAll">Dừng hết</button>
   <span class="status" id="status">Chạm một nút bất kỳ để nạp âm thanh</span>
 </div></div>
+<section id="music" style="max-width:960px;margin:16px auto;padding:0 16px">
+  <h2>Nhạc nền và không khí (P10)</h2>
+  <p>Tự tổng hợp bằng <code>tools/synth_music.py</code>, thang C ngũ cung như SFX. Phát đúng độ to trong game (gain trong <code>music/meta.json</code> × 0.8), lặp vô hạn. Bấm thêm vài nút SFX ở dưới trong lúc nhạc chạy để nghe nhạc có nằm dưới SFX không.</p>
+  <p>
+    <button data-mus="home,ambience">Màn chính + không khí</button>
+    <button data-mus="play,ambience:play">Màn chơi + không khí</button>
+    <button data-mus="home">Chỉ nhạc màn chính</button>
+    <button data-mus="play">Chỉ nhạc màn chơi</button>
+    <button data-mus="ambience">Chỉ không khí</button>
+    <button id="musStop">Dừng nhạc</button>
+    <span class="status" id="musStatus"></span>
+  </p>
+</section>
 <main id="main"></main>
 
 <script>
@@ -296,7 +309,33 @@ function table(meta) {
   return wrap;
 }
 
-$('#stopAll').onclick = stopAll;
+$('#stopAll').onclick = () => { stopAll(); musStop(); };
+
+// ---- nhạc nền (P10): lặp bằng loopEnd = loop_s (Chrome/Safari bỏ encoder delay; trong game dùng crossfade 2 s)
+let musMeta = null, musSrcs = [];
+const musBuf = {};
+function musStop() { musSrcs.forEach(s => { try { s.stop(); } catch (e) { } }); musSrcs = []; $('#musStatus').textContent = ''; }
+async function musPlay(spec) {
+  await ensure();
+  if (ctx.state === 'suspended') await ctx.resume();
+  musMeta = musMeta || await (await fetch('music/meta.json', { cache: 'no-cache' })).json();
+  musStop();
+  for (const part of spec.split(',')) {
+    const [name, variant] = part.split(':');
+    if (!musBuf[name]) musBuf[name] = await ctx.decodeAudioData(await (await fetch(`music/${name}.mp3`, { cache: 'no-cache' })).arrayBuffer());
+    const m = musMeta[name];
+    const src = ctx.createBufferSource();
+    src.buffer = musBuf[name]; src.loop = true; src.loopStart = 0; src.loopEnd = m.loop_s;
+    const g = ctx.createGain();
+    g.gain.value = (variant === 'play' ? m.gain_play : m.gain) * (gameMix() ? 0.8 : 1);
+    src.connect(g).connect($('#phone').checked ? phoneIn : master);
+    src.start();
+    musSrcs.push(src);
+  }
+  $('#musStatus').textContent = spec.split(',').map(p => { const m = musMeta[p.split(':')[0]]; return `${p}: vòng ${m.loop_s.toFixed(1)} s, ${m.bpm ? m.bpm + ' BPM, ' : ''}${p.endsWith(':play') ? -42 : m.in_game_lufs} LUFS trong game`; }).join(' | ');
+}
+document.querySelectorAll('[data-mus]').forEach(b => { b.onclick = () => musPlay(b.dataset.mus); });
+$('#musStop').onclick = musStop;
 document.addEventListener('pointerdown', () => { ensure(); }, { once: true });
 fetch('sfx/meta.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null).then(render);
 </script>

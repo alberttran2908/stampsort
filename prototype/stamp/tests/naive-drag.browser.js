@@ -161,3 +161,90 @@ export async function run({ level = 3, actions = 40, seed = 1, hasty = false, le
   if (hasty) { await settle(g, 6000); const st = strays(g, g.geo()); if (st.length) bug('STRAY', 'sau chuỗi kéo vội: ' + st.slice(0, 3).join('; ')); }
   return { level, seed, hasty, drags: done, moved, counts, log };
 }
+
+// ---------------------------------------------------------------- chạm trượt (R9, review game design v2 #1)
+// Người run tay: chạm vào lá nhưng ngón tay trượt đi vài pt trước khi nhấc lên. Lá có chỗ đi thì PHẢI đi như một cú chạm.
+//   const m = await import('/tests/naive-drag.browser.js'); await m.runDrift({ level: 3 })
+// Mỗi thử: dựng lại cùng một bàn, bấm vào giữa phần lộ của lá, trượt `pt` theo 8 hướng (px CSS = pt), thả.
+// pass khi mọi cú trượt <= 12pt đều làm lá đi (S.used tăng và lá rời chỗ cũ).
+async function closePanels(ms = 9000) {
+  for (const t0 = performance.now(); performance.now() - t0 < ms;) {
+    const b = [...document.querySelectorAll('.panel .btn')].find(x => x.offsetParent);
+    if (b) b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    await sleep(300);
+  }
+}
+/** Lá trên cùng của một cột mà chạm vào là đi được (theo đúng luật chạm của game: E.bestTargetFor). */
+function tappableTop(g) {
+  const S = g.S, E = g.E;
+  for (let i = 0; i < S.cols.length; i++) {
+    const col = S.cols[i];
+    if (!col.length || !col[col.length - 1].up) continue;
+    const src = { from: 'col', i, idx: E.maxRunStart(S, i) };
+    const dst = E.bestTargetFor(S, src);
+    if (dst && !(dst.to === 'found' && !S.found[dst.i] && S.found.filter(f => !f).length === 1)) return { i, card: col[col.length - 1] };
+  }
+  return null;
+}
+async function driftTap(g, card, pt, angle, id) {
+  const board = document.getElementById('board');
+  const r = g.views().get(card.id).el.getBoundingClientRect();
+  const start = { x: r.left + r.width / 2, y: r.top + r.height * 0.45 };
+  const el = document.elementFromPoint(start.x, start.y);
+  const end = { x: start.x + Math.cos(angle) * pt, y: start.y + Math.sin(angle) * pt };
+  fire('pointerdown', el, start, id);
+  const steps = pt ? 5 : 0;
+  for (let k = 1; k <= steps; k++) {
+    const c = { x: start.x + (end.x - start.x) * k / steps, y: start.y + (end.y - start.y) * k / steps };
+    fire('pointermove', window, c, id);
+    await sleep(16);
+  }
+  await sleep(40);
+  fire('pointerup', board, end, id);
+  return el && el.closest('.card') && el.closest('.card')._view.id === card.id;
+}
+export async function runDrift({ level = 3, drifts = [0, 3, 5, 8, 12], dirs = 8, restart = true } = {}) {
+  const g = window.__game;
+  if (restart) { g.startLevel(level - 1); await settle(g, 6000); await closePanels(); await settle(g); }
+  const base = g.E.clone(g.S);
+  const rows = [];
+  let pid = 300, fail = 0;
+  for (const pt of drifts) {
+    let moved = 0, total = 0, miss = 0;
+    for (let d = 0; d < (pt ? dirs : 1); d++) {
+      g.setState(g.E.clone(base));
+      await settle(g);
+      const tgt = tappableTop(g);
+      if (!tgt) return { error: 'không có lá nào chạm được trên bàn này' };
+      const before = { used: g.S.used, col: g.S.cols[tgt.i].length };
+      const hit = await driftTap(g, tgt.card, pt, d * 2 * Math.PI / dirs, pid++);
+      if (!hit) { miss++; continue; }
+      await settle(g);
+      total++;
+      const went = g.S.used > before.used && !g.S.cols[tgt.i].some(c => c.id === tgt.card.id);
+      if (went) moved++; else if (pt <= 12) fail++;
+    }
+    rows.push({ pt, moved, total, hitMiss: miss });
+  }
+  g.setState(g.E.clone(base));
+  await settle(g);
+  return { level, pass: fail === 0, rows };
+}
+/** Kịch bản L1 (cần save chưa xem kịch bản): chạm trượt 12pt vào đúng lá bàn tay chỉ thì kịch bản sang bước tiếp,
+ *  không hiện câu từ chối "Đặt vào ô bàn tay chỉ". */
+export async function runDriftScript({ pt = 12 } = {}) {
+  const g = window.__game;
+  g.startLevel(0);
+  await settle(g, 8000);
+  for (let k = 0; k < 40 && !g.scriptStep; k++) await sleep(150);   // kịch bản bắt đầu sau banner
+  await settle(g);
+  const st = g.scriptStep;
+  if (!st || st.src == null) return { skipped: 'không có kịch bản (save đã xem kịch bản L1)' };
+  const card = [...g.S.cols.flat(), ...g.S.waste].find(c => c.id === st.src);
+  const used = g.S.used;
+  await driftTap(g, card, pt, Math.PI / 4, 900);
+  await sleep(250);
+  const toast = g.toastText;
+  await settle(g);
+  return { pass: g.S.used === used + 1 && !toast, used: [used, g.S.used], toast };
+}

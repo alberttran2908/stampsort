@@ -3,7 +3,8 @@ import { LEVELS as LEVELS_B } from './levels_b.js';
 import { LEVELS_APK } from './levels_apk.js';   // L21-L60: level APK 0.9.5 (tools/import_apk_levels.mjs)
 import * as E from './engine.js';
 import { hint as solverHint, solve } from './solver.js';
-import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js';
+import { initAudio, unlockAudio, sfx, comboSfx, setMuted, isMuted, setMusicOn, isMusicOn, setMusicScene } from './audio.js';
+import { haptic } from './haptics.js';   // 4 bậc, Capacitor Haptics trên iOS (benchmark-grand-games.md P1)
 import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js';
 import { candidateActions, isDeadlocked } from './solver.js';
 import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js';
@@ -226,7 +227,7 @@ let lastMovesShown = null;
 let lowWarned = false;
 let overtime = false;          // đã vào Overtime (level khó, hết moves vẫn chơi tiếp)
 let jokerFree = false;         // Joker cứu trợ miễn phí khi kẹt (level khó)
-let play = { start: 0, attempt: 0, boosters: 0, undo: 0, rescues: 0, continues: 0 };   // số liệu ván hiện tại cho analytics
+let play = { start: 0, attempt: 0, boosters: 0, undo: 0, rescues: 0, continues: 0, taps: 0, drags: 0 };   // số liệu ván hiện tại cho analytics
 let levelActive = false;
 let extraKept = -1;          // level đã mua Ô phụ (giữ khi Retry cùng level)
 let levelToken = 0;
@@ -661,6 +662,7 @@ function doUndo() {
   relayout({ dur: 260 });
   updateSlotLabels();
   updateHUD(true);
+  saveRun();
 }
 
 // ---- hint
@@ -761,6 +763,7 @@ function placeJokerAt(j) {
   updateHUD();
   undoStack = [];      // không undo joker
   renderBoosters();
+  saveRun();
   if (script) { $('boosters').querySelectorAll('.booster').forEach(b => b.classList.remove('active')); script.i++; setTimeout(runScript, 500); }
   if (b) b.classList.remove('active');
   void res;
@@ -926,6 +929,7 @@ function unlockExtra() {
   sparkle(EXTRA_X + CW / 2, ROW_A + CH / 2, 22, { colors: ['#8cff7a', '#fff', '#ffe36b'] });
   updateDeckUI();
   updateSlotLabels();
+  saveRun();
 }
 
 // ============================================================ hand / tutorial / toast
@@ -981,16 +985,20 @@ function toast(msg, ms = 1500) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('on'), ms);
 }
-function tut(html) {
+// ms: tự ẩn sau bao lâu (0 = giữ tới khi có lệnh ẩn, vd. câu "Tem mới" giữ tới nước đi đầu tiên)
+function tut(html, ms = 9000) {
   const t = $('tut');
   clearTimeout(tutTimer);
   if (!html) { t.classList.remove('on'); return; }
   const deepest = S ? Math.max(0, ...S.cols.map(col => (col.length ? colOffsets(col)[col.length - 1] : TAB_Y) + CH)) : 0;
-  if (!script && deepest > 1490 + DY_BOT) { t.classList.remove('on'); toast(html, 2600); return; }
+  // cột dài che chỗ ô chữ: đưa lên toast, vẫn hiện >= TIP_MIN_MS (toast nhân 1.5 thời gian)
+  if (!script && deepest > 1490 + DY_BOT) { t.classList.remove('on'); toast(html, Math.max(TIP_MIN_MS, Math.min(ms || 9000, 9000)) / 1.5); return; }
   t.innerHTML = html;
   t.classList.add('on');
-  if (!script) tutTimer = setTimeout(() => t.classList.remove('on'), 9000);   // gợi ý tự ẩn, không nằm mãi trên màn
+  if (!script && ms > 0) tutTimer = setTimeout(() => t.classList.remove('on'), ms);   // gợi ý tự ẩn, không nằm mãi trên màn
 }
+// Nhịp đọc của người lớn tuổi (review #9): chữ gợi ý hiện ít nhất 6 giây, kể cả khi người chơi đi nước ngay.
+const TIP_MIN_MS = 6000, TIP_MAX_MS = 12000;
 let tutTimer = 0;
 
 // ---- Tutorial ép bước (level 1 dựng lại từ video). Bước: { text, src: cardId, dst: {found:k}|{onto:cardId}, draw, info }
@@ -1022,7 +1030,7 @@ function runScript() {
     clearHint();
     renderBoosters();
     // vừa đặt Tem Vàng theo kịch bản: dạy nốt cách dùng nó (review FTUE #7, QA #7)
-    if (wasJoker) { const h = t('joker_after'); tut(h); setTimeout(() => { if ($('tut').innerHTML === h) tut(null); }, 5000); }
+    if (wasJoker) tut(t('joker_after'), TIP_MIN_MS + 2000);
     tutorialCheck();
     resetIdleHint();
     return;
@@ -1032,8 +1040,9 @@ function runScript() {
     // bước chỉ có chữ: kết thúc kịch bản ngay (không chặn thao tác bằng "Làm theo bàn tay" khi không có bàn tay)
     script.i = script.steps.length;
     runScript();
-    tut(html);
-    setTimeout(() => { if (!script && $('tut').innerHTML === html) tut(null); }, step.ms || 2600);
+    tut(html, 0);
+    const shown = $('tut').innerHTML;
+    setTimeout(() => { if (!script && $('tut').innerHTML === shown) tut(null); }, Math.max(TIP_MIN_MS, step.ms || 0));
     return;
   }
   tut(html);
@@ -1108,6 +1117,10 @@ const TUTS = [
   { id: 'crown', lv: [2, 3, 4], text: () => t('tip_crown'),
     when: () => S.found.some(f => !f) && findAction(a => a.dst && a.dst.to === 'found' && !S.found[a.dst.i]),
     done: ev => ev.some(e => e.type === 'open') },
+  // dạy "chạm để tự đi" (review #8): bàn tay CHẠM (không kéo) lên một lá chạm vào là đi tới chỗ có ích
+  { id: 'tap', lv: [2, 3, 4], tapHand: true, text: () => t('tip_tap'),
+    when: () => S.used >= 1 && tapTeachAction(),
+    done: ev => !lastMoveDrag && ev.some(e => e.type === 'move') },
   { id: 'draw', lv: [2, 3], text: () => t('tip_draw'),
     when: () => S.deck.length && !findAction(a => a.dst && a.dst.to === 'found'),
     action: () => ({ draw: true }), done: ev => ev.some(e => e.type === 'draw') },
@@ -1121,6 +1134,46 @@ const TUTS = [
   { id: 'full', lv: [3, 4, 5, 6, 7, 8, 9, 10], info: true, text: () => t('tip_full'),
     when: () => S.found.every(Boolean) && [...S.cols.map(c => c[c.length - 1]), S.waste[S.waste.length - 1]].some(c => c && c.k === 'topic') },
 ];
+// ---- "chạm để tự đi" (review #8): tip ở L2-L4 hoặc ngay sau lần kéo hụt đầu tiên (mọi level)
+let lastMoveDrag = false;      // nước đi gần nhất là kéo (true) hay chạm (false)
+/** Một nước chạm vào là đi tới chỗ CÓ ÍCH: vào ô đúng loại, lên tem cùng loại, hoặc tem vương miện mở ô (khi không rủi ro). */
+function tapTeachAction() {
+  const useful = a => a.dst && a.src && (a.dst.to === 'found'
+    ? (!!S.found[a.dst.i] || !lastSlotRisky())
+    : S.cols[a.dst.j].length > 0 && S.cols[a.dst.j][S.cols[a.dst.j].length - 1].k !== E.JOKER);
+  const a = findAction(useful);
+  if (!a) return null;
+  // lá chạm vào phải tự đi đúng nước này (chạm chọn đích theo bestTapFor)
+  const pick = bestTapFor([a.src]);
+  return pick ? { src: pick.src, dst: pick.dst } : null;
+}
+function showTapHand(a) {
+  clearHint();
+  if (!a) return false;
+  const run = E.sourceCards(S, a.src);
+  if (!run) return false;
+  run.forEach(c => { const v = views.get(c.id); if (v) v.el.classList.add('hintglow'); });
+  const top = views.get(run[run.length - 1].id);
+  if (!top) return false;
+  handTap(top.x + CW / 2, top.y + CH * 0.45);
+  return true;
+}
+function teachTapSoon() {
+  if (save.seen.tap || script) return;
+  setTimeout(() => {
+    if (save.seen.tap || script || tutorial || introHold || ended || panelOpen || drag || jokerMode || pickMode || !S) return;
+    save.seen.tap = 1;
+    persist();
+    track('tip_shown', { level: levelIdx + 1, key: 'tap', via: 'drop_miss' });
+    const a = tapTeachAction();
+    if (a) {
+      tutorial = { id: 'tap', t0: Date.now() };
+      tut(t('tip_tap'), TIP_MAX_MS);
+      showTapHand(a);
+      tutorialNag();
+    } else tut(t('tip_tap'), TIP_MAX_MS);
+  }, 1600);
+}
 function findAction(pred) {
   const acts = E.legalMoves(S);
   // ưu tiên chồng dài nhất (giống solver)
@@ -1130,15 +1183,24 @@ function tutorialCheck(events = []) {
   if (!tutorial && (panelOpen || (deferredIntro && S.used >= 6))) return;   // đừng bật gợi ý mới đè lên popup (QA v2 N1: L2 "Tem vương miện" + popup Gợi ý)
   if (tutorial) {
     const step = TUTS.find(t => t.id === tutorial.id);
-    if (step.info ? events.length : step.done && step.done(events)) {
+    if (step.info) {
+      // tip chỉ có chữ: ẩn sau nước đi đầu tiên, nhưng không sớm hơn TIP_MIN_MS kể từ lúc hiện
+      if (events.length && !tutorial.moved) {
+        const tok = tutorial;
+        tok.moved = true;
+        setTimeout(() => { if (tutorial === tok) { tutorial = null; tut(null); } }, Math.max(0, TIP_MIN_MS - (Date.now() - tok.t0)));
+      }
+      return;
+    }
+    if (step.done && step.done(events)) {
       tutorial = null; tut(null); clearHint();
-    } else if (!step.info) {
+    } else {
       // làm lại mũi tên theo state mới
       const ok = step.when();
       const a = ok ? (step.action ? step.action() : ok) : null;
-      if (a) showAction(a); else { tutorial = null; tut(null); clearHint(); }
+      if (a) (step.tapHand ? showTapHand(a) : showAction(a)); else { tutorial = null; tut(null); clearHint(); }
       return;
-    } else return;
+    }
   }
   for (const step of TUTS) {
     if (!step.lv.includes(levelIdx + 1) || save.seen[step.id]) continue;
@@ -1148,11 +1210,13 @@ function tutorialCheck(events = []) {
     markTip();
     save.seen[step.id] = 1;
     persist();
-    tutorial = { id: step.id };
+    const tok = { id: step.id, t0: Date.now() };
+    tutorial = tok;
     track('tip_shown', { level: levelIdx + 1, key: step.id });
-    tut(typeof step.text === 'function' ? step.text() : step.text);
-    if (!step.info) { showAction(step.action ? step.action() : a); tutorialNag(); }
-    else setTimeout(() => { if (tutorial && tutorial.id === step.id) { tutorial = null; tut(null); } }, 3800);
+    tut(typeof step.text === 'function' ? step.text() : step.text, step.info ? TIP_MAX_MS : 9000);
+    if (step.tapHand) { showTapHand(a); tutorialNag(); }
+    else if (!step.info) { showAction(step.action ? step.action() : a); tutorialNag(); }
+    else setTimeout(() => { if (tutorial === tok) { tutorial = null; tut(null); } }, TIP_MAX_MS);
     return;
   }
 }
@@ -1253,6 +1317,10 @@ function colAt(p) {
   }
   return -1;
 }
+// Chạm trượt (review game design v2 #1): đo bằng pt trên màn hình (px CSS), không theo stage, vì run tay là khoảng cách thật.
+// Ngón tay đi chưa quá DRAG_START_PT: vẫn là chạm. Đã nhấc lá nhưng thả trong TAP_SLOP_PT quanh điểm bấm và chỗ thả
+// không có đích hợp lệ: coi như chạm (lá tự đi), không coi là kéo hụt. 12pt trượt vẫn phải tính là chạm.
+const DRAG_START_PT = 8, TAP_SLOP_PT = 14;
 let lastActAt = 0;          // thời điểm thao tác gần nhất (nước đi, rút bài, hoàn tác)
 const tooSoon = () => performance.now() - lastActAt < 250;   // chạm đúp do run tay: bỏ cú thứ hai (QA v2 N7)
 function onDown(e) {
@@ -1325,7 +1393,7 @@ function onMove(e) {
   e.preventDefault();
   const p = toStage(e);
   const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
-  if (!drag.moved && Math.hypot(dx, dy) > 12) {
+  if (!drag.moved && Math.hypot(dx, dy) * scale > DRAG_START_PT) {
     drag.moved = true;
     sfx('pick', { vol: 0.8 });
     haptic(6);
@@ -1364,22 +1432,7 @@ function onUp(e) {
   unhighlight();
   d.vs.forEach(v => { if (v.dragAnim) { v.dragAnim = false; animOff(v); } });
   if (!d.moved && tooSoon()) return;          // chạm đúp do run tay: bỏ cú chạm thứ hai (kéo thì vẫn nhận)
-  if (!d.moved) {
-    // chạm: tự tìm đích
-    if (scriptStep()) {
-      const a = scriptAction(scriptStep());
-      if (a && !a.draw && scriptAllows(d.src, a.dst)) doMove(d.src, a.dst, false); else scriptReject(d.vs);
-      return;
-    }
-    const pick = bestTapFor(d.cands);
-    // chạm không tự mở ô trống CUỐI CÙNG (quyết định dễ gây kẹt): phải kéo vào nếu chắc chắn
-    if (pick && pick.dst.to === 'found' && !S.found[pick.dst.i] && lastSlotRisky()) {
-      nudge(d.vs); sfx('deny'); toast(t('err_last_slot'), 2000);
-      track('last_slot_tap_blocked', { level: levelIdx + 1 });
-    } else if (pick) doMove(pick.src, pick.dst, false);
-    else rejectTap(d.src, d.vs);
-    return;
-  }
+  if (!d.moved) { play.taps++; onTap(d); return; }
   const p = toStage(e);
   // Lượt 1: chỗ NGÓN TAY thả, thử mọi cách hiểu cú cầm (xấp lớn nhất trước). Lượt 2 (dự phòng): tâm lá đáy của xấp.
   let pick = null;
@@ -1389,16 +1442,48 @@ function onUp(e) {
     const dst = targetAt(src, { x: v0.x + CW / 2, y: v0.y + CH / 2 });
     if (dst) { pick = { src, dst }; break; }
   }
-  d.vs.forEach(v => { v.lifted = false; v.el.classList.remove('lift'); });
+  d.vs.forEach(v => { v.lifted = false; v.el.classList.remove('lift'); killKey('lift-' + v.id); });
+  const driftPt = Math.hypot(p.x - d.start.x, p.y - d.start.y) * scale;
+  if (!pick && driftPt <= TAP_SLOP_PT) {
+    // chạm trượt (run tay): lá đã nhấc lên nhưng ngón tay gần như đứng yên và không thả vào đích nào -> xử lý như chạm
+    if (tooSoon()) { snapBack(d.vs); return; }
+    play.taps++;
+    const before = S.used;
+    onTap(d, true);
+    track('tap_drift', { level: levelIdx + 1, pt: Math.round(driftPt * 10) / 10, moved: S.used !== before });
+    return;
+  }
+  play.drags++;
   if (pick) doMove(pick.src, pick.dst, true);
   else if (scriptStep()) scriptReject(null);           // thả hụt trong kịch bản: lá về chỗ, bàn tay hiện lại (review FTUE #1)
   else {
     const why = dropReason(d.cands[d.cands.length - 1], p);   // lý do theo lá đang cầm
     if (why) { toast(why, 1600); teachOnError('drop'); }
     sfx('deny');
-    const T = computeLayout();
-    d.vs.forEach(v => { moveView(v, T.get(v.id), { dur: 260, easing: ease.outBackSoft }).then(() => setZ(v, T.get(v.id).z)); });
+    snapBack(d.vs);
+    teachTapSoon();                                       // kéo hụt lần đầu: chỉ lối dễ hơn "chạm để tự đi" (review #8)
   }
+}
+function snapBack(vs) {
+  const T = computeLayout();
+  vs.forEach(v => { const t0 = T.get(v.id); if (t0) moveView(v, t0, { dur: 260, easing: ease.outBackSoft }).then(() => setZ(v, t0.z)); });
+}
+/** Chạm một lá/xấp: tự tìm đích. drift: chạm trượt (lá đã nhấc lên): lá đứng lệch, phải trả về chỗ nếu không đi. */
+function onTap(d, drift = false) {
+  if (scriptStep()) {
+    const a = scriptAction(scriptStep());
+    if (a && !a.draw && scriptAllows(d.src, a.dst)) doMove(d.src, a.dst, false);
+    else { if (drift) snapBack(d.vs); scriptReject(d.vs); }
+    return;
+  }
+  const pick = bestTapFor(d.cands);
+  // chạm không tự mở ô trống CUỐI CÙNG (quyết định dễ gây kẹt): phải kéo vào nếu chắc chắn
+  if (pick && pick.dst.to === 'found' && !S.found[pick.dst.i] && lastSlotRisky()) {
+    if (drift) snapBack(d.vs);
+    nudge(d.vs); sfx('deny'); toast(t('err_last_slot'), 2000);
+    track('last_slot_tap_blocked', { level: levelIdx + 1 });
+  } else if (pick) doMove(pick.src, pick.dst, false);
+  else { if (drift) snapBack(d.vs); rejectTap(d.src, d.vs); }
 }
 // Mở ô trống CUỐI bằng chạm chỉ bị chặn khi có rủi ro: level có giới hạn moves và còn nhiều chủ đề chưa mở hơn số ô trống
 function lastSlotRisky() {
@@ -1493,18 +1578,18 @@ function teachOnError(reason = 'other') {
 // Nhịp gợi ý: mỗi lần một khái niệm, cách nhau >= 4 nước và 7 giây, tối đa 3 gợi ý mỗi level (chống quá tải).
 let tipGate = { used: -99, t: 0, count: 0 };
 function canTip() {
-  if (script || tutorial || !S) return false;
+  if (script || tutorial || introHold || !S) return false;
   return S.used - tipGate.used >= 4 && Date.now() - tipGate.t >= 7000 && tipGate.count < 3;
 }
 function markTip() { tipGate = { used: S.used, t: Date.now(), count: tipGate.count + 1 }; }
 // Gợi ý một lần cho mỗi khái niệm, đúng lúc nó xảy ra (just-in-time).
-function onceTip(key, vars = {}, ms = 4800) {
+function onceTip(key, vars = {}, ms = TIP_MIN_MS + 1000) {
   if (save.seen['tip_' + key] || !canTip()) return false;
   markTip();
   save.seen['tip_' + key] = 1;
   persist();
   track('tip_shown', { level: levelIdx + 1, key });
-  tut(t('tip_' + key, vars));
+  tut(t('tip_' + key, vars), ms);
   const mine = $('tut').innerHTML;
   setTimeout(() => { if ($('tut').innerHTML === mine && !script && !tutorial) tut(null); }, ms);
   return true;
@@ -1549,6 +1634,7 @@ function doMove(src, dst, fromDrag) {
   if (undoStack.length > 60) undoStack.shift();
   undoBlockedBySend = false;
   lastActAt = performance.now();
+  lastMoveDrag = !!fromDrag;
   clearHint();
   resetIdleHint();
   playEvents(res.events, fromDrag);
@@ -1709,6 +1795,7 @@ function playEvents(events, fromDrag) {
   if (!delivered) updateSlotLabels();
   else setTimeout(updateSlotLabels, 400);
   updateHUD(true);
+  if (introHold) releaseIntro();
   if (script) { $('boosters').querySelectorAll('.booster').forEach(b => b.classList.remove('active')); script.i++; setTimeout(runScript, 420); }
   else tutorialCheck(events);
   afterAction();
@@ -1839,7 +1926,9 @@ function afterAction() {
   if (ended) return;
   const token = levelToken;
   const same = fn => () => { if (token === levelToken) fn(); };
+  saveRun();
   if (E.isWon(S)) {
+    clearRun();
     ended = true;
     clearTimeout(idleTimer);
     tut(null);
@@ -1871,6 +1960,7 @@ function startOvertime() {
   haptic([20, 40, 20]);
   floatText(t('overtime_big'), 540, 420, '#ffd36b');
   toast(t('overtime'), 2800);
+  saveRun();
   const tp = topicProgress();
   track('overtime_start', { level: levelIdx + 1, attempt: play.attempt, delivered: S.delivered, total: S.total, topics_left: tp.total - tp.done, special: specialOf(L) || '' });
 }
@@ -1951,12 +2041,13 @@ function stars() {
   return S.moves >= 0.5 * slack ? 3 : S.moves >= 0.2 * slack ? 2 : 1;
 }
 async function winSequence() {
+  clearRun();
   levelActive = false;
   const lvNum = levelIdx + 1;
   const done = {
     level: lvNum, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? 0 : S.moves,
     time_s: Math.round((Date.now() - play.start) / 1000), stars: stars(), overtime, boosters: play.boosters, undo: play.undo,
-    rescues: play.rescues, continues: play.continues, special: specialOf(L) || '', safety: safetyOf(L),
+    rescues: play.rescues, continues: play.continues, special: specialOf(L) || '', safety: safetyOf(L), taps: play.taps || 0, drags: play.drags || 0,
   };
   track('level_complete', done);
   track('af_level_achieved', { af_level: lvNum, af_score: done.stars });      // sự kiện chuẩn AppsFlyer
@@ -2105,6 +2196,7 @@ function addMoves(n, free = false, source = 'debug') {
   sfx('claim');
   floatText(`+${n}`, 110, 200, '#8cff7a');
   updateHUD(true);
+  saveRun();
 }
 function fakeAd(done) {
   const p = panel({ title: t('ad_break'), body: `<p>${t('ad_mock')}</p><p id="adc">2</p>`, buttons: [] });
@@ -2117,9 +2209,78 @@ function fakeAd(done) {
   }, 700);
 }
 
+// ============================================================ lưu và tiếp tục ván dở (R10, review game design v2 #5)
+// Một bản lưu duy nhất (ván gần nhất), khoá riêng cạnh save chính nên save cũ của tester không đổi cấu trúc, không cần migration.
+// Lưu sau mỗi thao tác và khi app bị ẩn (cuộc gọi đến, khoá màn hình). Không lưu khi đang chạy kịch bản dạy chơi.
+// Dữ liệu level đổi (generator sinh lại) thì chữ ký levelSig khác -> bỏ bản lưu, chơi ván mới.
+const RESUME_KEY = SAVE_KEY + '_resume';
+let levelSigCache = null;
+function levelSig(lv) {
+  const s = JSON.stringify([lv.id, lv.moves, lv.foundations, lv.columns, lv.deck, lv.preplaced || []]);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36) + '.' + s.length;
+}
+const liveCards = st => [...st.deck, ...st.waste, ...st.cols.flat(), ...st.found.filter(Boolean).flatMap(f => [f.topic, ...f.cards])];
+function saveRun() {
+  if (!levelActive || !S || !L || script || E.isWon(S)) return;
+  if (!levelSigCache) levelSigCache = levelSig(L);
+  const st = E.clone(S);
+  if (st.moves === Infinity) st.moves = 'inf';                       // JSON không có Infinity
+  const data = { v: 1, lv: L.id, idx: levelIdx, sig: levelSigCache, at: Date.now(), s: st,
+    undoLeft, combo, freeMovesUsed, overtime, lowWarned, play: { ...play, elapsed: Date.now() - play.start } };
+  try { localStorage.setItem(RESUME_KEY, JSON.stringify(data)); } catch (e) { /* đầy bộ nhớ / chế độ riêng tư: bỏ qua */ }
+}
+function clearRun() { try { localStorage.removeItem(RESUME_KEY); } catch (e) { /* ignore */ } }
+/** Bản lưu ván dở còn dùng được (đúng level, level chưa đổi), hoặc null. */
+function loadRun() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null'); } catch (e) { d = null; }
+  if (!d) return null;
+  const lv = LEVELS[d.idx];
+  if (d.v !== 1 || !lv || lv.id !== d.lv || levelSig(lv) !== d.sig || !d.s || d.idx + 1 > save.unlocked) { clearRun(); return null; }
+  return d;
+}
+/** Dựng state từ bản lưu, kiểm tra lá khớp với level (không thừa, không trùng). Lỗi thì ném ra -> chơi ván mới. */
+function restoreRun(d, lv) {
+  const S2 = E.clone({ ...d.s, moves: d.s.moves === 'inf' ? Infinity : d.s.moves });
+  const known = new Set([...lv.columns.flat(), ...lv.deck, ...(lv.preplaced || []).flat()].map(c => c.id));
+  const seen = new Set();
+  for (const c of liveCards(S2)) {
+    if (seen.has(c.id) || !(known.has(c.id) || /^J\d+$/.test(String(c.id)))) throw new Error('resume: lá lạ ' + c.id);
+    seen.add(c.id);
+  }
+  if (!Number.isFinite(S2.used) || S2.found.length < lv.foundations || S2.cols.length !== lv.columns.length) throw new Error('resume: state hỏng');
+  return { S: S2, undoLeft: d.undoLeft ?? 5, combo: d.combo || 0, freeMovesUsed: !!d.freeMovesUsed, overtime: !!d.overtime, lowWarned: !!d.lowWarned,
+    play: { boosters: 0, undo: 0, rescues: 0, continues: 0, taps: 0, drags: 0, ...d.play, elapsed: Math.max(0, d.play && d.play.elapsed || 0) } };
+}
+/** Vào level i từ màn hình chính: có ván dở của đúng level đó thì hỏi chơi tiếp hay ván mới. */
+function playLevel(i) {
+  const run = loadRun();
+  if (run && run.idx === i) askResume(run); else startLevel(i);
+}
+function askResume(run) {
+  panel({
+    title: t('resume_title'),
+    body: `<p>${t('resume_body', { n: run.idx + 1 })}</p><p style="font-size:36px;margin:0">${t('resume_free')}</p>`,
+    buttons: [
+      { label: t('resume_yes'), act: () => startLevel(run.idx, { resume: run }) },
+      { label: t('resume_new'), cls: 'brown', act: () => { track('level_resume_decline', { level: run.idx + 1, moves_used: run.s.used }); clearRun(); startLevel(run.idx); } },
+    ],
+  });
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) return;
+  saveRun();
+  if (levelActive && S) track('app_hidden', { level: levelIdx + 1, moves_used: S.used, time_s: Math.round((Date.now() - play.start) / 1000) });
+});
+addEventListener('pagehide', () => saveRun());
+
 // ============================================================ level flow
-async function startLevel(i) {
+// resume: bản lưu ván dở (loadRun) của đúng level i -> dựng lại bàn y như lúc dừng, không tính lượt chơi mới
+async function startLevel(i, { resume = null } = {}) {
   closePanel(true);
+  setMusicScene('play');
   if (levelActive && L && S) track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000) });
   const nextIdx = Math.max(0, Math.min(LEVELS.length - 1, i));
   if (nextIdx !== levelIdx) extraKept = -1;
@@ -2128,33 +2289,49 @@ async function startLevel(i) {
   clearParticles();
   completing.clear();
   L = LEVELS[levelIdx];
-  S = E.createState(L);
+  levelSigCache = null;
+  let restored = null;
+  if (resume) { try { restored = restoreRun(resume, L); } catch (e) { restored = null; } }
+  if (!restored) { const old = loadRun(); if (old && old.idx === levelIdx) clearRun(); }   // ván mới / chơi lại cùng level: bỏ bản lưu cũ
+  S = restored ? restored.S : E.createState(L);
   undoStack = [];
-  undoLeft = 5;                       // người lớn tuổi đi sai nhiều hơn: 5 lần hoàn tác miễn phí mỗi level
-  combo = 0;
+  undoLeft = restored ? restored.undoLeft : 5;   // người lớn tuổi đi sai nhiều hơn: 5 lần hoàn tác miễn phí mỗi level
+  combo = restored ? restored.combo : 0;
   ended = false;
   pending = [];
-  freeMovesUsed = false;
+  freeMovesUsed = restored ? restored.freeMovesUsed : false;
   jokerMode = false;
   tutorial = null;
   script = null;
   pickMode = null;
   lastMovesShown = null;
-  lowWarned = false;
+  lowWarned = restored ? restored.lowWarned : false;
   tipGate = { used: -99, t: 0, count: 0 };
   stuckMuteUntil = 0;
   deferredIntro = false;
+  introHold = null;
   lastDelivered = null;
-  overtime = false;
+  overtime = restored ? restored.overtime : false;
   jokerFree = false;
-  movesEl.classList.remove('overtime');
-  save.attempts = save.attempts || {};
-  save.attempts[levelIdx + 1] = (save.attempts[levelIdx + 1] || 0) + 1;
-  persist();
-  play = { start: Date.now(), attempt: save.attempts[levelIdx + 1], boosters: 0, undo: 0, rescues: 0, continues: 0 };
+  movesEl.classList.toggle('overtime', overtime);
+  jokerSeq = 0;
+  if (restored) {
+    // id Tem Vàng đã đặt: J1, J2... -> đặt tiếp không trùng id
+    for (const c of liveCards(S)) { const m = /^J(\d+)$/.exec(String(c.id)); if (m) jokerSeq = Math.max(jokerSeq, +m[1]); }
+    if (S.extraSlot) extraKept = levelIdx;
+    play = { ...restored.play, start: Date.now() - restored.play.elapsed };
+    delete play.elapsed;
+  } else {
+    save.attempts = save.attempts || {};
+    save.attempts[levelIdx + 1] = (save.attempts[levelIdx + 1] || 0) + 1;
+    persist();
+    play = { start: Date.now(), attempt: save.attempts[levelIdx + 1], boosters: 0, undo: 0, rescues: 0, continues: 0, taps: 0, drags: 0 };
+  }
   levelActive = true;
   document.body.classList.toggle('hard', !!specialOf(L));
-  track('level_start', { level: levelIdx + 1, attempt: play.attempt, moves: L.moves ?? -1, special: specialOf(L) || '', safety: safetyOf(L) });
+  if (restored) track('level_resume', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? -1 : S.moves,
+    delivered: S.delivered, total: S.total, away_s: Math.round((Date.now() - resume.at) / 1000), overtime, special: specialOf(L) || '' });
+  else track('level_start', { level: levelIdx + 1, attempt: play.attempt, moves: L.moves ?? -1, special: specialOf(L) || '', safety: safetyOf(L) });
   clearHint();
   tut(null);
   $('home').classList.add('off');
@@ -2170,11 +2347,20 @@ async function startLevel(i) {
   faceOfTopic = new Map();
   [...L.columns.flat(), ...L.deck, ...(L.preplaced || []).flat()].forEach(c => faceIndex(c));
   buildChrome();
-  for (const c of [...L.deck, ...L.columns.flat()]) makeView(c);
-  // lá trong ô mở sẵn: hiện ngay tại ô
-  const T0 = computeLayout();
-  for (const c of pre) { const v = makeView(c); const t = T0.get(c.id); v.x = t.x; v.y = t.y; setZ(v, t.z); setUp(v, true, { animate: false }); applyTransform(v); }
-  if (extraKept === levelIdx) E.addExtraSlot(S);        // Ô phụ đã mua ở lượt trước của level này vẫn giữ khi Retry
+  if (restored) {
+    // ván dở: lá ở bộ bài, lá đã rút và lá trong ô hiện ngay tại chỗ; lá trên cột được chia lại như đầu ván
+    for (const c of liveCards(S)) makeView(c);
+    const T0 = computeLayout();
+    for (const c of [...S.waste, ...S.found.filter(Boolean).flatMap(f => [f.topic, ...f.cards])]) {
+      const v = views.get(c.id); const t = T0.get(c.id); v.x = t.x; v.y = t.y; setZ(v, t.z); setUp(v, true, { animate: false }); applyTransform(v);
+    }
+  } else {
+    for (const c of [...L.deck, ...L.columns.flat()]) makeView(c);
+    // lá trong ô mở sẵn: hiện ngay tại ô
+    const T0 = computeLayout();
+    for (const c of pre) { const v = makeView(c); const t = T0.get(c.id); v.x = t.x; v.y = t.y; setZ(v, t.z); setUp(v, true, { animate: false }); applyTransform(v); }
+    if (extraKept === levelIdx) E.addExtraSlot(S);        // Ô phụ đã mua ở lượt trước của level này vẫn giữ khi Retry
+  }
   updateHUD();
   updateSlotLabels();
   updateDeckUI();
@@ -2215,19 +2401,33 @@ async function startLevel(i) {
   if (token !== levelToken) return;
   await featureIntro();
   if (token !== levelToken) return;
+  if (restored) {
+    // ván dở đã hết nước lúc dừng: mở lại bảng "Hết nước" (không phát lại tiếng thua, không ghi level_fail lần nữa)
+    if (S.moves <= 0 && safetyOf(L) !== 'overtime') outOfMoves(true);
+    else { afterAction(); if (!ended) { tutorialCheck(); resetIdleHint(); } }
+    return;
+  }
   if (L.script && !save.seen['script_' + L.id]) { script = { steps: L.script, i: 0 }; runScript(); return; }
   if (L.introduce && L.introduce.length && !save.seen['intro_' + L.id]) {
     save.seen['intro_' + L.id] = 1; persist();
     const names = L.introduce.map(tp => `<b>${topicName(tp)}</b>`).join(', ');
-    const h = t('new_topic', { names });
-    tut(h); sfx('feature', { vol: 0.5 });
+    tut(t('new_topic', { names }), 0); sfx('feature', { vol: 0.5 });
+    introHold = { html: $('tut').innerHTML, t0: Date.now(), token };     // giữ tới nước đi đầu tiên (review #9)
     track('topic_intro', { level: levelIdx + 1, topics: L.introduce.join(',') });
-    await wait(3600);
-    if (token !== levelToken) return;
-    if ($('tut').innerHTML === h) tut(null);
   }
   tutorialCheck();
   resetIdleHint();
+}
+// Câu "Tem mới: ..." đầu level: không tự tắt, ẩn sau nước đi đầu tiên (nhưng hiện ít nhất TIP_MIN_MS)
+let introHold = null;
+function releaseIntro() {
+  const h = introHold;
+  introHold = null;
+  if (!h) return;
+  setTimeout(() => {
+    if (h.token === levelToken && $('tut').innerHTML === h.html) tut(null);
+    if (!script && !ended && h.token === levelToken) tutorialCheck();   // tip đã nhường chỗ cho câu này thì giờ mới được hiện
+  }, Math.max(0, TIP_MIN_MS - (Date.now() - h.t0)));
 }
 let bannerEl = null;
 function removeBanner() { if (bannerEl) { bannerEl.remove(); bannerEl = null; } }
@@ -2307,8 +2507,13 @@ function featureIntro(force = false) {
 
 // ============================================================ home / pause
 function goHome(chId) {
+  setMusicScene('home');
   homeCh = CHAPTERS.find(c => c.id === chId) || chapterOf(save.unlocked);
-  if (levelActive && S) track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000) });
+  if (levelActive && S) {
+    saveRun();
+    const run = loadRun();
+    track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000), resumable: !!(run && run.idx === levelIdx) });
+  }
   levelActive = false;
   document.body.classList.remove('hard');
   levelToken++;
@@ -2322,13 +2527,14 @@ function goHome(chId) {
   clearHint();
   const grid = $('grid');
   grid.innerHTML = '';
+  const run = loadRun();
   LEVELS.forEach((_, i) => {
     const lv = i + 1;
     if (lv < homeCh.from || lv > homeCh.to) return;          // chỉ hiện level của chương đang xem
     const el = document.createElement('div');
-    el.className = 'lvl' + (lv > save.unlocked ? ' locked' : '') + (save.stars[lv] ? ' done' : '') + (lv === save.unlocked ? ' cur' : '');
+    el.className = 'lvl' + (lv > save.unlocked ? ' locked' : '') + (save.stars[lv] ? ' done' : '') + (lv === save.unlocked ? ' cur' : '') + (run && run.idx === i ? ' resume' : '');
     el.innerHTML = `${lv}${save.stars[lv] ? `<span class="pts">${'<i></i>'.repeat(save.stars[lv])}</span>` : ''}`;
-    el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); startLevel(i); } else sfx('deny'); });
+    el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); playLevel(i); } else sfx('deny'); });
     grid.append(el);
   });
   // Thanh chương ngay dưới lưới level: [← chương trước] tên chương đang xem [chương sau →].
@@ -2351,7 +2557,8 @@ function goHome(chId) {
       buttons: [{ label: t('play', { n: save.unlocked }), act: () => startLevel(save.unlocked - 1) }, { label: t('close'), cls: 'orange', act: () => {} }] });
   });
   grid.append(nav);
-  $('playBtn').textContent = allDone() ? t('more_soon') : t('play', { n: save.unlocked });
+  // có ván dở: nút chính là "Chơi tiếp Level N" (vào thẳng ván dở, không hỏi lại)
+  $('playBtn').textContent = run ? t('play_resume', { n: run.idx + 1 }) : allDone() ? t('more_soon') : t('play', { n: save.unlocked });
   renderDecor();
   $('home').classList.remove('off');
 }
@@ -2402,7 +2609,9 @@ function decorPanel() {
 $('undoBtn').addEventListener('pointerup', () => { unlockAudio(); onBooster('undo'); });
 $('playBtn').addEventListener('pointerup', () => {
   unlockAudio(); sfx('click');
-  if (allDone()) panel({ title: t('more_soon'), body: `<p>${t('more_soon_body')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
+  const run = loadRun();
+  if (run) startLevel(run.idx, { resume: run });
+  else if (allDone()) panel({ title: t('more_soon'), body: `<p>${t('more_soon_body')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
   else startLevel(save.unlocked - 1);
 });
 // Chương 2 "Bến Cảng" sắp mở (concept-little-post-office.md mục 3.1): teaser khu mới + tem mới + cư dân + decor.
@@ -2428,7 +2637,7 @@ const ch2Level = () => Math.min(CHAPTERS[1].to, LEVELS.length, Math.max(CHAPTERS
 $('ch2Notify').addEventListener('pointerup', () => {
   // chương đã mở: chơi level đầu chương; còn khoá: chơi tiếp level đang dở để mở chương
   unlockAudio(); sfx('click'); $('ch2').classList.add('off');
-  startLevel((ch2Open() ? ch2Level() : save.unlocked) - 1);
+  playLevel((ch2Open() ? ch2Level() : save.unlocked) - 1);
 });
 $('ch2Close').addEventListener('pointerup', () => { sfx('close'); $('ch2').classList.add('off'); });
 $('pauseBtn').addEventListener('pointerup', () => {
@@ -2441,13 +2650,35 @@ $('pauseBtn').addEventListener('pointerup', () => {
     buttons: [
       { label: t('resume'), act: () => {} },
       { label: t('howto'), cls: 'brown', act: () => showRules() },
-      { label: t('restart'), cls: 'orange', act: () => startLevel(levelIdx) },
+      { label: t('restart'), cls: 'brown', act: () => confirmRestart() },
       { label: isMuted() ? t('sound_off') : t('sound_on'), cls: 'brown', act: () => { setMuted(!isMuted()); } },
+      { label: isMusicOn() ? t('music_on') : t('music_off'), cls: 'brown', act: () => { setMusicOn(!isMusicOn()); } },
       { label: t('lang'), cls: 'brown', act: () => { setLang(getLang() === 'vi' ? 'en' : 'vi'); applyStaticCopy(); relabelCards(); updateSlotLabels(); updateHUD(); if (script) tut(t(scriptStep() && scriptStep().booster ? 'script_' + scriptStep().booster : `script_${L.id}_${script.i}`)); } },
-      { label: t('home'), cls: 'brown', act: goHome },
+      { label: t('home'), cls: 'brown', act: () => confirmHome() },
     ],
   });
 });
+// Giữa ván (đã đi ít nhất 1 nước) mới hỏi; nút an toàn "Chơi tiếp" đứng đầu, nút làm mất ván màu nâu
+const midLevel = () => levelActive && !ended && S && S.used > 0;
+function confirmRestart() {
+  if (!midLevel()) { startLevel(levelIdx); return; }
+  track('confirm_open', { level: levelIdx + 1, kind: 'restart', moves_used: S.used });
+  panel({ title: t('confirm_restart_title'), body: `<p>${t('confirm_restart_body')}</p>`, buttons: [
+    { label: t('keep_playing'), act: () => track('confirm_choice', { level: levelIdx + 1, kind: 'restart', choice: 'keep' }) },
+    { label: t('confirm_restart_yes'), cls: 'brown', act: () => { track('confirm_choice', { level: levelIdx + 1, kind: 'restart', choice: 'yes' }); startLevel(levelIdx); } },
+  ] });
+}
+function confirmHome() {
+  if (!midLevel()) { goHome(); return; }
+  saveRun();
+  const run = loadRun();
+  const saved = !!(run && run.idx === levelIdx);
+  track('confirm_open', { level: levelIdx + 1, kind: 'home', moves_used: S.used, saved });
+  panel({ title: t('confirm_home_title'), body: `<p>${t(saved ? 'confirm_home_saved' : 'confirm_home_lost')}</p>`, buttons: [
+    { label: t('keep_playing'), act: () => track('confirm_choice', { level: levelIdx + 1, kind: 'home', choice: 'keep' }) },
+    { label: t('confirm_home_yes'), cls: 'brown', act: () => { track('confirm_choice', { level: levelIdx + 1, kind: 'home', choice: 'yes' }); goHome(); } },
+  ] });
+}
 
 // ============================================================ debug
 function buildDebug() {
@@ -2460,7 +2691,7 @@ function buildDebug() {
   btn('Win now', () => { S.delivered = S.total; afterAction(); });
   btn('Reveal', () => { for (const col of S.cols) for (const c of col) c.up = true; relayout(); });
   btn('Next lv', () => startLevel(levelIdx + 1));
-  btn('Reset save', () => { save = defaultSave(); persist(); clearEvents(); location.reload(); });
+  btn('Reset save', () => { save = defaultSave(); persist(); clearRun(); clearEvents(); location.reload(); });
   btn('Events', () => {
     const f = funnelSummary();
     const rows = Object.keys(f).sort((a, b) => a - b).map(k => `<tr><td>${k}</td><td>${f[k].start}</td><td>${f[k].complete}</td><td>${f[k].fail}</td><td>${f[k].overtime}</td></tr>`).join('');
@@ -2496,6 +2727,10 @@ window.__game = { variant: VARIANT, get S() { return S; }, get level() { return 
   layout: () => computeLayout(), views: () => views,
   setState(s2) { S = s2; undoStack = []; clearHint(); tut(null); relayout({ dur: 0 }); updateSlotLabels(); updateHUD(); updateDeckUI(); },
   get toastText() { const el = $('toast'); return el && el.classList.contains('on') ? el.textContent : ''; },
+  get tutText() { const el = $('tut'); return el && el.classList.contains('on') ? el.textContent : ''; },
+  get scriptStep() { return scriptStep(); }, get panelTitle() { return panelOpen ? panelOpen.p.querySelector('.head').textContent : ''; },
+  loadRun, saveRun, clearRun, playLevel,
+  get tipDebug() { return { tutorial, tipGate, introHold: !!introHold, deferredIntro, tap: !!(S && tapTeachAction()), seen: save.seen }; },
   get busy() { return !!(drag || busyInput || panelOpen || ended || completing.size); } };
 
 // đổi ngôn ngữ giữa ván: viết lại tên chủ đề trên lá vương miện
@@ -2536,5 +2771,6 @@ function applyStaticCopy() {
   track('app_open', { lite: LITE, ab_hard: AB.hard ? AB.hard.join('-') : 'default', ab_safety: AB.safety || 'default' });
   goHome();
   const m = location.search.match(/level=(\d+)/);
-  if (m) startLevel(+m[1] - 1);
+  if (m) playLevel(+m[1] - 1);
+  else { const run = loadRun(); if (run) askResume(run); }     // mở lại app có ván dở: hỏi chơi tiếp (R10)
 })();
