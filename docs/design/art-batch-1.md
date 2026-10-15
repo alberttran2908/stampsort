@@ -1038,3 +1038,29 @@ Gợi ý `CHAPTERS[12].decor`: `tulip_garland 2, pressed_flowers 3, birdhouse 4,
 **Tổng kết đợt 5:** 11/11 ảnh xong (6 chủ đề, 2 decor, 2 bưu thiếp, 1 khách thăm), không phải vẽ lại. Việc tiếp theo:
 - **Level Dev:** thêm chương 12–13 vào `CHAPTER_TOPICS` (tên EN/VI ở bảng đầu mục 8); xem xét thêm `Sewing↔Knitting`, `Sewing↔Vegetable` vào `CONFUSE`. Các cặp giả thuyết khác: `Fireplace↔Candle`, `Snow Sports↔Winter`, `Books↔Stationery`, `Bicycle↔Car`.
 - **Feature Dev:** `CHAPTERS[11..12].decor` theo gợi ý D12, D13; màn "Chương sắp mở" đọc `ch12`, `ch13`; tên VI chủ đề vào `copy.js`.
+
+---
+
+## 9. Đợt 6 (1 ảnh): dấu tem mùa và decor hiếm theo mùa
+
+**Nguồn nhu cầu:** người điều phối 2026-10-15; chỗ dùng ở `docs/design/l6-l10-tech-notes.md` (E2 Tem theo mùa: dấu trên góc lá, trang tem mùa trong album; E-7: decor hiếm theo mùa thay phần thưởng xu khi đủ bộ). Một lưới 3×3, chat mới, đính kèm `REF-CAT` và `REF-DECOR`. Tải về `lpo_season.png`.
+
+Prompt (rút gọn phần style chung như các lưới khác): ô 1–4 là dấu tem mùa: tem tròn nhỏ răng cưa, viền nâu đậm, mặt màu có vòng kem mảnh, một biểu tượng kem to ở giữa, đọc được ở 60 px, không chữ. (1) xuân: mặt hồng, hoa anh đào 5 cánh; (2) hè: mặt xanh biển, vỏ sò; (3) thu: mặt cam đỏ, lá phong; (4) đông: mặt xanh băng, bông tuyết 6 cánh. Ô 5–8 là decor hiếm theo mùa, vẽ to và chi tiết hơn: (5) hòm thư đỏ phủ hoa anh đào; (6) đèn lồng vỏ sò ngọc trai phát sáng trên đế gỗ; (7) hòm thư gỗ trên cọc, trang trí lá phong và dây quả sồi; (8) hòm thư trắng phủ tuyết, viền băng nhỏ, nơ đỏ. Ô 9: huy chương vàng tròn có 4 biểu tượng mùa quanh ngôi sao (dấu "đủ bộ"). Không mặt.
+
+Lệnh cắt (ảnh trả nền trong suốt, cắt theo ô bằng `decor_boxcut.py`, giữ vùng liên thông lớn):
+
+```
+mv ~/Downloads/lpo_season.png research/art-redo/gen/
+python3 research/art-redo/decor_boxcut.py research/art-redo/gen/lpo_season.png \
+  ui/season_flower:0,0,418,418@256 ui/season_shell:418,0,836,418@256 ui/season_leaf:836,0,1254,418@256 \
+  ui/season_snow:0,418,418,836@256 decor/rare_sakura_postbox:418,410,836,836 decor/rare_shell_lantern:836,410,1254,836 \
+  decor/rare_maple_mailbox:0,800,418,1254 decor/rare_snow_mailbox:418,800,836,1254 ui/season_all:836,820,1254,1254@256
+```
+
+| File | Kết quả | Ghi chú |
+|---|---|---|
+| `ui/season_flower.png`, `season_shell.png`, `season_leaf.png`, `season_snow.png` | Xong, 256 px | Cùng tên với 4 SVG tạm (SVG giữ nguyên). Đã thử ở 60 px (`research/art-redo/preview_season_60.png`): đọc rõ. Vỏ sò và bông tuyết cùng tông xanh nhưng khác đậm nhạt và khác hình |
+| `ui/season_all.png` | Xong (thêm) | Huy chương "đủ bộ 4 mùa", dùng nếu cần cho trang tem mùa |
+| `decor/rare_sakura_postbox.png` (xuân), `rare_shell_lantern.png` (hè), `rare_maple_mailbox.png` (thu), `rare_snow_mailbox.png` (đông) | Xong, cạnh dài 600 | Vẽ đủ 4 mùa (tech notes ghi "4 decor hiếm theo mùa"); người điều phối yêu cầu 3, món thứ 4 dư để chọn |
+
+**Feature Dev:** đổi `motifUrl()` trong `main.js` từ `season_*.svg` sang `season_*.png` (cùng tên gốc, chỉ khác đuôi); đổi phần thưởng 100 xu (E-7) thành `decor/rare_*` theo mùa.
