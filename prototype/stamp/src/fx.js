@@ -87,28 +87,35 @@ function img(src) {
   return imgCache[src];
 }
 
-const COLORS = ['#ffd84a', '#ff7a59', '#5fd3ff', '#8cff7a', '#ff9de2', '#ffffff'];
-/** Tia sáng nhỏ khi đặt tem. */
-export function sparkle(x, y, n = 10, { spread = 1, colors = ['#fff7b0', '#ffe36b', '#ffffff'], size = 9 } = {}) {
-  n = Math.max(1, Math.round(n * PSCALE));
+// P5 (benchmark-grand-games.md, art-batch-1 P5): hạt theo theme bưu điện thay sao 8 cánh và confetti neon. Sprite 128 px
+// trong assets/fx/, đúng palette 5 màu (kem giấy, nâu gỗ, đỏ air-mail, xanh air-mail, vàng đồng).
+const FX = n => `assets/fx/${n}.png`;
+export const FX_SPRITES = ['paper_cream', 'paper_red', 'paper_blue', 'foil_gold', 'stamp_red', 'stamp_blue', 'envelope', 'wax_drop', 'twinkle'];
+const CONFETTI_SET = ['paper_cream', 'paper_red', 'paper_blue', 'foil_gold', 'paper_cream', 'paper_red', 'paper_blue', 'foil_gold', 'stamp_red', 'stamp_blue', 'envelope'];
+/** Tải trước sprite hạt (gọi lúc khởi động, để hạt đầu tiên không trống). */
+export function preloadFx() { for (const n of FX_SPRITES) img(FX(n)); }
+/** Lấp lánh mềm 4 cánh khi đặt tem / gửi thư. colors giữ cho tương thích chỗ gọi cũ, không dùng (sprite đã có màu vàng đồng). */
+export function sparkle(x, y, n = 10, { spread = 1, size = 9 } = {}) {
+  n = Math.max(1, Math.round(n * PSCALE * 0.7));
+  const tw = img(FX('twinkle'));
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
-    const v = (160 + Math.random() * 380) * spread;
-    parts.push({ kind: 'star', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, g: 700, life: 0.5 + Math.random() * 0.35,
-      t: 0, size: size * (0.6 + Math.random() * 0.8), rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10,
-      color: colors[(Math.random() * colors.length) | 0] });
+    const v = (120 + Math.random() * 300) * spread;
+    parts.push({ kind: 'tw', im: tw, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 100, g: 420, drag: 2.2, life: 0.55 + Math.random() * 0.35,
+      t: 0, size: size * (2.6 + Math.random() * 1.6), rot: 0, vr: 0 });
   }
   loop();
 }
-/** Confetti khi thắng. Mặc định giữ như cũ (6 màu sáng); màn thắng dàn dựng (R12) truyền palette giấy,
- *  drag cao, trọng lực thấp để hạt rơi chậm (benchmark mục 4.3 và 8: ít hạt, rơi chậm cho người lớn tuổi). */
-export function confetti(n = 160, { palette = COLORS, drag = 1.6, gravity = 1500, life = 2.4, spread = 1 } = {}) {
+/** Hạt giấy khi thắng: mảnh giấy kem/đỏ/xanh, lá vàng, tem nhỏ, phong bì nhỏ. Rơi chậm (drag cao, trọng lực thấp),
+ *  lật như giấy (co giãn theo trục dọc). x, y: điểm bung (mặc định giữa trên màn). */
+export function confetti(n = 60, { drag = 3.2, gravity = 650, life = 2.1, spread = 0.75, x = 540, y = 700, set = CONFETTI_SET } = {}) {
   n = Math.round(n * PSCALE);
   for (let i = 0; i < n; i++) {
-    parts.push({ kind: 'rect', x: 540 + (Math.random() - 0.5) * 300, y: 700, vx: (Math.random() - 0.5) * 1700 * spread,
-      vy: (-900 - Math.random() * 1100) * spread, g: gravity, drag, life: life + Math.random() * (life / 2.4), t: 0, w: 16 + Math.random() * 14,
-      h: 9 + Math.random() * 8, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14,
-      color: palette[(Math.random() * palette.length) | 0] });
+    const name = set[(Math.random() * set.length) | 0];
+    const small = /^(stamp|envelope)/.test(name);
+    parts.push({ kind: 'spr', im: img(FX(name)), x: x + (Math.random() - 0.5) * 300, y, vx: (Math.random() - 0.5) * 1700 * spread,
+      vy: (-900 - Math.random() * 1100) * spread, g: gravity, drag, life: life + Math.random() * (life / 2.4), t: 0,
+      size: (small ? 40 : 46) + Math.random() * 16, rot: Math.random() * 6, vr: (Math.random() - 0.5) * (small ? 5 : 9), flip: !small });
   }
   loop();
 }
@@ -121,7 +128,7 @@ export function coinFly(x, y, tx, ty, n, onEach) {
   loop();
 }
 /** Vòng sóng lan ra. */
-export function ring(x, y, { color = '#fff4a0', r0 = 30, r1 = 170, life = 0.45, width = 10 } = {}) {
+export function ring(x, y, { color = '#f6eedc', r0 = 30, r1 = 170, life = 0.45, width = 10 } = {}) {
   parts.push({ kind: 'ring', x, y, r0, r1, life, t: 0, color, width });
   loop();
 }
@@ -165,24 +172,16 @@ function particlesStep(now) {
     p.y += p.vy * dt;
     p.rot += p.vr * dt;
     cx.globalAlpha = Math.min(1, a * 1.6);
-    cx.fillStyle = p.color;
-    if (LITE) { const s = p.kind === 'rect' ? p.w : p.size; cx.fillRect(p.x - s / 2, p.y - s / 2, s, p.kind === 'rect' ? p.h : s); continue; }
+    const im = p.im;
+    if (!im || !im.complete || !im.naturalWidth) continue;
+    const sz = p.kind === 'tw' ? p.size * (0.6 + 0.4 * a) : p.size;
+    if (LITE) { cx.drawImage(im, p.x - sz / 2, p.y - sz / 2, sz, sz); continue; }   // máy yếu: không xoay
     cx.save();
     cx.translate(p.x, p.y);
-    cx.rotate(p.rot);
-    if (p.kind === 'rect') {
-      cx.scale(1, Math.abs(Math.cos(p.rot * 1.7)) + 0.15);
-      cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-    } else {
-      const s = p.size;
-      cx.beginPath();
-      for (let j = 0; j < 8; j++) {
-        const rr = j % 2 ? s * 0.38 : s;
-        const an = (j * Math.PI) / 4;
-        cx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr);
-      }
-      cx.closePath(); cx.fill();
-    }
+    if (p.rot) cx.rotate(p.rot);
+    if (p.flip) cx.scale(1, Math.abs(Math.cos(p.rot * 1.7)) * 0.8 + 0.2);
+    const k = sz / Math.max(im.naturalWidth, im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k;
+    cx.drawImage(im, -w / 2, -h / 2, w, h);
     cx.restore();
   }
   cx.globalAlpha = 1;

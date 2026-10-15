@@ -145,11 +145,22 @@ const STR = {
     daily_win: 'Letter delivered!', daily_win_again: 'Delivered again!', daily_no_reward: 'Already delivered, so no reward this time.', daily_home: 'Back home',
     daily_intro: 'A new little letter every day. Deliver it for coins and a date stamp.', feat_new: 'New!', feat_see: 'Take a look',
     book_title: 'Date Stamp Book', book_page: 'page {n}', book_page_done: 'Page full! A keepsake for your post office and +{n} coins.', book_keepsakes: 'Keepsakes: {n}',
+    keepsake_name: 'Little red postbox',
+    weekly_title: 'Weekly Card', weekly_note: '5 days a week is plenty. Days off are fine.', weekly_done: 'Weekly box opened. A new card starts on Monday.',
+    weekly_box: 'Weekly box opened!', wd_short: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
+    morning_title: 'Morning Mail', morning_body: 'Good morning! Pip brought you a little letter.',
+    wb_title: 'Welcome back!', wb_body: 'Pip kept your letters safe.', wb_moves: '+{n} moves on your next level', wb_place: 'Your post office is in {place}.',
+    wb_decor: 'Next decoration: {name}', wb_toast: 'Pip added <em>{n} moves</em> for you.',
+    gifts_title: 'Pip kept a gift for you', gifts_body: 'Gifts you earned while you were away.',
+    ev_route: 'Mail Route', ev_season: 'Seasonal Stamps', ev_errands: 'Errand Week', ev_opens: 'Opens at Level {n}', ev_soon: 'Coming soon',
+    coins_aria: 'Coins', settings_aria: 'Settings',
     ch_locked: 'Clear Level {n} to open this chapter.', decor_soon: 'Decor for this chapter is coming soon.',
     more_soon_body: 'Every letter is delivered. More of the town is coming soon!', next_ch: 'Chapter {n} →',
     ch2_sub_open: 'The Harbor · now open', ch2_open: 'OPEN',
     decor_fan: 'Ceiling fan', decor_porthole: 'Porthole', decor_buoy: 'Life ring', decor_lantern: 'Ship lantern', decor_chart: 'Sea chart', decor_boatbed: 'Pip\'s boat bed',
     decor_knit_bunting: 'Knitted bunting', decor_tea_shelf: 'Tea shelf', decor_daisy_pot: 'Daisy planter', decor_copper_kettle: 'Copper kettle', decor_tea_painting: 'Tea hill painting', decor_yarn_basket: "Pip's yarn basket", decor_string_lights: 'Fairy lights', decor_wreath: 'Apple wreath', decor_scarf_hook: 'Scarf hook', decor_apple_basket: 'Apple basket', decor_stockings: 'Stockings', decor_gift_bed: "Pip's gift box", decor_station_clock: 'Station clock', decor_signal_lamp: 'Signal lamp', decor_travel_poster: 'Travel poster', decor_old_suitcases: 'Old suitcases', decor_departure_board: 'Departure board', decor_suitcase_bed: "Pip's suitcase", decor_hammock: 'Hammock', decor_globe: 'Globe', decor_cactus_pot: 'Cactus pot', decor_lighthouse_model: 'Lighthouse model', decor_sea_chest: 'Sea chest', decor_shell_bed: "Pip's shell bed", decor_awning: 'Striped awning', decor_wicker_basket: 'Wicker basket', decor_brass_scale: 'Brass scale', decor_bread_basket: 'Bread basket', decor_chalk_board: 'Chalk price board', decor_flour_bed: "Pip's flour sack", decor_fishing_rods: 'Fishing rods', decor_ice_skates: 'Ice skates', decor_picnic_shelf: 'Picnic shelf', decor_easel: 'Easel', decor_lake_painting: 'Lake painting', decor_gingham_bed: "Pip's gingham cushion", decor_flower_garland: 'Flower garland', decor_pencil_cup: 'Pencil cup', decor_rocking_horse: 'Rocking horse', decor_windmill_model: 'Windmill model', decor_bookshelf: 'Bookshelf', decor_book_bed: "Pip's book basket", decor_festival_lights: 'Festival lights', decor_masks: 'Festival masks', decor_door_bell: 'Door bell', decor_flag_stand: 'Flag stand', decor_music_box: 'Music box', decor_party_bed: "Pip's party hat", decor_crane_string: 'Paper cranes', decor_key_hooks: 'Key hooks', decor_thermometer: 'Old thermometer', decor_pinwheel_pot: 'Pinwheels', decor_raincoat_peg: 'Raincoat peg', decor_cloud_bed: "Pip's cloud cushion",
+    decor_pine_garland: 'Pine garland', decor_snowshoes: 'Snowshoes', decor_owl_shelf: 'Owl shelf', decor_pinecone_jar: 'Pine cone jar', decor_cuckoo_clock: 'Cuckoo clock', decor_cabin_bed: "Pip's log cabin",
+    decor_tulip_garland: 'Tulip garland', decor_pressed_flowers: 'Pressed flowers', decor_birdhouse: 'Birdhouse', decor_watering_can: 'Watering can', decor_valley_painting: 'Valley painting', decor_petal_bed: "Pip's petal basket",
     decor_bunting: 'Bunting', decor_frame: 'Stamp frame', decor_clock: 'Wall clock', decor_postbox: 'Post box', decor_board: 'Notice board', decor_cat: 'Cat basket', extra_label: '+1 slot', b_undo_icon: '↶',
   },
   vi: {
@@ -282,11 +293,22 @@ const STR = {
     daily_win: 'Đã giao thư!', daily_win_again: 'Giao lại xong!', daily_no_reward: 'Thư này đã giao rồi, lần này không có thưởng.', daily_home: 'Về bưu điện',
     daily_intro: 'Mỗi ngày một lá thư nhỏ. Giao thư để nhận xu và dấu ngày.', feat_new: 'Mới!', feat_see: 'Xem',
     book_title: 'Sổ dấu ngày', book_page: 'trang {n}', book_page_done: 'Đầy một trang! Một món kỷ niệm cho bưu điện và +{n} xu.', book_keepsakes: 'Món kỷ niệm: {n}',
+    keepsake_name: 'Hộp thư đỏ nhỏ',
+    weekly_title: 'Thẻ tuần', weekly_note: 'Mỗi tuần 5 ngày là đủ. Nghỉ vài hôm cũng không sao.', weekly_done: 'Đã mở hộp tuần. Thứ Hai có thẻ mới.',
+    weekly_box: 'Mở hộp tuần!', wd_short: 'T2,T3,T4,T5,T6,T7,CN',
+    morning_title: 'Thư buổi sáng', morning_body: 'Chào buổi sáng! Pip mang cho bạn một lá thư nhỏ.',
+    wb_title: 'Mừng bạn quay lại!', wb_body: 'Pip giữ thư cho bạn.', wb_moves: '+{n} nước ở level kế tiếp', wb_place: 'Bưu điện của bạn đang ở {place}.',
+    wb_decor: 'Món trang trí kế tiếp: {name}', wb_toast: 'Pip thêm <em>{n} nước</em> cho bạn.',
+    gifts_title: 'Pip giữ quà cho bạn', gifts_body: 'Quà bạn đã đạt khi vắng nhà.',
+    ev_route: 'Tuyến đưa thư', ev_season: 'Tem theo mùa', ev_errands: 'Tuần việc vặt', ev_opens: 'Mở ở Level {n}', ev_soon: 'Sắp có',
+    coins_aria: 'Xu', settings_aria: 'Cài đặt',
     ch_locked: 'Qua Level {n} để mở chương này.', decor_soon: 'Decor của chương này sắp có.',
     more_soon_body: 'Thư đã giao hết. Thị trấn sẽ còn mở thêm!', next_ch: 'Chương {n} →',
     ch2_sub_open: 'Bến Cảng · đã mở', ch2_open: 'ĐÃ MỞ',
     decor_fan: 'Quạt trần', decor_porthole: 'Cửa sổ tròn', decor_buoy: 'Phao cứu sinh', decor_lantern: 'Đèn bão', decor_chart: 'Hải đồ', decor_boatbed: 'Thuyền ngủ của Pip',
     decor_knit_bunting: 'Cờ dây len', decor_tea_shelf: 'Kệ trà', decor_daisy_pot: 'Chậu cúc', decor_copper_kettle: 'Ấm đồng', decor_tea_painting: 'Tranh đồi chè', decor_yarn_basket: 'Giỏ len của Pip', decor_string_lights: 'Đèn dây', decor_wreath: 'Vòng hoa táo', decor_scarf_hook: 'Móc khăn len', decor_apple_basket: 'Giỏ táo', decor_stockings: 'Tất treo', decor_gift_bed: 'Hộp quà của Pip', decor_station_clock: 'Đồng hồ ga', decor_signal_lamp: 'Đèn tín hiệu', decor_travel_poster: 'Tranh du lịch', decor_old_suitcases: 'Vali cũ', decor_departure_board: 'Bảng giờ tàu', decor_suitcase_bed: 'Vali ngủ của Pip', decor_hammock: 'Võng', decor_globe: 'Quả địa cầu', decor_cactus_pot: 'Chậu xương rồng', decor_lighthouse_model: 'Mô hình hải đăng', decor_sea_chest: 'Rương gỗ', decor_shell_bed: 'Vỏ sò ngủ của Pip', decor_awning: 'Mái hiên sọc', decor_wicker_basket: 'Giỏ mây', decor_brass_scale: 'Cân đồng', decor_bread_basket: 'Rổ bánh mì', decor_chalk_board: 'Bảng giá phấn', decor_flour_bed: 'Bao bột của Pip', decor_fishing_rods: 'Cần câu treo', decor_ice_skates: 'Giày trượt băng', decor_picnic_shelf: 'Kệ dã ngoại', decor_easel: 'Giá vẽ', decor_lake_painting: 'Tranh mặt hồ', decor_gingham_bed: 'Gối kẻ ô của Pip', decor_flower_garland: 'Dây hoa', decor_pencil_cup: 'Hộp bút', decor_rocking_horse: 'Ngựa gỗ', decor_windmill_model: 'Mô hình cối xay', decor_bookshelf: 'Kệ sách', decor_book_bed: 'Giỏ sách của Pip', decor_festival_lights: 'Dây đèn hội', decor_masks: 'Mặt nạ hội', decor_door_bell: 'Chuông cửa', decor_flag_stand: 'Cờ hội', decor_music_box: 'Hộp nhạc', decor_party_bed: 'Mũ tiệc của Pip', decor_crane_string: 'Chuỗi hạc giấy', decor_key_hooks: 'Móc chìa khóa', decor_thermometer: 'Nhiệt kế cổ', decor_pinwheel_pot: 'Chong chóng', decor_raincoat_peg: 'Áo mưa treo', decor_cloud_bed: 'Gối mây của Pip',
+    decor_pine_garland: 'Dây cành thông', decor_snowshoes: 'Giày đi tuyết', decor_owl_shelf: 'Kệ cú gỗ', decor_pinecone_jar: 'Hũ quả thông', decor_cuckoo_clock: 'Đồng hồ cúc cu', decor_cabin_bed: 'Nhà gỗ của Pip',
+    decor_tulip_garland: 'Dây hoa tulip', decor_pressed_flowers: 'Khung hoa ép', decor_birdhouse: 'Tổ chim gỗ', decor_watering_can: 'Bình tưới', decor_valley_painting: 'Tranh thung lũng', decor_petal_bed: 'Giỏ cánh hoa của Pip',
     decor_bunting: 'Cờ dây', decor_frame: 'Khung tem', decor_clock: 'Đồng hồ treo', decor_postbox: 'Hòm thư', decor_board: 'Bảng ghim', decor_cat: 'Giỏ mèo ngủ', extra_label: '+1 ô', b_undo_icon: '↶',
   },
 };
@@ -309,6 +331,8 @@ const TOPIC_VI = {
   Bread: 'Bánh mì', Cheese: 'Phô mai', Pottery: 'Đồ gốm', Fishing: 'Đồ câu', Picnic: 'Dã ngoại', Painting: 'Họa cụ',
   Stationery: 'Văn phòng phẩm', 'Wooden Toys': 'Đồ chơi gỗ', Honey: 'Ong và mật', Fireworks: 'Pháo hoa', Mask: 'Mặt nạ hội', Bell: 'Chuông',
   Weather: 'Thời tiết', Origami: 'Giấy gấp', Keys: 'Chìa khóa',
+  // chương 12–13 (art-batch-1.md mục 8)
+  Books: 'Sách', Fireplace: 'Lò sưởi', 'Snow Sports': 'Thể thao tuyết', Bicycle: 'Xe đạp', Sewing: 'May vá', Playground: 'Sân chơi',
 };
 /** Tên chủ đề theo ngôn ngữ đang chọn. */
 const TOPIC_EN = {
@@ -316,7 +340,7 @@ const TOPIC_EN = {
   'Pet Care': 'Pet supplies', Grilled: 'BBQ', 'Soft drink': 'Drinks', 'Music Inst': 'Instruments', 'Water Plants': 'Water plants',
   Pets: 'Small pets', Tool: 'Tools', Gems: 'Gems', Leaf: 'Leaves', Glasses: 'Glasses',
   Lantern: 'Lanterns', Acorn: 'Acorns', Winter: 'Snowmen', Candle: 'Candles', Gift: 'Gifts', Camera: 'Cameras', Umbrella: 'Umbrellas',
-  Honey: 'Bees & honey', Mask: 'Masks', Bell: 'Bells',
+  Honey: 'Bees & honey', Mask: 'Masks', Bell: 'Bells', 'Snow Sports': 'Snow sports', Bicycle: 'Bicycles',
 };
 export function topicName(tp) { return lang === 'vi' ? (TOPIC_VI[tp] || tp) : (TOPIC_EN[tp] || tp); }
 
@@ -353,6 +377,7 @@ const RESIDENT_OF = {
   Lantern: 'Ines', Knitting: 'Ines', Acorn: 'Ines', Winter: 'Otto', Candle: 'Otto', Gift: 'Otto', Luggage: 'Finch', Umbrella: 'Finch', Camera: 'Finch',
   Lighthouse: 'Bo', Treasure: 'Bo', Cactus: 'Bo', Bread: 'Marigold', Cheese: 'Marigold', Pottery: 'Marigold', Fishing: 'Lina', Picnic: 'Lina', Painting: 'Lina',
   Stationery: 'Otto', 'Wooden Toys': 'Otto', Honey: 'Otto', Fireworks: 'Marigold', Mask: 'Marigold', Bell: 'Marigold', Weather: 'Bo', Origami: 'Bo', Keys: 'Bo',
+  Books: 'Lina', Fireplace: 'Lina', 'Snow Sports': 'Lina', Bicycle: 'Finch', Sewing: 'Finch', Playground: 'Finch',
 };
 export function residentOf(topic) { return RESIDENT_OF[topic] || 'Otto'; }
 const NOTES = {

@@ -191,12 +191,17 @@ export async function runEvents() {
   if (!/idle=3/.test(location.search)) return ['SETUP  mở trang với ?idle=3&debug'];
   const out = [];
   const n0 = name => events(name).length;
+  // Tất định (sửa test chập chờn): ván của test trước (runDrift) đứng yên vẫn có thể ghi idle_long trong lúc vào level mới,
+  // nên về màn chính trước (levelActive = false thì không đếm), và đóng bảng Ô phụ bằng nút Đóng (nút đầu là xem quảng cáo giả 1,4 s).
+  G().goHome();
+  await sleep(1700);                                     // > 1 nhịp interval (1,5 s ở ?idle=3)
   const before = { offer: events('ad_offer', e => e.placement === 'extra_slot').length, hidden: n0('app_hidden'), idle: n0('idle_long'), pause: n0('pause_open'), rules: n0('rules_open') };
   await enter(2);
   document.querySelector('.slot.locked').dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
   await sleep(500);
   const offer = events('ad_offer', e => e.placement === 'extra_slot').length - before.offer;
-  await closePanels(1200);
+  { const bs = visibleBtns(); const close = bs[bs.length - 1]; if (close) close.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); }
+  await sleep(400);
   out.push(`${offer === 1 ? 'PASS' : 'FAIL'}  ad_offer extra_slot khi mở bảng Ô phụ  [+${offer}]`);
   // app vào nền (giả document.hidden)
   Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
@@ -205,8 +210,9 @@ export async function runEvents() {
   document.dispatchEvent(new Event('visibilitychange'));
   const hid = n0('app_hidden') - before.hidden;
   out.push(`${hid === 1 ? 'PASS' : 'FAIL'}  app_hidden khi app vào nền  [+${hid}]`);
-  // đứng yên > 3 giây (?idle=3), interval 1,5 giây
-  await sleep(6500);
+  // đứng yên > 3 giây (?idle=3), interval 1,5 giây: chờ tới khi có sự kiện (tối đa 15 s), rồi chờ thêm 2 nhịp để chắc không ghi lần 2
+  await until(() => !G().busy && n0('idle_long') > before.idle, 15000, 100);
+  await sleep(3200);
   const idle = events('idle_long').slice(before.idle);
   out.push(`${idle.length === 1 && idle[0].s >= 3 ? 'PASS' : 'FAIL'}  idle_long sau ~6 giây đứng yên (1 lần/đợt)  [${JSON.stringify(idle.map(e => ({ s: e.s, moves_used: e.moves_used })))}]`);
   // Pause, Cách chơi

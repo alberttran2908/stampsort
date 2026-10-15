@@ -1,8 +1,8 @@
 // Chương của chiến dịch (R5, docs/design/30-day-plan.md mục 2 và liveops-30-days.md mục 7.1).
 // Ch1–2: 10 level (FTUE thưởng nhanh). Từ ch3: 20 level mỗi chương. 13 chương phủ L1–L240 (sàn 200 = 11 chương);
 // chương sau 13 vẫn sinh theo công thức (tên chung) để game không gãy nếu Level Dev sinh thêm.
-// Tên khu ch3–11 theo bảng 2.2 của plan (người dùng duyệt 2026-10-15). Ch12–13 chưa có trong tài liệu: tên đề xuất
-// (mùa nối tiếp vòng Thu → Đông → Xuân), chờ GD/người dùng duyệt. Decor theo art-batch-1.md mục 3–5 (thứ tự 6 chỗ đặt:
+// Tên khu ch3–11 theo bảng 2.2 của plan (người dùng duyệt 2026-10-15). Ch12 Rừng Thông, ch13 Thung Lũng Hoa
+// (người dùng duyệt 2026-10-15; decor theo art-batch-1.md mục 8). Decor theo art-batch-1.md mục 3–5 (thứ tự 6 chỗ đặt:
 // TRÊN, TƯỜNG-TRÁI, TƯỜNG-PHẢI, KỆ-TRÁI, TƯỜNG-GIỮA, KỆ-PHẢI). Giá ch3+: 4/5/6/7/8/10 = 40 (plan mục 5 câu 3).
 // File chưa có art thì main.js hiện "sắp có" (kiểm tra bằng cách tải thử ảnh, xem decorReady()).
 
@@ -23,8 +23,8 @@ const META = {
   9: { season: 'spring', resident: 'Otto', decor: ['flower_garland', 'pencil_cup', 'rocking_horse', 'windmill_model', 'bookshelf', 'book_bed'] },
   10: { season: 'summer', resident: 'Marigold', decor: ['festival_lights', 'masks', 'door_bell', 'flag_stand', 'music_box', 'party_bed'] },
   11: { season: 'autumn', resident: 'Bo', decor: ['crane_string', 'key_hooks', 'thermometer', 'pinwheel_pot', 'raincoat_peg', 'cloud_bed'] },
-  12: { season: 'winter', resident: 'Lina', decor: [] },
-  13: { season: 'spring', resident: 'Finch', decor: [] },
+  12: { season: 'winter', resident: 'Lina', decor: ['pine_garland', 'snowshoes', 'owl_shelf', 'pinecone_jar', 'cuckoo_clock', 'cabin_bed'] },
+  13: { season: 'spring', resident: 'Finch', decor: ['tulip_garland', 'pressed_flowers', 'birdhouse', 'watering_can', 'valley_painting', 'petal_bed'] },
 };
 export const NAMED_CHAPTERS = 13;
 // Decor kỷ niệm khi Sổ dấu ngày đầy trang (art-batch-1.md D6: ô dư "rare_postbox", thưởng 20 dấu ngày)

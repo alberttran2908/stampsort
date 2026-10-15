@@ -70,13 +70,13 @@ scen('Mới thắng L4: không có nút Thư hôm nay; thắng L5: nút hiện, 
   G().goHome(); await sleep(400);
   const hidden = btn().classList.contains('off');
   const s = G().save; s.unlocked = 6; s.stars[5] = 2; G().persist();
-  G().goHome(); await sleep(500);
+  G().returnHome(); await sleep(800);              // L4: popup tự hiện chỉ khi vừa về màn chính (từ level)
   const shown = !btn().classList.contains('off') && btn().classList.contains('new');
   const popup = G().panelTitle;
   clickBtn(0); await sleep(500);                   // "Xem" -> panel Thư hôm nay
   const panelT = G().panelTitle;
   clickText(/Close|Đóng/); await sleep(300);
-  G().goHome(); await sleep(400);
+  G().returnHome(); await sleep(800);
   const again = G().panelTitle;
   return { pass: hidden && shown && /New|Mới/.test(popup) && /Today|Thư hôm nay/.test(panelT) && !again,
     detail: `L4: ẩn ${hidden}; L5: hiện+chấm ${shown}; popup "${popup}" -> "${panelT}"; lần sau popup: "${again || 'không'}"` };

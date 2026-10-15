@@ -13,7 +13,7 @@ import { hint as solverHint, solve } from './solver.js';
 import { initAudio, unlockAudio, sfx, comboSfx, setMusicOn, isMusicOn, setMusicScene, setSfxVolume, sfxVolume } from './audio.js';
 import { haptic, hapticsEnabled, setHapticsEnabled } from './haptics.js';   // 4 bậc, Capacitor Haptics trên iOS (benchmark-grand-games.md P1)
 import { getSetting, setSetting, onSetting, textScale } from './settings.js';   // cài đặt của máy (R13)
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles, setFxSize } from './fx.js';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles, setFxSize, preloadFx } from './fx.js';
 import { candidateActions, isDeadlocked } from './solver.js';
 import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js';
 import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js';
@@ -85,9 +85,9 @@ const specialOf = lv => ((AB.hard ? AB.hard.includes(lv.id) : !!lv.special) ? (l
 const safetyOf = lv => (specialOf(lv) ? (AB.safety || lv.safety || 'overtime') : 'none');
 const BOOSTERS = [
   { id: 'hint', name: 'Hint', icon: 'assets/ui/ic_hint.png' },
-  { id: 'pack', name: 'Pack', icon: 'assets/ui/ic_pack.png' },
+  { id: 'pack', name: 'Pack', icon: 'assets/ui/ic_magnet.png' },       // art đợt 2 (D4 ô dư): nam châm giữ phong bì, khớp tên Nam châm
   { id: 'stamper', name: 'Stamper', icon: 'assets/ui/ic_stamper.png' },
-  { id: 'joker', name: 'Joker', icon: 'assets/ui/ic_joker.png' },
+  { id: 'joker', name: 'Joker', icon: 'assets/ui/ic_wild.png' },        // art đợt 2 (D3 ô dư): tem vàng ngôi sao cầu vồng, khớp tên Tem Vàng
 ];
 
 const $ = id => document.getElementById(id);
@@ -218,6 +218,7 @@ function fit() {
   DY_BOT = extra - sab;                            // thanh booster neo theo đáy, tránh thanh home
   layoutRows();
   stage.style.height = STAGE_H + 'px';
+  stage.classList.toggle('short', extra < 160);       // màn 16:9 (iPhone SE): màn chính thu gọn logo/lưới để decor tường không chạm biển chương
   for (const [k, v] of [['--hud', DY_HUD], ['--bd', DY_BOARD], ['--bot', DY_BOT], ['--mid', extra / 2], ['--extra', extra], ['--sab', sab]]) stage.style.setProperty(k, v + 'px');
   const fxc = document.getElementById('fx');
   if (fxc) { fxc.style.height = STAGE_H + 'px'; setFxSize(STAGE_H); }   // QA N2: bitmap = chiều cao stage thật
@@ -681,6 +682,7 @@ function renderBoosters() {
     if (locked) { badge.style.display = 'none'; b.querySelector('.name').textContent = giftPending ? t('b_' + d.id) : `Lv ${UNLOCK_AT[d.id]}`; continue; }
     badge.style.display = '';
     b.querySelector('.name').textContent = t('b_' + d.id);
+    b.querySelector('.name').classList.toggle('long', t('b_' + d.id).length > 9);   // Golden Stamp: chữ nhỏ hơn một bậc, không ra mép màn
     if (count > 0) { badge.className = 'badge'; badge.textContent = count; }
     else { badge.className = 'badge coin'; badge.textContent = COSTS[d.id]; }
   }
@@ -848,7 +850,7 @@ function placeJokerAt(j) {
   sfx('magnet');
   moveView(v, T, { dur: 420, easing: ease.outBack, arc: 160 }).then(() => {
     setZ(v, T.z);
-    ring(T.x + CW / 2, T.y + CH / 2, { color: '#ffd84a' });
+    ring(T.x + CW / 2, T.y + CH / 2, { color: '#d9a441' });
     sparkle(T.x + CW / 2, T.y + CH / 2, 16, { colors: ['#ffd84a', '#fff4a0', '#ffffff'] });
     sfx('open');
     haptic('progress');
@@ -974,7 +976,7 @@ function applyPull(k, kind) {
   clearHint();
   const p = slotPos(k);
   if (kind === 'stamper') stampSlam(p.x + CW / 2, p.y + CH / 2);
-  else { sfx('magnet'); ring(p.x + CW / 2, p.y + CH / 2, { color: '#5fd3ff', r1: 260, width: 12 }); }
+  else { sfx('magnet'); ring(p.x + CW / 2, p.y + CH / 2, { color: '#3d6fa8', r1: 260, width: 12 }); }
   haptic('milestone');
   playEvents(res.events, false);
 }
@@ -987,7 +989,7 @@ function stampSlam(x, y) {
   draw();
   tween(o, { y, a: 1, s: 1 }, { dur: 260, easing: ease.inCubic, onUpdate: draw }).then(() => {
     sfx('complete', { vol: 0.8, rate: 1.1225 });   // giữ đúng thang C ngũ cung (sfx-review.md)
-    shake(7);
+    shake(3);
     sparkle(x, y, 14, { colors: ['#ff7a59', '#fff', '#ffd84a'] });
     return wait(120);
   }).then(() => tween(o, { y: y - 300, a: 0 }, { dur: 300, easing: ease.outCubic, onUpdate: draw })).then(() => el.remove());
@@ -1020,7 +1022,7 @@ function unlockExtra() {
   undoStack = [];
   sfx('slot');
   haptic('milestone');
-  ring(EXTRA_X + CW / 2, ROW_A + CH / 2, { color: '#8cff7a', r1: 200 });
+  ring(EXTRA_X + CW / 2, ROW_A + CH / 2, { color: '#d9a441', r1: 200 });
   sparkle(EXTRA_X + CW / 2, ROW_A + CH / 2, 22, { colors: ['#8cff7a', '#fff', '#ffe36b'] });
   updateDeckUI();
   updateSlotLabels();
@@ -1850,7 +1852,7 @@ function playEvents(events, fromDrag) {
         el.classList.add('open');
         el.querySelector('.ribbon').textContent = topicName(ev.t);
         sfx('open');
-        ring(p.x + CW / 2, p.y + CH / 2, { color: '#ffd84a', r1: 150 });
+        ring(p.x + CW / 2, p.y + CH / 2, { color: '#d9a441', r1: 150 });
         sparkle(p.x + CW / 2, p.y + CH / 2, 12, { colors: ['#ffd84a', '#fff4a0'] });
       }, fromDrag ? 120 : 200);
     } else if (ev.type === 'deliver') {
@@ -1885,7 +1887,7 @@ function playEvents(events, fromDrag) {
       const c = v && v.card;
       if (c && c.k === 'topic') setTimeout(() => {
         const tt = T.get(ev.id) || { x: v.x, y: v.y };
-        ring(tt.x + CW / 2, tt.y + CH / 2, { color: '#ffd84a', r1: 170, width: 10 });
+        ring(tt.x + CW / 2, tt.y + CH / 2, { color: '#d9a441', r1: 170, width: 10 });
         sparkle(tt.x + CW / 2, tt.y + 30, 14, { colors: ['#ffd84a', '#fff4a0', '#ffffff'] });
         sfx('open', { vol: 0.6, rate: 1.2599 });
         haptic('progress');
@@ -1924,10 +1926,14 @@ function landSquash(v) {
   tween(o, { k: 1 }, { dur: 180, key: 'sq-' + v.id, onUpdate: () => { v.s = 1 + 0.06 * Math.sin(o.k * Math.PI) ; applyTransform(v); } })
     .then(() => { v.s = 1; applyTransform(v); });
 }
-function floatText(txt, x, y, color = '#ffe36b') {
+// P5: chữ nổi (combo, +xu, giao thư) là chữ nâu đậm trên viên kem (tương phản > 7:1), thay chữ vàng nhạt trên nền mint.
+// Tham số màu cũ chỉ còn dùng cho viền nhấn (combo lớn viền đỏ air-mail).
+function floatText(txt, x, y, color = '') {
   const el = document.createElement('div');
   el.textContent = txt;
-  el.style.cssText = `position:absolute;left:0;top:0;font-size:${fs(56)};color:${color};text-shadow:0 4px 0 rgba(0,0,0,.3);z-index:4000;pointer-events:none;white-space:nowrap`;
+  const edge = color === '#ff9d3b' ? '#c8483c' : 'rgba(90,58,38,.75)';
+  el.style.cssText = `position:absolute;left:0;top:0;font-size:${fs(50)};line-height:1.15;padding:4px 26px 2px;border-radius:40px;background:#fff8ea;color:#5a3a26;
+    box-shadow:0 0 0 4px ${edge},0 5px 0 rgba(90,58,38,.25);z-index:4000;pointer-events:none;white-space:nowrap`;
   board.append(el);
   const o = { y, a: 1, s: 0.4 };
   const draw = () => { el.style.transform = `translate(${x - el.offsetWidth / 2}px,${o.y}px) scale(${o.s})`; el.style.opacity = o.a; };
@@ -1993,8 +1999,8 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   sfx('complete');
   sfx('boom', { vol: 0.35 });
   haptic('milestone');
-  shake(9);
-  ring(cx, cy, { color: '#ffffff', r1: 230, width: 14 });
+  shake(3);
+  ring(cx, cy, { color: '#f6eedc', r1: 230, width: 14 });
   sparkle(cx, cy, 26, { spread: 1.3, colors: ['#ffd84a', '#ff7a59', '#ffffff', '#fff4a0'], size: 12 });
   const sq = { s: 1 };
   tween(sq, { s: 0.92 }, { dur: 70, onUpdate: () => { e.s = 1.08 * sq.s; drawEnv(); } }).then(() =>
@@ -2026,7 +2032,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   env.remove(); wax.remove();
   // đến nơi: thanh nảy nhẹ + loé sáng ở đoạn vừa gửi
   sfx('coin', { vol: 0.5 });
-  ring(tx + 115, ty + 96, { color: '#ffd84a', r1: 120, width: 10 });
+  ring(tx + 115, ty + 96, { color: '#d9a441', r1: 120, width: 10 });
   sparkle(tx + 115, ty + 96, 10, { colors: ['#ffd84a', '#ffffff', '#8cc8ff'] });
   bar.classList.remove('bump'); void bar.offsetWidth; bar.classList.add('bump');
 }
@@ -2165,10 +2171,35 @@ function stars() {
 //   0,9 tiếng win + confetti giấy | 1,1 bảng trượt lên | 1,4/1,7/2,0 Tem Điểm đóng cộp | 2,2 xu bay, số đếm dần | 2,5 nút bấm được (AC ≤ 2,6)
 // Chạm bất kỳ đâu từ 0,9 giây: tua tới bước cuối (finishWin). Giảm chuyển động: không phong bì/confetti, bảng hiện ngay,
 // Tem Điểm cách nhau 150 ms. "Tiếp tục" là nút chính; "Nhận x2" là nút phụ nhỏ, chỉ từ L11 và không có ở màn hết chương.
-const WIN_PALETTE = ['#fff3d6', '#d9473d', '#2f6fb3', '#d39a2c', '#8fc9a8'];   // kem, đỏ air-mail, xanh air-mail, vàng đồng, xanh bạc hà
 let winTL = null;          // { t0, steps, timers, ended, skipped, finalized, skipFrom }
 let winInfo = null;        // cho test: { reward, paid() }
-let winCatch = null, winCoinClone = null, winEnvs = [];
+let winCatch = null, winCoinClone = null, winEnvs = [], winBag = null;
+// P6: túi thư của Pip (mailbag_open -> mailbag_full) phía trên bảng thắng. Phong bì từ các khay bay vào miệng túi.
+function bagShow({ full = false, instant = false } = {}) {
+  if (!winBag) {
+    winBag = document.createElement('div');
+    winBag.className = 'win-bag';
+    overlay.append(winBag);
+  }
+  winBag.classList.toggle('full', full);
+  if (instant) { winBag.style.transform = ''; winBag.style.opacity = 1; return winBag; }
+  const o = { s: 0.4, a: 0 };
+  const draw = () => { if (winBag) { winBag.style.transform = `scale(${o.s})`; winBag.style.opacity = o.a; } };
+  draw();
+  tween(o, { s: 1, a: 1 }, { dur: 240, easing: ease.outBackSoft, onUpdate: draw });
+  return winBag;
+}
+function bagFill() {
+  if (!winBag || winBag.classList.contains('full')) return;
+  winBag.classList.add('full');
+  sfx('claim', { vol: 0.45, rate: 0.9 });
+  if (reduceMotion()) return;
+  const o = { k: 0 };
+  tween(o, { k: 1 }, { dur: 260, easing: ease.outCubic, key: 'bagsq', onUpdate: () => {
+    if (winBag) winBag.style.transform = `scale(${1 + 0.06 * Math.sin(o.k * Math.PI)},${1 - 0.08 * Math.sin(o.k * Math.PI)})`;
+  } });
+}
+const bagMouth = () => (winBag ? { x: winBag.offsetLeft + winBag.offsetWidth / 2, y: winBag.offsetTop + winBag.offsetHeight * 0.42 } : { x: 540, y: 400 });
 function runWinTimeline(steps, skipFrom) {
   const tl = { t0: performance.now(), steps, timers: [], ended: false, skipped: false, finalized: false, skipFrom };
   for (const st of steps) {
@@ -2196,6 +2227,7 @@ function endWin() {
   }
   winTL = null;
   winEnvs.forEach(e => e.remove()); winEnvs = [];
+  if (winBag) { killKey('bagsq'); winBag.remove(); winBag = null; }
   if (winCatch) { winCatch.remove(); winCatch = null; }
   if (winCoinClone) { winCoinClone.remove(); winCoinClone = null; }
   document.body.classList.remove('win');
@@ -2212,8 +2244,9 @@ function fadeTrays(instant = false) {
   for (const el of [...slotEls, extraEl]) if (el) { el.style.transition = instant ? 'none' : 'opacity .2s'; el.style.opacity = '0'; }
 }
 function flyTraysAway() {
-  const bar = $('combo');
-  const tx = bar.offsetLeft + bar.offsetWidth / 2, ty = bar.offsetTop + bar.offsetHeight / 2;
+  const m = bagMouth();
+  const tx = m.x, ty = m.y;
+  let landed = 0;
   const envs = [];
   slotEls.forEach((_, k) => {
     const p = slotPos(k);
@@ -2239,8 +2272,9 @@ function flyTraysAway() {
         .then(() => {
           if (!env.isConnected) return;
           env.remove();
-          sparkle(tx, ty, 5, { colors: ['#ffd84a', '#ffffff', '#8cc8ff'] });
-          bar.classList.remove('bump'); void bar.offsetWidth; bar.classList.add('bump');
+          sparkle(tx, ty, 4);
+          if (++landed === slotEls.length) bagFill();
+          else if (winBag && !reduceMotion()) { const o = { k: 0 }; tween(o, { k: 1 }, { dur: 160, key: 'bagsq', onUpdate: () => { if (winBag) winBag.style.transform = `scale(1,${1 - 0.05 * Math.sin(o.k * Math.PI)})`; } }); }
         });
     }, k * 80);
   });
@@ -2330,11 +2364,15 @@ async function winSequence() {
   T.ready = calm ? T.coins + 300 : 2500;          // AC <= 2,6 giây: chừa 100 ms cho độ trễ setTimeout
   const unwait = () => { if (pEl) { pEl.querySelectorAll('.btn.wait').forEach(b => { b.classList.remove('wait'); b.classList.add('pop'); }); fitPanel(pEl); } };
   const steps = [];
-  if (!calm) steps.push({ at: 200, run: () => { winEnvs = flyTraysAway(); }, finish: () => { winEnvs.forEach(e => e.remove()); winEnvs = []; } });
-  steps.push({ at: calm ? T.panel : 950, run: () => fadeTrays(calm), finish: () => fadeTrays(true) });   // UI/UX P1-3: khay trống không ló trên ruy băng
+  if (!calm) {
+    steps.push({ at: 60, run: () => bagShow(), finish: () => bagShow({ full: true, instant: true }) });
+    steps.push({ at: 200, run: () => { winEnvs = flyTraysAway(); }, finish: () => { winEnvs.forEach(e => e.remove()); winEnvs = []; } });
+  }
+  steps.push({ at: calm ? T.panel : 950, run: () => { fadeTrays(calm); if (calm) bagShow({ full: true, instant: true }); else bagFill(); },
+    finish: () => { fadeTrays(true); bagShow({ full: true, instant: true }); } });   // UI/UX P1-3: khay trống không ló trên ruy băng
   steps.push({ at: T.win, run: () => {
     sfx('win');
-    if (!calm) confetti(50, { palette: WIN_PALETTE, drag: 3.2, gravity: 650, life: 2.1, spread: 0.75 });
+    if (!calm) { const m = bagMouth(); confetti(46, { x: m.x, y: m.y, drag: 3.2, gravity: 650, life: 2.1, spread: 0.75 }); }
     haptic('success');
   } });
   steps.push({ at: T.panel, run: () => { pEl = openPanel(calm); }, finish: ran => { if (!ran) pEl = openPanel(true); } });
@@ -2376,13 +2414,21 @@ function dailyWinSequence() {
   const D = dailySave();
   const first = !D.won[run.day];
   const reward = first ? (run.catchup ? DAILY_REWARD.catchup : DAILY_REWARD.today) : 0;
-  let pageDone = false;
+  let pageDone = false, wkBox = null;
   if (first) {
     D.won[run.day] = run.catchup ? 2 : 1;
     D.stamps.push(run.day);
     if (D.stamps.length % STAMP_PAGE === 0) { pageDone = true; D.pages++; D.keepsakes++; }
+    // F3 Thẻ tuần (L3): ô thứ 5 của tuần chứa ngày lá thư -> hộp mở ngay
+    const w = weekly(run.day);
+    if (w.ready) {
+      save.weekly[w.week] = 1;
+      wkBox = { coins: LIVE.WEEKLY.coins, hint: LIVE.WEEKLY.hint, pack: LIVE.WEEKLY.pack };
+      save.hint = (save.hint || 0) + wkBox.hint; save.pack = (save.pack || 0) + wkBox.pack;
+      track('weekly_box_open', { week: LIVE.dayKey(LIVE.weekStart(run.day)), days: w.count, day: run.key });
+    }
   }
-  const total = reward + (pageDone ? DAILY_REWARD.page : 0);
+  const total = reward + (pageDone ? DAILY_REWARD.page : 0) + (wkBox ? wkBox.coins : 0);
   persist();
   track('daily_complete', { day: run.key, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? 0 : S.moves, catchup: !!run.catchup,
     replay: !first, reward: total, stamps: D.stamps.length, time_s: Math.round((Date.now() - play.start) / 1000), src: L.src });
@@ -2403,6 +2449,7 @@ function dailyWinSequence() {
     body: `<div class="postmark big"><b>${dailyDateText(run.day)}</b><small>${t('daily_word')}</small></div>
       ${first ? `<div class="pts-line">${t('book_title')} · ${inPage}/${STAMP_PAGE}</div>` : `<p>${t('daily_no_reward')}</p>`}
       ${pageDone ? `<p>${t('book_page_done', { n: DAILY_REWARD.page })}</p>` : ''}
+      ${wkBox ? `<p><b>${t('weekly_box')}</b></p>${giftChips({ hint: wkBox.hint, pack: wkBox.pack, coins: wkBox.coins })}` : ''}
       ${total ? `<div class="coins-line"><i></i><span>+${total}</span></div>` : ''}`,
     buttons: [{ label: t('daily_home'), cls: 'wait', act: () => { const tl = winTL; finishWin(false); track('win_button', { level: run.key, button: 'home', ms: tl ? Math.round(performance.now() - tl.t0) : -1 }); goHome(); } }],
   });
@@ -2410,8 +2457,8 @@ function dailyWinSequence() {
   const unwait = () => { if (pEl) { pEl.querySelectorAll('.btn.wait').forEach(b => { b.classList.remove('wait'); b.classList.add('pop'); }); fitPanel(pEl); } };
   const stampOn = () => { const m = pEl && pEl.querySelector('.postmark'); if (m) m.classList.add('on'); };
   const steps = [
-    { at: T.panel, run: () => fadeTrays(calm), finish: () => fadeTrays(true) },
-    { at: T.win, run: () => { sfx('win'); if (!calm) confetti(40, { palette: WIN_PALETTE, drag: 3.2, gravity: 650, life: 2.1, spread: 0.75 }); haptic('success'); } },
+    { at: T.panel, run: () => { fadeTrays(calm); bagShow({ full: true, instant: calm }); }, finish: () => { fadeTrays(true); bagShow({ full: true, instant: true }); } },
+    { at: T.win, run: () => { sfx('win'); if (!calm) confetti(36, { x: 540, y: 420, drag: 3.2, gravity: 650, life: 2.1, spread: 0.75 }); haptic('success'); } },
     { at: T.panel, run: () => { pEl = openPanel(calm); }, finish: ran => { if (!ran) pEl = openPanel(true); } },
     { at: T.stamp, run: () => { stampOn(); sfx('stamp'); haptic('progress'); }, finish: ran => { if (!ran) stampOn(); } },
     { at: T.coins, run: () => { if (total) coinCtl = coinsTo(total, 540, 1000); },
@@ -2678,6 +2725,12 @@ async function startLevel(i, { resume = null, daily = null } = {}) {
     else { const old = loadRun(); if (old && old.idx === levelIdx) clearCampaignRun(); }
   }
   S = restored ? restored.S : E.createState(L);
+  // F6 (L4): quà Chào mừng quay lại +5 nước cho level chiến dịch đầu tiên chơi sau khi nhận (không áp cho Thư hôm nay, ván dở)
+  let welcomeMoves = 0;
+  if (!restored && !daily && L.moves != null && save.welcomeMoves > 0) {
+    welcomeMoves = save.welcomeMoves; S.moves += welcomeMoves; save.welcomeMoves = 0; persist();
+    track('welcome_moves_used', { level: levelIdx + 1, moves: welcomeMoves });
+  }
   undoStack = restored ? restored.undo : [];
   undoLeft = restored ? restored.undoLeft : 5;   // người lớn tuổi đi sai nhiều hơn: 5 lần hoàn tác miễn phí mỗi level
   combo = restored ? restored.combo : 0;
@@ -2775,6 +2828,7 @@ async function startLevel(i, { resume = null, daily = null } = {}) {
   if (token !== levelToken) return;
   busyInput = false;
   relayout({ dur: 120 });
+  if (welcomeMoves) toast(t('wb_toast', { n: welcomeMoves }), 1800);
   if (L.moves != null && !save.seen.rules) {
     save.seen.rules = 1;
     persist();
@@ -2841,7 +2895,7 @@ function levelBanner() {
   const o = calm ? { y: 0, a: 0, s: 1 } : { y: -60, a: 0, s: 0.6 };
   const draw = () => { el.style.transform = `translateY(${o.y}px) scale(${o.s})`; el.style.opacity = o.a; };
   draw();
-  if (sp) { sfx('boom', { vol: 0.5 }); shake(8); }
+  if (sp) { sfx('boom', { vol: 0.5 }); shake(3); }
   return tween(o, { y: 0, a: 1, s: 1 }, { dur: calm ? 250 : 380, easing: calm ? ease.linear : ease.outBack, onUpdate: draw })
     .then(() => wait(sp ? 2300 : 1700))
     .then(() => tween(o, { y: calm ? 0 : -40, a: 0 }, { dur: 260, onUpdate: draw }))
@@ -2880,7 +2934,7 @@ function featureIntro(force = false) {
   deferredIntro = false;
   clearHint();
   save.seen['unlock_' + u] = 1;
-  const icons = { hint: 'assets/ui/ic_hint.png', pack: 'assets/ui/ic_pack_big.png', stamper: 'assets/ui/ic_stamper.png', joker: 'assets/ui/joker_card.png' };
+  const icons = { hint: 'assets/ui/ic_hint.png', pack: 'assets/ui/ic_magnet.png', stamper: 'assets/ui/ic_stamper.png', joker: 'assets/ui/joker_card.png' };
   const info = { title: t('booster', { name: t('b_' + u) }), icon: icons[u], text: t('bi_' + u), name: t('b_' + u) };
   save[u] = (save[u] || 0) + GIFTS[u];
   persist();
@@ -2948,15 +3002,18 @@ function startDaily(day, { resume = null } = {}) {
   startLevel(0, { daily: run, resume });
 }
 /** Các ô của trang Sổ dấu ngày đang mở (trang đầy thì sang trang mới). */
-function stampBookHtml() {
+function stampBookHtml({ compact = false } = {}) {
   const D = dailySave();
   const n = D.stamps.length, inPage = n % STAMP_PAGE, page = Math.floor(n / STAMP_PAGE) + 1;
   const from = n - inPage;
+  // panel Thư hôm nay: chỉ 1 dòng tiến độ (panel đã có Thẻ tuần, cả trang 20 ô làm nút Mở thư tụt khỏi màn 375). Trang đầy đủ ở Album.
+  if (compact) return `<div class="sb compact"><div class="sb-head">${t('book_title')} · ${t('book_page', { n: page })} · ${inPage}/${STAMP_PAGE}</div>
+    <span class="ch-bar sb-bar"><b style="width:${Math.round(100 * inPage / STAMP_PAGE)}%"></b></span></div>`;
   const cells = Array.from({ length: STAMP_PAGE }, (_, i) => {
     const day = D.stamps[from + i];
     return day != null ? `<div class="sb-cell on"><span>${dailyDateText(day)}</span></div>` : '<div class="sb-cell"></div>';
   }).join('');
-  const keep = D.keepsakes ? `<div class="sb-keep"><i></i>${t('book_keepsakes', { n: D.keepsakes })}</div>` : '';
+  const keep = D.keepsakes ? `<div class="sb-keep"><i></i>${t('keepsake_name')} · ${t('book_keepsakes', { n: D.keepsakes })}</div>` : '';
   return `<div class="sb"><div class="sb-head">${t('book_title')} · ${t('book_page', { n: page })} · ${inPage}/${STAMP_PAGE}</div><div class="sb-grid">${cells}</div>${keep}</div>`;
 }
 function dailyPanel(source = 'home') {
@@ -2975,12 +3032,13 @@ function dailyPanel(source = 'home') {
   buttons.push({ label: t('close'), cls: 'orange', act: () => refreshHome() });
   panel({ title: t('daily_title'), kind: 'tall daily',
     body: `<div class="postmark${won ? ' done' : ''}"><b>${dailyDateText(td)}</b><small>${t('daily_word')}</small></div>
-      <p>${won ? t('daily_done') : t('daily_body', { n: DAILY_REWARD.today })}</p>${stampBookHtml()}`,
+      <p>${won ? t('daily_done') : t('daily_body', { n: DAILY_REWARD.today })}</p>${weeklyHtml()}${stampBookHtml({ compact: true })}`,
     buttons });
 }
-/** Lần đầu thấy nút Thư hôm nay: 1 popup (1 câu, 1 hình, 1 nút "Xem"), theo luật mở khoá mục 2. */
+/** Lần đầu thấy nút Thư hôm nay: 1 popup (1 câu, 1 hình, 1 nút "Xem"), theo luật mở khoá mục 2. Gọi qua hàng đợi homePopups. */
+const featureDue = () => dailyOn() && !save.seen.feat_daily;
 function dailyIntro() {
-  if (!dailyOn() || save.seen.feat_daily || panelOpen) return false;
+  if (!featureDue() || panelOpen) return false;
   save.seen.feat_daily = 1; persist();
   track('feature_unlock', { feature: 'daily', level: wonLevel() });
   sfx('feature');
@@ -2989,7 +3047,29 @@ function dailyIntro() {
     buttons: [{ label: t('feat_see'), act: () => dailyPanel('intro') }] });
   return true;
 }
-/** Nút Thư hôm nay trên màn chính: ẩn trước khi mở khoá, chấm đỏ khi chưa giao thư hôm nay, dấu tích khi đã giao. */
+// ============================================================ L3: Thẻ tuần 5/7 (F3)
+// Tuần lịch Thứ Hai–Chủ nhật, mỗi ngày có Thư hôm nay đã giao đóng 1 ô (thư hôm qua chơi bù đóng ô hôm qua). Đủ 5 ô thì hộp mở
+// ngay lúc thắng (không đợi Chủ nhật): 1 Gợi ý, 1 Nam châm, 100 xu. Tuần mới thẻ mới. Không có chữ "mất chuỗi".
+function weekly(day = today()) { save.weekly = save.weekly || {}; return LIVE.weeklyCard(dailySave().won, day, save.weekly); }
+function weeklyHtml() {
+  const w = weekly(), td = today(), names = t('wd_short').split(',');
+  const cells = w.days.map((d, i) => `<div class="wk-cell${w.cells[i] ? ' on' : ''}${d === td ? ' today' : ''}"><b></b>${names[i]}</div>`).join('');
+  return `<div class="wk-card${w.claimed ? ' done' : ''}"><div class="wk-head">${t('weekly_title')} · ${Math.min(w.count, w.need)}/${w.need}</div>
+    <div class="wk-row">${cells}</div><div class="wk-note">${w.claimed ? t('weekly_done') : t('weekly_note')}</div></div>`;
+}
+/** Phần quà dạng chip có icon (phong bì quà, hộp tuần). */
+function giftChips(r) {
+  const chip = (icon, txt) => `<div class="gift-chip"><i style="background-image:url(${icon})"></i>${txt}</div>`;
+  const out = [];
+  if (r.coins) out.push(chip('assets/ui/coin.png', `+${r.coins}`));
+  if (r.hint) out.push(chip('assets/ui/ic_hint.png', `${t('b_hint')} +${r.hint}`));
+  if (r.pack) out.push(chip('assets/ui/ic_magnet.png', `${t('b_pack')} +${r.pack}`));
+  if (r.stamper) out.push(chip('assets/ui/ic_stamper.png', `${t('b_stamper')} +${r.stamper}`));
+  if (r.joker) out.push(chip('assets/ui/ic_wild.png', `${t('b_joker')} +${r.joker}`));
+  if (r.moves) out.push(chip('assets/ui/plus.png', t('wb_moves', { n: r.moves })));
+  return `<div class="gift-list">${out.join('')}</div>`;
+}
+/** Nút Thư hôm nay trên màn chính: ẩn trước khi mở khoá, chấm đỏ khi chưa giao thư hôm nay, dấu tích khi đã giao, huy hiệu Thẻ tuần n/5. */
 function refreshDailyBtn() {
   const b = $('dailyBtn');
   if (!b) return;
@@ -3000,16 +3080,122 @@ function refreshDailyBtn() {
   b.classList.toggle('new', !won);
   b.classList.toggle('done', won);
   b.querySelector('.lbl').textContent = t('daily_btn');
+  const w = weekly(), wk = b.querySelector('.wk');
+  wk.classList.toggle('on', w.count > 0 || w.claimed);
+  wk.classList.toggle('full', w.claimed);
+  wk.textContent = `${Math.min(w.count, w.need)}/${w.need}`;
 }
-function refreshHome() { if (!$('home').classList.contains('off')) { LIVE.touch(save.live); persist(); refreshDailyBtn(); } }
+// ============================================================ L5: ô Event (điểm chạm 3)
+// Event lớn E1/E2/E4 làm ở L7–L9. Mỗi vòng sau đăng ký vào EVENT_UI[id] = { progress() -> {p, n}, open() }.
+// Trạng thái: ẩn (chưa qua L5, hoặc ngoài cửa sổ event); mờ "Mở ở Level N" (trong cửa sổ, chưa đủ level; không phải nút);
+// mờ "Sắp có" (đủ level nhưng event chưa làm xong, không phải nút); sáng (icon, vạch tiến độ, bấm được, tính là điểm chạm).
+const EVENT_UI = {};
+function refreshEventTile() {
+  const el = $('eventTile');
+  const won = wonLevel();
+  const st = LIVE.liveState(save.live, LIVE.nowMs(), won);
+  const id = st.big || st.bigPending;
+  const ui = st.big && EVENT_UI[st.big];
+  const show = !!id && LIVE.featureOn('daily', won);      // không function meta nào trước L5 (mục 2 quy tắc 1)
+  el.classList.toggle('off', !show);
+  el.classList.toggle('on', !!(show && ui));
+  el.classList.toggle('dim', !!(show && !ui));
+  if (show && ui) { el.dataset.touch = 'event'; el.setAttribute('role', 'button'); } else { delete el.dataset.touch; el.removeAttribute('role'); }
+  el.dataset.event = show ? id : '';
+  if (!show) return;
+  el.querySelector('.lbl').textContent = t('ev_' + id);
+  const ev = LIVE.BIG_EVENTS.find(e => e.id === id);
+  el.querySelector('.sub').textContent = st.big ? (ui ? '' : t('ev_soon')) : t('ev_opens', { n: ev.minLevel });
+  if (ui) { const pr = ui.progress(); el.querySelector('.ev-bar b').style.width = `${Math.round(100 * pr.p / Math.max(1, pr.n))}%`; }
+}
+$('eventTile').addEventListener('pointerup', () => {
+  const id = $('eventTile').dataset.event, ui = EVENT_UI[id];
+  if (!ui || !$('eventTile').classList.contains('on')) return;
+  unlockAudio(); sfx('click'); ui.open();
+});
+// ============================================================ L3, L4: Thư buổi sáng (F4), Chào mừng quay lại (F6), phong bì quà gộp
+// Quà event đã qua mà chưa nhận nằm ở save.gifts (các vòng L7–L9 đẩy vào khi event kết thúc). Tất cả gộp vào 1 phong bì.
+function giftsDue() {
+  const won = wonLevel();
+  const st = LIVE.liveState(save.live, LIVE.nowMs(), won);
+  // chưa qua L5: không đón (không function meta nào trước L5), bỏ luôn lần vắng này để sau này không đón nhầm
+  if (save.live.awayDue && !LIVE.featureOn('welcome', won)) { delete save.live.awayDue; persist(); }
+  return { day: st.day, welcome: LIVE.welcomeDue(save.live, won) ? save.live.awayDue : 0, gifts: (save.gifts || []).length > 0,
+    morning: LIVE.morningDue(save.morning, st.day, st.pd, won) };
+}
+function giftPopup(due) {
+  const parts = [];
+  if (due.welcome) parts.push(LIVE.welcomeReward(due.welcome));
+  const evGifts = (save.gifts || []).slice();
+  parts.push(...evGifts);
+  const mN = due.morning ? ((save.morning && save.morning.n) || 0) + 1 : 0;
+  if (due.morning) parts.push(LIVE.morningReward(mN));
+  const r = LIVE.mergeRewards(parts);
+  const title = due.welcome ? t('wb_title') : due.gifts ? t('gifts_title') : t('morning_title');
+  const lines = [];
+  if (due.welcome) {
+    lines.push(`<p>${t('wb_body')}</p>`);
+    const ch = chapterOf(curLevel()), dn = decorOf(ch)[save[ch.key] || 0];
+    lines.push(`<p class="small">${t('wb_place', { place: chPlace(ch) })}${dn ? ' ' + t('wb_decor', { name: t('decor_' + dn.id) }) : ''}</p>`);
+  } else if (due.gifts) lines.push(`<p>${t('gifts_body')}</p>`);
+  else lines.push(`<p>${t('morning_body')}</p>`);
+  sfx('feature', { vol: 0.6 });
+  panel({ title, kind: 'tall gift', body: `<div class="gift-art"></div>${lines.join('')}${giftChips(r)}`,
+    buttons: [{ label: t('claim'), act: () => {
+      save.coins += r.coins;
+      for (const k of ['hint', 'pack', 'stamper', 'joker']) if (r[k]) save[k] = (save[k] || 0) + r[k];
+      if (r.moves) save.welcomeMoves = Math.max(save.welcomeMoves || 0, r.moves);   // không cộng dồn nếu nhận 2 lần mà chưa chơi
+      if (due.welcome) { track('welcome_back', { away: due.welcome, level: wonLevel(), joker: r.joker }); delete save.live.awayDue; }
+      if (evGifts.length) { track('event_gift_claim', { n: evGifts.length, src: evGifts.map(g => g.src || '').join(',') }); save.gifts = (save.gifts || []).slice(evGifts.length); }
+      if (due.morning) { save.morning = { last: due.day, n: mN }; track('morning_claim', { n: mN, hint: r.hint > 0 ? 1 : 0, merged: !!(due.welcome || due.gifts) }); }
+      persist();
+      sfx('coins', { vol: 0.6 }); haptic('milestone');
+      bumpCoins();
+      refreshHome();
+    } }] });
+  return true;
+}
+// Hàng đợi popup tự hiện ở màn chính (mục 4): tối đa 1 popup mỗi lần mở app (boot, quay lại từ nền) và mỗi lần về màn chính.
+// Ưu tiên: hỏi chơi tiếp ván dở (chỉ lúc mở app) > phong bì quà (F6 > quà event cũ > F4, gộp 1 phong bì) > "Tính năng mới"
+// (tối đa 1 mỗi phiên). Thứ chưa hiện được thì đợi lần sau; quà đã đạt không mất.
+let popupVisit = 0, popupUsed = -1, featureShown = false;
+const popupLog = [];
+function homePopups(trigger = 'home') {
+  if (panelOpen || $('home').classList.contains('off') || popupUsed === popupVisit) return null;
+  if (!$('album').classList.contains('off') || !$('ch2').classList.contains('off')) return null;
+  const g = giftsDue();
+  const run = trigger === 'boot' ? loadRun() : null;
+  const pick = LIVE.pickPopup({ resume: !!run, welcome: !!g.welcome, gifts: g.gifts, morning: g.morning, feature: featureDue(), featureShown }, trigger);
+  if (!pick) return null;
+  popupUsed = popupVisit;
+  popupLog.push({ visit: popupVisit, trigger, pick, t: Date.now() });
+  if (pick === 'resume') askResume(run);
+  else if (pick === 'gifts') giftPopup(g);
+  else if (pick === 'feature') { featureShown = true; dailyIntro(); }
+  return pick;
+}
+function newVisit() { popupVisit++; }
+function refreshHome() {
+  if ($('home').classList.contains('off')) return;
+  LIVE.touch(save.live); persist();
+  refreshDailyBtn(); refreshEventTile(); renderDecor(); bumpCoins({ instant: true, pop: false });
+}
 $('dailyBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); dailyPanel('home'); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshHome(); });   // qua nửa đêm khi app ở nền: màn chính cập nhật khi quay lại
+// quay lại từ nền (qua nửa đêm, vắng nhiều ngày): màn chính cập nhật; vắng >= 30 phút hoặc sang ngày mới thì tính là một lần mở app
+let hiddenAt = 0, hiddenDay = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); hiddenDay = today(); return; }
+  refreshHome();
+  if (hiddenAt && (Date.now() - hiddenAt >= 30 * 60e3 || today() !== hiddenDay)) { newVisit(); setTimeout(() => homePopups('resume'), 300); }
+  hiddenAt = 0;
+});
 
 // ============================================================ home / pause
 // Level hiện tại để hiển thị (save cũ có thể mở xa hơn số level đang có: không hạ unlocked, chỉ kẹp khi hiển thị)
 const curLevel = () => Math.max(1, Math.min(save.unlocked, LEVELS.length));
 const chPages = ch => Math.max(1, Math.ceil((Math.min(ch.to, LEVELS.length) - ch.from + 1) / 10));
 function goHome(chId, page) {
+  const returning = $('home').classList.contains('off');     // về từ level/màn khác (không phải lật trang chương, đổi ngôn ngữ)
   endWin();
   setMusicScene('home');
   homeCh = CHAPTERS.find(c => c.id === chId && c.from <= LEVELS.length) || chapterOf(curLevel());
@@ -3041,6 +3227,9 @@ function goHome(chId, page) {
     const el = document.createElement('div');
     el.className = 'lvl' + (lv > save.unlocked ? ' locked' : '') + (save.stars[lv] ? ' done' : '') + (lv === save.unlocked ? ' cur' : '') + (run && run.idx === i ? ' resume' : '');
     el.innerHTML = `${lv}${save.stars[lv] ? `<span class="pts">${'<i></i>'.repeat(save.stars[lv])}</span>` : ''}`;
+    el.dataset.map = lv;                           // ô bản đồ level: không tính là điểm chạm chính (L5)
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', t('level', { n: lv }) + (lv > save.unlocked ? ' 🔒' : ''));
     el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); playLevel(i); } else sfx('deny'); });
     grid.append(el);
   }
@@ -3072,10 +3261,10 @@ function goHome(chId, page) {
   grid.append(nav);
   // có ván dở: nút chính là "Chơi tiếp Level N" (vào thẳng ván dở, không hỏi lại)
   $('playBtn').textContent = run ? t('play_resume', { n: run.idx + 1 }) : allDone() ? t('more_soon') : t('play', { n: curLevel() });
-  refreshDailyBtn();
-  renderDecor();
   $('home').classList.remove('off');
-  if (!panelOpen && !booting) dailyIntro();
+  refreshHome();
+  // popup tự hiện chỉ khi vừa về màn chính; chờ 1 nhịp để lệnh mở ngay sau goHome (Album, Trang trí) được ưu tiên
+  if (!booting && returning) { newVisit(); const v = popupVisit; setTimeout(() => { if (v === popupVisit) homePopups('home'); }, 260); }
 }
 const chPlace = ch => t(ch.named ? 'ch_place_' + ch.id : 'ch_place_x');
 const chName = ch => (ch.named ? t('ch_name_' + ch.id) : `${t('ch_word', { n: ch.id })} · ${t('ch_place_x')}`);
@@ -3107,9 +3296,10 @@ function renderDecor(justPlaced = -1) {
   // chương 3+: class theo chỗ đặt (dc-s0..dc-s5), dùng chung 6 chỗ của nền với chương 1–2
   $('decor').innerHTML = DECOR.map((d, i) => (i < n || i === n)
     ? `<img class="dc dc-${d.id}${homeCh.id > 2 ? ' dc-s' + i : ''}${i === n ? ' ghost' : ''}${i === justPlaced ? ' new' : ''}" src="assets/decor/${d.id}.png" alt="">` : '').join('');
-  $('decorBtn').innerHTML = `${t('decorate')} ${pointsLeft()}<i></i>`;
+  $('decorBtn').querySelector('.pts').textContent = pointsLeft();
   const next = DECOR[n];
   $('decorBtn').classList.toggle('ready', !!next && pointsLeft() >= next.cost);
+  $('homePip').classList.toggle('off', DECOR.length >= 6 && n >= 6);   // giường của Pip (món thứ 6) đã đặt: Pip ngủ trên đó, không ngồi chờ nữa
 }
 function decorPanel() {
   const DECOR = decorOf(homeCh);
@@ -3365,7 +3555,11 @@ window.__game = { variant: VARIANT, get S() { return S; }, get level() { return 
   chapters: CHAPTERS, get homeCh() { return homeCh.id; }, get homePage() { return homePage; }, openChapterTeaser, chapterReward, get daily() { return dailyRun && { key: dailyRun.key, catchup: !!dailyRun.catchup, replay: !!dailyRun.replay, src: dailyRun.src }; },
   get save() { return save; }, persist, curLevel, decorOf, startDaily, dailyPanel, dailyFor, loadDailyRun, refreshHome, dailyPool: () => getDailyPool().map(e => e.src),
   live: { setNow(v) { const off = (typeof v === 'number' ? v : new Date(v).getTime()) - Date.now(); LIVE.setClock(() => Date.now() + off); }, reset() { LIVE.setClock(null); },
-    state: () => LIVE.liveState(save.live, LIVE.nowMs(), wonLevel()), today: () => LIVE.dayKey(today()), touch() { LIVE.touch(save.live); persist(); } } };
+    state: () => LIVE.liveState(save.live, LIVE.nowMs(), wonLevel()), today: () => LIVE.dayKey(today()), touch() { LIVE.touch(save.live); persist(); } },
+  // L3–L5 (tests/home-liveops.browser.js): về màn chính như từ một level, hàng đợi popup, Thẻ tuần, điểm chạm
+  returnHome(chId) { $('home').classList.add('off'); goHome(chId); }, homePopups, get popupLog() { return popupLog.slice(); }, newVisit,
+  weekly: () => weekly(), giftsDue, refreshEventTile,
+  touchPoints: () => [...document.querySelectorAll('#home [data-touch]')].filter(el => el.offsetParent && getComputedStyle(el).visibility !== 'hidden').map(el => el.dataset.touch) };
 
 // đổi ngôn ngữ giữa ván: viết lại tên chủ đề trên lá vương miện
 function relabelCards() {
@@ -3378,8 +3572,13 @@ function relabelCards() {
 function applyStaticCopy() {
   movesEl.querySelector('.lbl').textContent = t('moves');
   document.documentElement.lang = getLang();
-  $('albumBtn').textContent = t('album');
-  $('decorBtn').title = t('pts_name');
+  $('albumBtn').querySelector('.lbl').textContent = t('album');
+  $('albumBtn').setAttribute('aria-label', t('album'));
+  $('decorBtn').querySelector('.lbl').textContent = t('decorate');
+  $('decorBtn').setAttribute('aria-label', t('decorate'));
+  $('homeCoins').setAttribute('aria-label', t('coins_aria'));
+  $('albumClose').setAttribute('aria-label', t('close'));
+  $('ch2Close').setAttribute('aria-label', t('close'));
   $('rotateTxt').textContent = t('rotate');
   $('ch2Title').textContent = t('ch2_title');
   $('ch2Sub').textContent = t('ch2_sub');
@@ -3388,10 +3587,8 @@ function applyStaticCopy() {
   $('ch2Npc').innerHTML = t('ch2_npc');
   $('ch2Decor').textContent = t('ch2_decor');
   $('ch2Tip').textContent = t('ch2_tip');
-  $('ch2Close').textContent = t('close');
   $('albumTitle').textContent = t('album_title');
-  $('albumClose').textContent = t('close');
-  $('gearBtn').textContent = t('settings');
+  $('gearBtn').setAttribute('aria-label', t('settings_aria'));
 }
 let booting = true;            // lúc mở app: hộp "Chơi tiếp ván dở" được ưu tiên hơn popup tính năng mới (tối đa 1 popup)
 (async function boot() {
@@ -3402,14 +3599,15 @@ let booting = true;            // lúc mở app: hộp "Chơi tiếp ván dở" 
   buildDebug();
   try { manifest = await (await fetch('assets/manifest.json')).json(); } catch (e) { manifest = {}; }
   await preload(['back', 'topic_frame', 'crown', 'slot_tray', 'tray_front', 'btn_undo_off', 'hud_moves', 'token', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'tem_diem', 'lock', 'plus', 'recycle', 'radial', 'logo',
-    'face_1', 'face_2', 'face_3', 'face_4', 'face_5', 'face_6', 'ic_hint', 'ic_joker', 'banner', 'bar_track', 'tipbox', 'ribbon', 'btn_yellow', 'btn_blue',
-    'btn_pause', 'btn_undo', 'deck_tag', 'panel'].map(n => `assets/ui/${n}.png`).concat(['assets/ui/bg_game.jpg']));
+    'face_1', 'face_2', 'face_3', 'face_4', 'face_5', 'face_6', 'ic_hint', 'ic_magnet', 'ic_wild', 'banner', 'bar_track', 'tipbox', 'ribbon', 'btn_primary', 'btn_primary_down', 'btn_secondary', 'btn_secondary_down',
+    'btn_close', 'btn_pause', 'btn_undo', 'deck_tag', 'panel', 'mailbag_open', 'mailbag_full', 'ic_settings', 'ic_album', 'ic_decor', 'ic_daily', 'level_pin', 'chapter_sign']
+    .map(n => `assets/ui/${n}.png`).concat(['assets/ui/bg_game_tall.jpg']));
+  preloadFx();
   initAudio();
   track('app_open', { lite: LITE, ab_hard: AB.hard ? AB.hard.join('-') : 'default', ab_safety: AB.safety || 'default' });
   goHome();
   const m = location.search.match(/level=(\d+)/);
-  if (m) playLevel(+m[1] - 1);
-  else { const run = loadRun(); if (run) askResume(run); }     // mở lại app có ván dở: hỏi chơi tiếp (R10)
   booting = false;
-  if (!panelOpen && !m) dailyIntro();
+  if (m) playLevel(+m[1] - 1);
+  else { newVisit(); homePopups('boot'); }       // tối đa 1 popup lúc mở app: ván dở (R10) > phong bì quà > tính năng mới
 })();

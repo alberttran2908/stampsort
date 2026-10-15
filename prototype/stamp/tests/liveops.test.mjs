@@ -124,6 +124,62 @@ test('L2 level Daily: cột đảo, lượt >= lượt gốc, giải được tr
   }
 });
 
+// ---------------------------------------------------------------- L3, L4 (Thẻ tuần, Thư buổi sáng, Chào mừng quay lại, hàng đợi popup)
+const MON = LIVE.epochDay(local(2026, 10, 12));      // Thứ Hai
+test('L3 Thẻ tuần: T2, T3, T5, T6 chưa đủ; thêm CN (dấu thứ 5) thì sẵn sàng mở hộp; bỏ T4, T7 không phạt', () => {
+  const won = { [MON]: 1, [MON + 1]: 1, [MON + 3]: 1, [MON + 4]: 1 };
+  const w4 = LIVE.weeklyCard(won, MON + 4, {});
+  ok(w4.count === 4 && !w4.ready && w4.days[0] === MON && w4.days[6] === MON + 6, JSON.stringify(w4));
+  won[MON + 6] = 1;
+  const w5 = LIVE.weeklyCard(won, MON + 6, {});
+  ok(w5.count === 5 && w5.ready && JSON.stringify(w5.cells) === JSON.stringify([true, true, false, true, true, false, true]), 'CN: ' + JSON.stringify(w5));
+  ok(!LIVE.weeklyCard(won, MON + 6, { [w5.week]: 1 }).ready, 'đã nhận thì không mở lần 2');
+});
+test('L3 Thẻ tuần: tuần mới thẻ trống; thư hôm qua chơi bù đóng ô hôm qua (cùng tuần), CN chơi bù vào T2 thuộc tuần cũ', () => {
+  const won = { [MON]: 1, [MON + 1]: 1, [MON + 2]: 1, [MON + 3]: 1, [MON + 6]: 2 };
+  const next = LIVE.weeklyCard(won, MON + 7, {});
+  ok(next.count === 0 && next.week === LIVE.weeklyCard(won, MON, {}).week + 1, 'tuần mới');
+  ok(LIVE.weeklyCard(won, MON + 6, {}).count === 5, 'CN (chơi bù) vẫn tính cho tuần cũ');
+  ok(LIVE.weekStart(MON + 6) === MON && LIVE.weekStart(MON + 7) === MON + 7, 'weekStart');
+});
+test('L3 Thư buổi sáng: từ ngày người chơi thứ 2, đã qua L5, 1 lần mỗi ngày; lần 7, 14 thêm Gợi ý', () => {
+  ok(!LIVE.morningDue({}, MON, 1, 9), 'D1 không có');
+  ok(LIVE.morningDue({}, MON + 1, 2, 5) && !LIVE.morningDue({}, MON + 1, 2, 4), 'D2: cần L5');
+  ok(!LIVE.morningDue({ last: MON + 1, n: 1 }, MON + 1, 2, 9), 'đã nhận hôm nay');
+  ok(LIVE.morningDue({ last: MON + 1, n: 1 }, MON + 4, 5, 9), 'bỏ vài ngày vẫn nhận tiếp');
+  const r = [1, 6, 7, 8, 13, 14].map(n => LIVE.morningReward(n));
+  ok(r.every(x => x.coins === 20) && r.map(x => x.hint).join('') === '001001', JSON.stringify(r));
+});
+test('L4 Chào mừng quay lại: vắng 2 ngày không có, vắng 3 ngày có, vắng 7 ngày thêm Tem Đa Năng; lùi giờ không tạo', () => {
+  const live = {};
+  LIVE.touch(live, local(2026, 10, 12));
+  LIVE.touch(live, local(2026, 10, 15));            // vắng 13, 14
+  ok(!live.awayDue && !LIVE.welcomeDue(live, 9), 'vắng 2: ' + JSON.stringify(live));
+  LIVE.touch(live, local(2026, 10, 19));            // vắng 16, 17, 18
+  ok(live.awayDue === 3 && LIVE.welcomeDue(live, 9) && !LIVE.welcomeDue(live, 4), 'vắng 3 (và cần L5)');
+  ok(LIVE.welcomeReward(3).joker === 0 && LIVE.welcomeReward(7).joker === 1 && LIVE.welcomeReward(3).moves === 5, 'quà');
+  delete live.awayDue;
+  LIVE.touch(live, local(2026, 10, 14));            // lùi giờ
+  ok(!live.awayDue, 'lùi giờ');
+  LIVE.touch(live, local(2026, 10, 27));            // vắng 20..26 = 7
+  ok(live.awayDue === 7, 'vắng 7: ' + live.awayDue);
+});
+test('L4 hàng đợi popup: tối đa 1, ưu tiên ván dở (lúc mở app) > phong bì quà > tính năng mới; quà gộp', () => {
+  const all = { resume: true, welcome: true, gifts: true, morning: true, feature: true };
+  ok(LIVE.pickPopup(all, 'boot') === 'resume', 'boot');
+  ok(LIVE.pickPopup(all, 'home') === 'gifts', 'home: ván dở chỉ hỏi lúc mở app');
+  ok(LIVE.pickPopup({ morning: true, feature: true }) === 'gifts', 'F4 trước tính năng mới');
+  ok(LIVE.pickPopup({ feature: true }) === 'feature' && LIVE.pickPopup({ feature: true, featureShown: true }) === null, '1 tính năng mới mỗi phiên');
+  ok(LIVE.pickPopup({}) === null, 'không có gì');
+  const m = LIVE.mergeRewards([LIVE.welcomeReward(7), { coins: 50 }, LIVE.morningReward(7)]);
+  ok(m.coins === 70 && m.hint === 2 && m.pack === 1 && m.joker === 1 && m.moves === 5, JSON.stringify(m));
+});
+const COPY_SRC = (await import('node:fs')).readFileSync(new URL('../src/copy.js', import.meta.url), 'utf8');
+test('Copy EN/VI: 0 kết quả cho "mất chuỗi", "streak lost", "hết hạn", "expire"', () => {
+  const bad = COPY_SRC.match(/mất chuỗi|streak lost|hết hạn|expire/gi);
+  ok(!bad, bad && bad.join(','));
+});
+
 let nf = 0;
 for (const [pass, name, msg] of results) { if (!pass) nf++; console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${name}${pass ? '' : '\n       ' + msg}`); }
 console.log(`\n${results.length - nf}/${results.length} pass, ${nf} fail.`);
