@@ -1,12 +1,19 @@
 import { LEVELS as LEVELS_A } from './levels.js';
 import { LEVELS as LEVELS_B } from './levels_b.js';
-import { LEVELS_APK } from './levels_apk.js';   // L21-L60: level APK 0.9.5 (tools/import_apk_levels.mjs)
+import { LEVELS_APK } from './levels_apk.js';   // L21-L60: level APK 0.9.5 (tools/import_apk_levels.mjs), chỉ còn làm fallback
+import { buildChapters, KEEPSAKE_DECOR } from './chapters.js';
+import * as LIVE from './liveops.js';
+import { buildDailyPool, pickDaily, dailyLevel } from './daily.js';
+// L21+ sinh bởi tools/gen_levels.mjs (luật A, R3). File do Level Dev ghi, có thể chưa có: nạp động, thiếu thì mảng rỗng.
+const LEVELS_GEN = await import('./levels_gen.js').then(m => m.LEVELS_GEN || [], () => []);
+// Pool Thư hôm nay của Level Dev (gen_levels.mjs --daily, L2). Chưa có thì daily.js dựng pool tạm từ level chiến dịch.
+const LEVELS_DAILY = await import('./levels_daily.js').then(m => m.LEVELS_DAILY || [], () => []);
 import * as E from './engine.js';
 import { hint as solverHint, solve } from './solver.js';
 import { initAudio, unlockAudio, sfx, comboSfx, setMusicOn, isMusicOn, setMusicScene, setSfxVolume, sfxVolume } from './audio.js';
 import { haptic, hapticsEnabled, setHapticsEnabled } from './haptics.js';   // 4 bậc, Capacitor Haptics trên iOS (benchmark-grand-games.md P1)
 import { getSetting, setSetting, onSetting, textScale } from './settings.js';   // cài đặt của máy (R13)
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles, setFxSize } from './fx.js';
 import { candidateActions, isDeadlocked } from './solver.js';
 import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js';
 import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js';
@@ -38,21 +45,7 @@ const GIFTS = { hint: 3, pack: 2, stamper: 2, joker: 2 };   // Joker 2 (PO chố
 // là đủ cả phòng, món cuối thường cần chơi lại 1-2 level.
 // Mỗi chương (concept mục 3.1: khu mới = tem mới + decor mới) có 6 decor riêng, dùng chung 6 chỗ trên ảnh nền
 // (đỉnh, tường trái/giữa/phải, kệ trái/phải). Màn hình chính hiện lưới level + decor của chương đang xem.
-const CHAPTERS = [
-  { id: 1, from: 1, to: 10, key: 'decor', decor: [
-    { id: 'bunting', cost: 2 }, { id: 'frame', cost: 3 }, { id: 'clock', cost: 4 },
-    { id: 'postbox', cost: 4 }, { id: 'board', cost: 5 }, { id: 'cat', cost: 6 }] },
-  { id: 2, from: 11, to: 20, key: 'decor2', decor: [
-    { id: 'fan', cost: 2 }, { id: 'porthole', cost: 3 }, { id: 'buoy', cost: 4 },
-    { id: 'lantern', cost: 4 }, { id: 'chart', cost: 5 }, { id: 'boatbed', cost: 6 }] },
-  // Chương 3-6: level lấy từ APK (concept mục 3.1: Đồi Trà, Vườn Táo, Ga Tàu, Đảo Xa). Chưa có decor riêng.
-  { id: 3, from: 21, to: 30, key: 'decor3', decor: [] },
-  { id: 4, from: 31, to: 40, key: 'decor4', decor: [] },
-  { id: 5, from: 41, to: 50, key: 'decor5', decor: [] },
-  { id: 6, from: 51, to: 60, key: 'decor6', decor: [] },
-];
-const chapterOf = lv => CHAPTERS.find(c => lv >= c.from && lv <= c.to) || CHAPTERS[CHAPTERS.length - 1];
-let homeCh = CHAPTERS[0];     // chương đang xem ở màn hình chính
+// R5: CHAPTERS sinh trong chapters.js (ch1–2: 10 level, ch3+: 20 level). Khai báo sau LEVELS (cần độ dài chiến dịch).
 // Mốc UA: level "khó nhưng không thể thua". Mặc định theo levels.js (special/safety); ghi đè để A/B test:
 //   ?hard=5,10      danh sách level khó      ?safety=overtime | retry | none
 const AB = (() => {
@@ -68,7 +61,25 @@ const VARIANT = (() => {
   try { v = v || localStorage.getItem('stampsort_variant'); if (v) localStorage.setItem('stampsort_variant', v); } catch (e) { /* ignore */ }
   return v === 'b' ? 'b' : 'a';
 })();
-const LEVELS = (VARIANT === 'b' ? LEVELS_B : LEVELS_A).concat(LEVELS_APK);   // L21+ dùng chung cho A và B
+// L21+ (dùng chung cho A và B): ưu tiên level sinh (levels_gen.js); số level chưa sinh thì lấy level APK cùng số để tester
+// không mất nội dung (bản web công khai: deploy_web.sh thay levels_apk.js bằng mảng rỗng, nên chỉ còn level sinh).
+// ?apk=1: ép dùng level APK để so sánh nội bộ. Dừng ở chỗ hổng đầu tiên để số level luôn liền mạch (id = chỉ số + 1).
+const USE_APK = /[?&]apk=1/.test(location.search);
+const LEVELS_TAIL = (() => {
+  const gen = new Map(LEVELS_GEN.map(l => [l.id, l])), apk = new Map(LEVELS_APK.map(l => [l.id, l]));
+  const out = [];
+  for (let id = 21; ; id++) {
+    const lv = USE_APK ? (apk.get(id) || gen.get(id)) : (gen.get(id) || apk.get(id));
+    if (!lv) break;
+    out.push(lv.source ? lv : { ...lv, source: 'apk' });
+  }
+  return out;
+})();
+const LEVELS = (VARIANT === 'b' ? LEVELS_B : LEVELS_A).concat(LEVELS_TAIL);
+const CHAPTERS = buildChapters(LEVELS.length);
+const chapterOf = lv => CHAPTERS.find(c => lv >= c.from && lv <= c.to) || CHAPTERS[CHAPTERS.length - 1];
+let homeCh = CHAPTERS[0];     // chương đang xem ở màn hình chính
+let homePage = 0;             // chương 20 level: 2 trang 10 ô (lưới giữ 2 hàng, vừa màn 9:16)
 setCommon({ variant: VARIANT });
 const specialOf = lv => ((AB.hard ? AB.hard.includes(lv.id) : !!lv.special) ? (lv.special || 'hard') : null);
 const safetyOf = lv => (specialOf(lv) ? (AB.safety || lv.safety || 'overtime') : 'none');
@@ -127,6 +138,24 @@ if (save.album && save.album.Cocktail) {
   delete save.album.Cocktail;
   persist();
 }
+// R5: chương 3+ đổi từ 10 sang 20 level (L21+ là level sinh). Tiến độ giữ theo SỐ level (unlocked, Tem Điểm từng level),
+// không reset. Cờ thưởng hết chương 3–6 thuộc cấu trúc cũ (L30/L40/L50/L60 của level APK) không còn đúng: bỏ một lần.
+if ((save.chv || 1) < 2) { for (const k of ['chapter3', 'chapter4', 'chapter5', 'chapter6']) delete save[k]; save.chv = 2; persist(); }
+// L1: lịch local. Đồng hồ giả chỉ ở chế độ ?debug: ?now=YYYY-MM-DD[THH:MM] (đồng hồ vẫn chạy từ mốc đó), ?pd=N (ngày người chơi N).
+save.live = save.live || {};
+{
+  const q = location.search.match(/[?&]now=(\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2})?)/);
+  if (DEBUG && q) { const off = new Date(q[1].length > 10 ? q[1] : q[1] + 'T12:00').getTime() - Date.now(); LIVE.setClock(() => Date.now() + off); }
+  const pq = location.search.match(/[?&]pd=(\d+)/);
+  if (DEBUG && pq) {
+    if (!Number.isFinite(save.live.firstOpenDay)) save.live.firstOpenDay = LIVE.epochDay(LIVE.nowMs());
+    const target = (save.live.firstOpenDay + Math.max(1, +pq[1]) - 1) * 864e5 + 12 * 36e5;   // trưa ngày đích (giờ địa phương)
+    const off = target + new Date(target).getTimezoneOffset() * 6e4 - Date.now();
+    LIVE.setClock(() => Date.now() + off);
+  }
+}
+LIVE.touch(save.live);
+persist();
 // Save của bản 10 level dừng ở unlocked = 10 dù đã thắng L10: mở level kế tiếp level cao nhất đã thắng
 {
   const won = Object.keys(save.stars).map(Number).filter(n => save.stars[n]);
@@ -191,7 +220,7 @@ function fit() {
   stage.style.height = STAGE_H + 'px';
   for (const [k, v] of [['--hud', DY_HUD], ['--bd', DY_BOARD], ['--bot', DY_BOT], ['--mid', extra / 2], ['--extra', extra], ['--sab', sab]]) stage.style.setProperty(k, v + 'px');
   const fxc = document.getElementById('fx');
-  if (fxc) { fxc.height = STAGE_H; fxc.style.height = STAGE_H + 'px'; }
+  if (fxc) { fxc.style.height = STAGE_H + 'px'; setFxSize(STAGE_H); }   // QA N2: bitmap = chiều cao stage thật
   stage.style.transform = `scale(${scale})`;
   stage.style.left = stageLeft + 'px';
   stage.style.top = stageTop + 'px';
@@ -279,6 +308,8 @@ let play = { start: 0, attempt: 0, boosters: 0, undo: 0, rescues: 0, continues: 
 let levelActive = false;
 let extraKept = -1;          // level đã mua Ô phụ (giữ khi Retry cùng level)
 let levelToken = 0;
+let dailyRun = null;            // đang chơi Thư hôm nay: { key, day, lv, catchup, replay }
+const runKey = () => (dailyRun ? L.id : levelIdx);   // khoá "cùng một ván" cho Ô phụ giữ khi chơi lại
 const completing = new Set();   // slot đang chạy animation phong bì
 
 // ============================================================ layout
@@ -565,7 +596,7 @@ function updateHUD(bump = false) {
   }
   lastMovesShown = m;
   bumpCoins({ instant: true, pop: false });                // vào level: đặt thẳng số xu, không đếm
-  $('title').textContent = `Level ${levelIdx + 1}`;
+  $('title').textContent = curTitle();
   const fill = $('combo').querySelector('.fill');
   { const tp0 = topicProgress(); fill.style.transform = `scaleX(${tp0.total ? tp0.done / tp0.total : 0})`; $('combo').style.setProperty('--segs', Math.max(1, tp0.total)); }
   const tp = topicProgress();
@@ -985,7 +1016,7 @@ function onExtraSlot(e) {
 }
 function unlockExtra() {
   E.addExtraSlot(S);
-  extraKept = levelIdx;
+  extraKept = runKey();
   undoStack = [];
   sfx('slot');
   haptic('milestone');
@@ -1345,6 +1376,7 @@ function panel({ title, body = '', buttons = [], radial = false, onOpen, kind = 
   overlay.style.pointerEvents = 'auto';
   overlay.style.zIndex = $('home').classList.contains('off') ? '' : '48';   // panel mở từ màn hình chính (Trang trí) phải nằm trên .home
   handEl.style.visibility = 'hidden';
+  $('tut').classList.add('hold');          // UI/UX P2-1: chữ dạy không thò ra sau bảng
   if (radial) { const r = document.createElement('div'); r.className = 'radial'; scrim.append(r); }
   overlay.append(scrim, p);
   if (instant) { scrim.classList.add('on'); p.classList.add('on'); }
@@ -1374,6 +1406,7 @@ function closePanel(instant = false) {
   }
   overlay.style.pointerEvents = 'none';
   handEl.style.visibility = '';
+  $('tut').classList.remove('hold');
 }
 
 // ============================================================ input
@@ -1559,13 +1592,18 @@ function onTap(d, drift = false) {
   }
   const pick = bestTapFor(d.cands);
   // chạm không tự mở ô trống CUỐI CÙNG (quyết định dễ gây kẹt): phải kéo vào nếu chắc chắn
-  if (pick && pick.dst.to === 'found' && !S.found[pick.dst.i] && lastSlotRisky()) {
+  // QA N9: mẹo "chỉ cần chạm" không được mâu thuẫn với luật này -> chạm lần 2 vào cùng lá trong 5 giây là xác nhận, lá tự vào ô.
+  const card0 = pick && pick.src.from === 'col' ? S.cols[pick.src.i][pick.src.idx] : pick && pick.src.from === 'waste' ? S.waste[S.waste.length - 1] : null;
+  const armed = lastSlotArm && card0 && lastSlotArm.id === card0.id && performance.now() - lastSlotArm.t < 5000;
+  if (pick && pick.dst.to === 'found' && !S.found[pick.dst.i] && lastSlotRisky() && !armed) {
     if (drift) snapBack(d.vs);
-    nudge(d.vs); sfx('deny'); toast(t('err_last_slot'), 2000);
+    lastSlotArm = card0 ? { id: card0.id, t: performance.now() } : null;
+    nudge(d.vs); sfx('deny'); toast(t('err_last_slot'), 2600);
     track('last_slot_tap_blocked', { level: levelIdx + 1 });
-  } else if (pick) doMove(pick.src, pick.dst, false);
+  } else if (pick) { if (armed) track('last_slot_tap_confirm', { level: levelIdx + 1 }); lastSlotArm = null; doMove(pick.src, pick.dst, false); }
   else { if (drift) snapBack(d.vs); rejectTap(d.src, d.vs); }
 }
+let lastSlotArm = null;       // lá vừa bị chặn mở ô cuối bằng chạm: chạm lại lá đó để xác nhận
 // Mở ô trống CUỐI bằng chạm chỉ bị chặn khi có rủi ro: level có giới hạn moves và còn nhiều chủ đề chưa mở hơn số ô trống
 function lastSlotRisky() {
   const free = S.found.filter(f => !f).length;
@@ -1963,7 +2001,8 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
     tween(sq, { s: 1 }, { dur: 200, easing: ease.outBack, onUpdate: () => { e.s = 1.08 * sq.s; drawEnv(); } }));
   floatText(`${topicName(topic)} · ${t('to_resident', { name: residentOf(topic) })}`, cx, p.y - 30, '#ffffff');
   lastDelivered = topic;
-  await wait(380);
+  const fast = E.isWon(S);          // UI/UX P2-8: lá thư cuối của ván rút ngắn để bảng thắng hiện sớm hơn (~1,1 s thay vì 1,6 s)
+  await wait(fast ? 150 : 380);
   completing.delete(slot);
   // bay đi
   slotEl(slot).classList.toggle('open', !!S.found[slot]);
@@ -1978,7 +2017,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   const sx = e.x, sy = e.y;
   sfx('whoosh', { vol: 0.8 });
   const wx0 = cx - 42, wy0 = cy - 50;
-  await tween(fly, { k: 1 }, { dur: 560, easing: ease.inOutCubic, onUpdate: () => {
+  await tween(fly, { k: 1 }, { dur: fast ? 420 : 560, easing: ease.inOutCubic, onUpdate: () => {
     e.x = sx + (tx - sx) * fly.k; e.y = sy + (ty - sy) * fly.k - Math.sin(fly.k * Math.PI) * 140;
     e.r = -10 * Math.sin(fly.k * Math.PI); e.s = 1.08 - 0.86 * fly.k; drawEnv();
     wax.style.transform = `translate(${wx0 + (e.x - sx)}px,${wy0 + (e.y - sy)}px) rotate(${e.r}deg) scale(${e.s / 1.08})`;
@@ -2012,7 +2051,7 @@ function afterAction() {
     ended = true;
     clearTimeout(idleTimer);
     tut(null);
-    Promise.all(pending).then(() => wait(250)).then(same(winSequence));
+    Promise.all(pending).then(() => wait(120)).then(same(winSequence));
     return;
   }
   if (S.moves <= 0) {
@@ -2169,6 +2208,9 @@ overlay.addEventListener('pointerdown', () => {
   if (panelOpen) panelOpen.p.querySelectorAll('.btn').forEach(b => { b._armed = false; });
 });
 /** Mỗi khay đích thành một phong bì, bay lần lượt (cách 80 ms) vào thanh tiến độ. Trả về các phần tử để tua/dọn. */
+function fadeTrays(instant = false) {
+  for (const el of [...slotEls, extraEl]) if (el) { el.style.transition = instant ? 'none' : 'opacity .2s'; el.style.opacity = '0'; }
+}
 function flyTraysAway() {
   const bar = $('combo');
   const tx = bar.offsetLeft + bar.offsetWidth / 2, ty = bar.offsetTop + bar.offsetHeight / 2;
@@ -2205,6 +2247,7 @@ function flyTraysAway() {
   return envs;
 }
 async function winSequence() {
+  if (dailyRun) return dailyWinSequence();
   clearRun();
   levelActive = false;
   const lvNum = levelIdx + 1;
@@ -2230,7 +2273,7 @@ async function winSequence() {
   if (explainPts) save.seen.pts_explain = 1;
   // đủ Tem Điểm cho món decor kế tiếp của chương này: mời trang trí ngay (mỗi món mời 1 lần), không thì vòng meta vô hình
   const dch = chapterOf(lv);
-  const dnext = dch.decor[save[dch.key] || 0];
+  const dnext = decorOf(dch)[save[dch.key] || 0];       // chương chưa có art decor: không mời trang trí
   const promptDecor = !chEnd && dnext && pointsLeft() >= dnext.cost && save.seen['decor_prompt_' + dnext.id] !== 1;
   if (promptDecor) save.seen['decor_prompt_' + dnext.id] = 1;
   persist();
@@ -2261,7 +2304,7 @@ async function winSequence() {
   };
   const buttons = [
     { label: t('cont'), cls: 'wait', act: () => winButton('continue', () => (chEnd ? chapterReward(chEnd) : startLevel(levelIdx + 1))) },
-    ...(promptDecor ? [{ label: t('decorate_now', { name: t('decor_' + dnext.id) }), cls: 'brown wait', act: () => winButton('decorate', () => { goHome(dch.id); decorPanel(); }) }] : []),
+    ...(promptDecor ? [{ label: t('decorate_now', { name: t('decor_' + dnext.id) }), cls: 'sub wait', act: () => winButton('decorate', () => { goHome(dch.id); decorPanel(); }) }] : []),
     ...(showX2 ? [{ label: t('claim2'), cls: 'small wait', act: () => winButton('x2', () => fakeAd(() => {
       coinsTo(reward, 540, 900);
       const tk = levelToken;
@@ -2285,9 +2328,10 @@ async function winSequence() {
   const T = calm ? { win: 0, panel: 150, stamp0: 350, gap: 150 } : { win: 900, panel: 1100, stamp0: 1400, gap: 300 };
   T.coins = calm ? T.stamp0 + 3 * T.gap : 2200;
   T.ready = calm ? T.coins + 300 : 2500;          // AC <= 2,6 giây: chừa 100 ms cho độ trễ setTimeout
-  const unwait = () => { if (pEl) pEl.querySelectorAll('.btn.wait').forEach(b => b.classList.remove('wait')); };
+  const unwait = () => { if (pEl) { pEl.querySelectorAll('.btn.wait').forEach(b => { b.classList.remove('wait'); b.classList.add('pop'); }); fitPanel(pEl); } };
   const steps = [];
   if (!calm) steps.push({ at: 200, run: () => { winEnvs = flyTraysAway(); }, finish: () => { winEnvs.forEach(e => e.remove()); winEnvs = []; } });
+  steps.push({ at: calm ? T.panel : 950, run: () => fadeTrays(calm), finish: () => fadeTrays(true) });   // UI/UX P1-3: khay trống không ló trên ruy băng
   steps.push({ at: T.win, run: () => {
     sfx('win');
     if (!calm) confetti(50, { palette: WIN_PALETTE, drag: 3.2, gravity: 650, life: 2.1, spread: 0.75 });
@@ -2324,9 +2368,63 @@ async function winSequence() {
   steps.push({ at: T.ready, run: () => { unwait(); if (winTL) winTL.ended = true; }, finish: unwait });
   winTL = runWinTimeline(steps, calm ? T.panel : 900);
 }
+// Màn thắng Thư hôm nay (L2): cùng khung dàn dựng với màn thắng thường, phần thưởng là dấu ngày đóng lên + xu.
+function dailyWinSequence() {
+  const run = dailyRun;
+  clearDailyRun();
+  levelActive = false;
+  const D = dailySave();
+  const first = !D.won[run.day];
+  const reward = first ? (run.catchup ? DAILY_REWARD.catchup : DAILY_REWARD.today) : 0;
+  let pageDone = false;
+  if (first) {
+    D.won[run.day] = run.catchup ? 2 : 1;
+    D.stamps.push(run.day);
+    if (D.stamps.length % STAMP_PAGE === 0) { pageDone = true; D.pages++; D.keepsakes++; }
+  }
+  const total = reward + (pageDone ? DAILY_REWARD.page : 0);
+  persist();
+  track('daily_complete', { day: run.key, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? 0 : S.moves, catchup: !!run.catchup,
+    replay: !first, reward: total, stamps: D.stamps.length, time_s: Math.round((Date.now() - play.start) / 1000), src: L.src });
+  if (first && run.catchup) track('daily_catchup', { day: run.key });
+  if (pageDone) track('stampbook_page_complete', { page: D.pages, stamps: D.stamps.length, days: D.stamps[D.stamps.length - 1] - D.stamps[D.stamps.length - STAMP_PAGE] + 1 });
+  endWin();
+  const calm = reduceMotion();
+  document.body.classList.add('win');
+  overlay.style.pointerEvents = 'auto';
+  overlay.style.zIndex = '';
+  winCatch = document.createElement('div'); winCatch.className = 'win-catch'; overlay.append(winCatch);
+  winCoinClone = $('coins').cloneNode(true); winCoinClone.removeAttribute('id'); winCoinClone.classList.add('clone'); winCoinClone.style.transform = ''; overlay.append(winCoinClone);
+  let pEl = null, coinCtl = null, paidDirect = false;
+  winInfo = { level: run.key, reward: total, paid: () => (paidDirect ? total : coinCtl ? total - coinCtl.left : 0) };
+  const inPage = pageDone ? STAMP_PAGE : D.stamps.length % STAMP_PAGE;
+  const openPanel = instant => panel({
+    title: first ? t('daily_win') : t('daily_win_again'), radial: true, kind: 'win', instant,
+    body: `<div class="postmark big"><b>${dailyDateText(run.day)}</b><small>${t('daily_word')}</small></div>
+      ${first ? `<div class="pts-line">${t('book_title')} · ${inPage}/${STAMP_PAGE}</div>` : `<p>${t('daily_no_reward')}</p>`}
+      ${pageDone ? `<p>${t('book_page_done', { n: DAILY_REWARD.page })}</p>` : ''}
+      ${total ? `<div class="coins-line"><i></i><span>+${total}</span></div>` : ''}`,
+    buttons: [{ label: t('daily_home'), cls: 'wait', act: () => { const tl = winTL; finishWin(false); track('win_button', { level: run.key, button: 'home', ms: tl ? Math.round(performance.now() - tl.t0) : -1 }); goHome(); } }],
+  });
+  const T = calm ? { win: 0, panel: 150, stamp: 350, coins: 650, ready: 900 } : { win: 300, panel: 500, stamp: 850, coins: 1250, ready: 1600 };
+  const unwait = () => { if (pEl) { pEl.querySelectorAll('.btn.wait').forEach(b => { b.classList.remove('wait'); b.classList.add('pop'); }); fitPanel(pEl); } };
+  const stampOn = () => { const m = pEl && pEl.querySelector('.postmark'); if (m) m.classList.add('on'); };
+  const steps = [
+    { at: T.panel, run: () => fadeTrays(calm), finish: () => fadeTrays(true) },
+    { at: T.win, run: () => { sfx('win'); if (!calm) confetti(40, { palette: WIN_PALETTE, drag: 3.2, gravity: 650, life: 2.1, spread: 0.75 }); haptic('success'); } },
+    { at: T.panel, run: () => { pEl = openPanel(calm); }, finish: ran => { if (!ran) pEl = openPanel(true); } },
+    { at: T.stamp, run: () => { stampOn(); sfx('stamp'); haptic('progress'); }, finish: ran => { if (!ran) stampOn(); } },
+    { at: T.coins, run: () => { if (total) coinCtl = coinsTo(total, 540, 1000); },
+      finish: ran => { if (!total) return; if (ran && coinCtl) { coinCtl.finish(); bumpCoins({ instant: true, pop: false }); return; } if (!paidDirect) { paidDirect = true; save.coins += total; persist(); bumpCoins({ instant: true }); } },
+      leave: ran => { if (!total) return; if (ran && coinCtl) coinCtl.finish(); else if (!paidDirect) { paidDirect = true; save.coins += total; persist(); } } },
+    { at: T.ready, run: () => { unwait(); if (winTL) winTL.ended = true; }, finish: unwait },
+  ];
+  winTL = runWinTimeline(steps, calm ? T.panel : 300);
+}
 // Cuối chương: thưởng một lần + mời sang chương sau (hoặc mở album) -> lý do quay lại (đo D1)
 function chapterReward(ch = CHAPTERS[0]) {
   const next = CHAPTERS.find(c => c.id === ch.id + 1 && c.from <= LEVELS.length);
+  const body = ch.id === 1 ? t('chapter_body_1') : `${t('chapter_done', { place: chPlace(ch) })} ${next ? t('chapter_next', { next: chPlace(next) }) : t('chapter_more')}`;
   const flag = 'chapter' + ch.id;
   if (save[flag]) { goHome(next ? next.id : ch.id); return; }
   save[flag] = 1;
@@ -2335,9 +2433,9 @@ function chapterReward(ch = CHAPTERS[0]) {
   track('chapter_complete', { chapter: ch.id });
   sfx('chapter');
   panel({ title: t('chapter_title', { n: ch.id }), radial: true,
-    body: `<div class="feature-icon" style="background-image:url(assets/ui/envelope_closed.png)"></div><p>${t('chapter_body_' + ch.id)}</p><div class="coins-line"><i></i><span>+200</span></div>`,
+    body: `<div class="feature-icon" style="background-image:url(assets/ui/envelope_closed.png)"></div><p>${body}</p><div class="coins-line"><i></i><span>+200</span></div>`,
     buttons: next
-      ? [{ label: t('next_ch', { n: next.id }), act: () => startLevel(next.from - 1) }, { label: t('open_album'), cls: 'orange', act: () => { goHome(next.id); openAlbum(); } }]
+      ? [{ label: t('next_ch', { n: next.id }), act: () => playLevel(next.from - 1) }, { label: t('open_album'), cls: 'orange', act: () => { goHome(next.id); openAlbum(); } }]
       : [{ label: t('open_album'), act: () => { goHome(ch.id); openAlbum(); } }, { label: t('home'), cls: 'orange', act: () => goHome(ch.id) }],
     onOpen: () => setTimeout(() => coinsTo(200, 540, 1000), 500) });
 }
@@ -2360,7 +2458,7 @@ function openAlbum() {
       : `<div class="al-st miss"></div>`).join('');
     return `<div class="al-row"><img class="al-ic" src="${iconUrl(tp)}"><div class="al-info"><b>${topicName(tp)}</b><span>${all.filter(a => got.has(a)).length}/${all.length} · ${t('to_resident', { name: residentOf(tp) })}</span><div class="al-cells">${cells}</div></div></div>`;
   }).join('');
-  $('albumBody').innerHTML = rows;
+  $('albumBody').innerHTML = (dailyOn() ? stampBookHtml() : '') + rows;   // L2: trang Sổ dấu ngày đầu album
   $('albumCount').textContent = t('album_count', { n: have, total });
   $('album').classList.remove('off');
   track('album_open', { have, total });
@@ -2371,12 +2469,13 @@ $('albumClose').addEventListener('pointerup', () => { sfx('close'); $('album').c
 function outOfMoves(again = false) {
   ended = true;
   if (!again) { sfx('lose'); haptic('deny'); }
-  if (!again) track('level_fail', { level: levelIdx + 1, attempt: play.attempt, reason: 'out_of_moves', delivered: S.delivered, total: S.total, special: specialOf(L) || '' });
+  if (!again && dailyRun) track('daily_fail', { day: dailyRun.key, attempt: play.attempt, delivered: S.delivered, total: S.total });
+  else if (!again) track('level_fail', { level: levelIdx + 1, attempt: play.attempt, reason: 'out_of_moves', delivered: S.delivered, total: S.total, special: specialOf(L) || '' });
   if (safetyOf(L) === 'retry') {
     // Level khó kiểu "chơi lại miễn phí": không phạt, giữ Ô phụ, vào lại ngay
     track('ad_offer', { level: levelIdx + 1, placement: 'soclose_more' });
     panel({ title: t('soclose'), body: `<p>${t('soclose_body')}</p>`, buttons: [
-      { label: t('try_again'), act: () => startLevel(levelIdx) },
+      { label: t('try_again'), act: () => restartCur() },
       { label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad'), 'soclose_more') },
     ] });
     return;
@@ -2392,7 +2491,7 @@ function outOfMoves(again = false) {
     if (save.coins < COSTS.moves) { outOfMoves(true); toast(t('coins_short')); sfx('deny'); return; }
     save.coins -= COSTS.moves; persist(); bumpCoins(); addMoves(5, false, 'coins');
   } });
-  buttons.push({ label: t('retry'), cls: 'brown', act: () => startLevel(levelIdx) });
+  buttons.push({ label: t('retry'), cls: 'brown', act: () => restartCur() });
   buttons.push({ label: t('home'), cls: 'brown', act: () => goHome() });
   const tp = topicProgress();
   panel({ title: t('oom_title'), body: `<p>${t('oom_body', { n: tp.total - tp.done })}</p>`, buttons });
@@ -2408,7 +2507,7 @@ function stuckPanel() {
   if (levelIdx + 1 >= UNLOCK_AT.pack && can('pack') && S.found.some((_, k) => pullable(k))) buttons.push({ label: t('use_pack') + cnt('pack'), cls: 'orange', act: () => startPick('pack') });
   if (levelIdx + 1 >= UNLOCK_AT.slot && !S.extraSlot) buttons.push({ label: t('extra_slot'), cls: 'orange', act: () => onExtraSlot() });
   if (undoStack.length) buttons.push({ label: t('undo'), act: () => doUndo() });
-  buttons.push({ label: t('retry'), cls: 'brown', act: () => startLevel(levelIdx) });
+  buttons.push({ label: t('retry'), cls: 'brown', act: () => restartCur() });
   panel({ title: t('stuck_title'), body: `<p>${t('stuck_body')}</p>`, buttons });
 }
 function addMoves(n, free = false, source = 'debug') {
@@ -2440,6 +2539,7 @@ function fakeAd(done, placement = 'unknown') {
 // Lưu sau mỗi thao tác và khi app bị ẩn (cuộc gọi đến, khoá màn hình). Không lưu khi đang chạy kịch bản dạy chơi.
 // Dữ liệu level đổi (generator sinh lại) thì chữ ký levelSig khác -> bỏ bản lưu, chơi ván mới.
 const RESUME_KEY = SAVE_KEY + '_resume';
+const RESUME_DAILY_KEY = SAVE_KEY + '_resume_daily';   // Thư hôm nay lưu riêng: chơi Daily không bao giờ đè ván dở chiến dịch
 let levelSigCache = null;
 function levelSig(lv) {
   const s = JSON.stringify([lv.id, lv.moves, lv.foundations, lv.columns, lv.deck, lv.preplaced || []]);
@@ -2448,42 +2548,71 @@ function levelSig(lv) {
   return h.toString(36) + '.' + s.length;
 }
 const liveCards = st => [...st.deck, ...st.waste, ...st.cols.flat(), ...st.found.filter(Boolean).flatMap(f => [f.topic, ...f.cards])];
+const UNDO_KEEP = 10;      // N4: giữ 10 bước hoàn tác gần nhất trong bản lưu (mỗi level có 5 lượt miễn phí)
+const packState = st => { const c = E.clone(st); if (c.moves === Infinity) c.moves = 'inf'; return c; };   // JSON không có Infinity
+const unpackState = st => E.clone({ ...st, moves: st.moves === 'inf' ? Infinity : st.moves });
 function saveRun() {
   if (!levelActive || !S || !L || script || E.isWon(S)) return;
+  if (!S.used) return;     // QA N1/N5: chưa đi nước nào thì không lưu (chỉ mở xem rồi thoát không đè ván dở cũ)
   if (!levelSigCache) levelSigCache = levelSig(L);
-  const st = E.clone(S);
-  if (st.moves === Infinity) st.moves = 'inf';                       // JSON không có Infinity
-  const data = { v: 1, lv: L.id, idx: levelIdx, sig: levelSigCache, at: Date.now(), s: st,
-    undoLeft, combo, freeMovesUsed, overtime, lowWarned, play: { ...play, elapsed: Date.now() - play.start } };
-  try { localStorage.setItem(RESUME_KEY, JSON.stringify(data)); } catch (e) { /* đầy bộ nhớ / chế độ riêng tư: bỏ qua */ }
+  const data = { v: 1, lv: L.id, idx: levelIdx, sig: levelSigCache, at: Date.now(), s: packState(S),
+    undo: undoStack.slice(-UNDO_KEEP).map(u => ({ s: packState(u.s), combo: u.combo })),
+    undoLeft, combo, freeMovesUsed, overtime, lowWarned, play: { ...play, elapsed: Date.now() - play.start },
+    ...(dailyRun ? { daily: dailyRun.key, catchup: !!dailyRun.catchup } : {}) };
+  try { localStorage.setItem(dailyRun ? RESUME_DAILY_KEY : RESUME_KEY, JSON.stringify(data)); } catch (e) { /* đầy bộ nhớ / chế độ riêng tư: bỏ qua */ }
 }
-function clearRun() { try { localStorage.removeItem(RESUME_KEY); } catch (e) { /* ignore */ } }
-/** Bản lưu ván dở còn dùng được (đúng level, level chưa đổi), hoặc null. */
+function clearRun() { try { localStorage.removeItem(dailyRun ? RESUME_DAILY_KEY : RESUME_KEY); } catch (e) { /* ignore */ } }
+const clearCampaignRun = () => { try { localStorage.removeItem(RESUME_KEY); } catch (e) { /* ignore */ } };
+const clearDailyRun = () => { try { localStorage.removeItem(RESUME_DAILY_KEY); } catch (e) { /* ignore */ } };
+/** Bản lưu ván dở CHIẾN DỊCH còn dùng được (đúng level, level chưa đổi), hoặc null. */
 function loadRun() {
   let d = null;
   try { d = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null'); } catch (e) { d = null; }
   if (!d) return null;
   const lv = LEVELS[d.idx];
-  if (d.v !== 1 || !lv || lv.id !== d.lv || levelSig(lv) !== d.sig || !d.s || d.idx + 1 > save.unlocked) { clearRun(); return null; }
+  if (d.v !== 1 || !lv || lv.id !== d.lv || levelSig(lv) !== d.sig || !d.s || d.idx + 1 > save.unlocked) { clearCampaignRun(); return null; }
   return d;
+}
+/** Bản lưu ván dở Thư hôm nay của ngày `key`, hoặc null (thư khác ngày / level đổi thì bỏ). */
+function loadDailyRun(key) {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(RESUME_DAILY_KEY) || 'null'); } catch (e) { d = null; }
+  if (!d) return null;
+  const run = dailyFor(LIVE.parseDayKey(d.daily));
+  if (d.v !== 1 || !run || run.lv.id !== d.lv || levelSig(run.lv) !== d.sig || !d.s) { clearDailyRun(); return null; }
+  return key && d.daily !== key ? null : d;
 }
 /** Dựng state từ bản lưu, kiểm tra lá khớp với level (không thừa, không trùng). Lỗi thì ném ra -> chơi ván mới. */
 function restoreRun(d, lv) {
-  const S2 = E.clone({ ...d.s, moves: d.s.moves === 'inf' ? Infinity : d.s.moves });
+  const S2 = unpackState(d.s);
   const known = new Set([...lv.columns.flat(), ...lv.deck, ...(lv.preplaced || []).flat()].map(c => c.id));
-  const seen = new Set();
-  for (const c of liveCards(S2)) {
-    if (seen.has(c.id) || !(known.has(c.id) || /^J\d+$/.test(String(c.id)))) throw new Error('resume: lá lạ ' + c.id);
-    seen.add(c.id);
-  }
+  const check = st => {
+    const seen = new Set();
+    for (const c of liveCards(st)) {
+      if (seen.has(c.id) || !(known.has(c.id) || /^J\d+$/.test(String(c.id)))) throw new Error('resume: lá lạ ' + c.id);
+      seen.add(c.id);
+    }
+  };
+  check(S2);
   if (!Number.isFinite(S2.used) || S2.found.length < lv.foundations || S2.cols.length !== lv.columns.length) throw new Error('resume: state hỏng');
-  return { S: S2, undoLeft: d.undoLeft ?? 5, combo: d.combo || 0, freeMovesUsed: !!d.freeMovesUsed, overtime: !!d.overtime, lowWarned: !!d.lowWarned,
+  let undo = [];
+  try { undo = (d.undo || []).map(u => ({ s: unpackState(u.s), combo: u.combo || 0 })); undo.forEach(u => check(u.s)); } catch (e) { undo = []; }
+  return { S: S2, undo, undoLeft: d.undoLeft ?? 5, combo: d.combo || 0, freeMovesUsed: !!d.freeMovesUsed, overtime: !!d.overtime, lowWarned: !!d.lowWarned,
     play: { boosters: 0, undo: 0, rescues: 0, continues: 0, taps: 0, drags: 0, ...d.play, elapsed: Math.max(0, d.play && d.play.elapsed || 0) } };
 }
-/** Vào level i từ màn hình chính: có ván dở của đúng level đó thì hỏi chơi tiếp hay ván mới. */
+/** Vào level i từ màn hình chính: có ván dở của đúng level đó thì hỏi chơi tiếp hay ván mới.
+ *  QA N1: có ván dở ở level KHÁC thì hỏi trước. Chọn mở level mới thì ván cũ vẫn giữ cho tới nước đi đầu của level mới
+ *  (saveRun bỏ qua ván chưa đi nước nào), nên chỉ mở xem rồi thoát cũng không mất gì. */
 function playLevel(i) {
   const run = loadRun();
-  if (run && run.idx === i) askResume(run); else startLevel(i);
+  if (run && run.idx === i) askResume(run);
+  else if (run) {
+    track('resume_conflict_open', { level: i + 1, saved_level: run.idx + 1, moves_used: run.s.used });
+    panel({ title: t('resume_title'), body: `<p>${t('resume_conflict', { n: run.idx + 1, m: i + 1 })}</p>`, buttons: [
+      { label: t('play_resume', { n: run.idx + 1 }), act: () => { track('resume_conflict_choice', { level: i + 1, choice: 'resume' }); startLevel(run.idx, { resume: run }); } },
+      { label: t('resume_conflict_new', { n: i + 1 }), cls: 'brown', act: () => { track('resume_conflict_choice', { level: i + 1, choice: 'new' }); startLevel(i); } },
+    ] });
+  } else startLevel(i);
 }
 function askResume(run) {
   panel({
@@ -2491,7 +2620,7 @@ function askResume(run) {
     body: `<p>${t('resume_body', { n: run.idx + 1 })}</p><p style="font-size:${fs(42)};margin:0">${t('resume_free')}</p>`,
     buttons: [
       { label: t('resume_yes'), act: () => startLevel(run.idx, { resume: run }) },
-      { label: t('resume_new'), cls: 'brown', act: () => { track('level_resume_decline', { level: run.idx + 1, moves_used: run.s.used }); clearRun(); startLevel(run.idx); } },
+      { label: t('resume_new'), cls: 'brown', act: () => { track('level_resume_decline', { level: run.idx + 1, moves_used: run.s.used }); clearCampaignRun(); startLevel(run.idx); } },
     ],
   });
 }
@@ -2516,26 +2645,40 @@ document.addEventListener('visibilitychange', () => {
 });
 addEventListener('pagehide', () => saveRun());
 
+/** Chơi lại ván đang chơi (chiến dịch hoặc Thư hôm nay). */
+function restartCur() { if (dailyRun) startDaily(dailyRun.day); else startLevel(levelIdx); }
+const curTitle = () => (dailyRun ? t('daily_title') : t('level', { n: levelIdx + 1 }));
+function trackQuit(extra = {}) {
+  const base = { attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000), ...extra };
+  if (dailyRun) track('daily_quit', { day: dailyRun.key, ...base }); else track('level_quit', { level: levelIdx + 1, ...base });
+}
 // ============================================================ level flow
 // resume: bản lưu ván dở (loadRun) của đúng level i -> dựng lại bàn y như lúc dừng, không tính lượt chơi mới
-async function startLevel(i, { resume = null } = {}) {
+// daily: { key, day, lv, catchup, replay } -> chơi Thư hôm nay (L2). levelIdx giữ ở level hiện tại của người chơi để mọi cổng
+// mở khoá (booster, Ô phụ, mẹo) giống chiến dịch; số level, tiến độ, Tem Điểm của chiến dịch không đổi.
+async function startLevel(i, { resume = null, daily = null } = {}) {
   endWin();
   closePanel(true);
   setMusicScene('play');
-  if (levelActive && L && S) track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000) });
-  const nextIdx = Math.max(0, Math.min(LEVELS.length - 1, i));
-  if (nextIdx !== levelIdx) extraKept = -1;
+  if (levelActive && L && S) trackQuit();
+  const prevKey = L ? runKey() : null;
+  const nextIdx = daily ? Math.max(0, Math.min(LEVELS.length, save.unlocked) - 1) : Math.max(0, Math.min(LEVELS.length - 1, i));
   levelIdx = nextIdx;
+  dailyRun = daily;
   levelToken++;
   clearParticles();
   completing.clear();
-  L = LEVELS[levelIdx];
+  L = daily ? daily.lv : LEVELS[levelIdx];
+  if (prevKey !== runKey()) extraKept = -1;
   levelSigCache = null;
   let restored = null;
   if (resume) { try { restored = restoreRun(resume, L); } catch (e) { restored = null; } }
-  if (!restored) { const old = loadRun(); if (old && old.idx === levelIdx) clearRun(); }   // ván mới / chơi lại cùng level: bỏ bản lưu cũ
+  if (!restored) {      // ván mới / chơi lại cùng level: bỏ bản lưu cũ
+    if (daily) { const old = loadDailyRun(daily.key); if (old) clearDailyRun(); }
+    else { const old = loadRun(); if (old && old.idx === levelIdx) clearCampaignRun(); }
+  }
   S = restored ? restored.S : E.createState(L);
-  undoStack = [];
+  undoStack = restored ? restored.undo : [];
   undoLeft = restored ? restored.undoLeft : 5;   // người lớn tuổi đi sai nhiều hơn: 5 lần hoàn tác miễn phí mỗi level
   combo = restored ? restored.combo : 0;
   ended = false;
@@ -2559,20 +2702,22 @@ async function startLevel(i, { resume = null } = {}) {
   if (restored) {
     // id Tem Vàng đã đặt: J1, J2... -> đặt tiếp không trùng id
     for (const c of liveCards(S)) { const m = /^J(\d+)$/.exec(String(c.id)); if (m) jokerSeq = Math.max(jokerSeq, +m[1]); }
-    if (S.extraSlot) extraKept = levelIdx;
+    if (S.extraSlot) extraKept = runKey();
     play = { ...restored.play, start: Date.now() - restored.play.elapsed };
     delete play.elapsed;
   } else {
+    const ak = daily ? L.id : levelIdx + 1;
     save.attempts = save.attempts || {};
-    save.attempts[levelIdx + 1] = (save.attempts[levelIdx + 1] || 0) + 1;
+    save.attempts[ak] = (save.attempts[ak] || 0) + 1;
     persist();
-    play = { start: Date.now(), attempt: save.attempts[levelIdx + 1], boosters: 0, undo: 0, rescues: 0, continues: 0, taps: 0, drags: 0 };
+    play = { start: Date.now(), attempt: save.attempts[ak], boosters: 0, undo: 0, rescues: 0, continues: 0, taps: 0, drags: 0 };
   }
   levelActive = true;
   document.body.classList.toggle('hard', !!specialOf(L));
-  if (restored) track('level_resume', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? -1 : S.moves,
+  if (daily) track(restored ? 'daily_resume' : 'daily_start', { day: daily.key, attempt: play.attempt, catchup: !!daily.catchup, replay: !!daily.replay, src: L.src, moves: L.moves });
+  else if (restored) track('level_resume', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? -1 : S.moves,
     delivered: S.delivered, total: S.total, away_s: Math.round((Date.now() - resume.at) / 1000), overtime, special: specialOf(L) || '' });
-  else track('level_start', { level: levelIdx + 1, attempt: play.attempt, moves: L.moves ?? -1, special: specialOf(L) || '', safety: safetyOf(L) });
+  else track('level_start', { level: levelIdx + 1, attempt: play.attempt, moves: L.moves ?? -1, special: specialOf(L) || '', safety: safetyOf(L), src: L.source || 'base' });
   clearHint();
   tut(null);
   $('home').classList.add('off');
@@ -2600,7 +2745,7 @@ async function startLevel(i, { resume = null } = {}) {
     // lá trong ô mở sẵn: hiện ngay tại ô
     const T0 = computeLayout();
     for (const c of pre) { const v = makeView(c); const t = T0.get(c.id); v.x = t.x; v.y = t.y; setZ(v, t.z); setUp(v, true, { animate: false }); applyTransform(v); }
-    if (extraKept === levelIdx) E.addExtraSlot(S);        // Ô phụ đã mua ở lượt trước của level này vẫn giữ khi Retry
+    if (extraKept === runKey()) E.addExtraSlot(S);        // Ô phụ đã mua ở lượt trước của level này vẫn giữ khi Retry
   }
   updateHUD();
   updateSlotLabels();
@@ -2649,12 +2794,19 @@ async function startLevel(i, { resume = null } = {}) {
     return;
   }
   if (L.script && !save.seen['script_' + L.id]) { script = { steps: L.script, i: 0 }; runScript(); return; }
-  if (L.introduce && L.introduce.length && !save.seen['intro_' + L.id]) {
-    save.seen['intro_' + L.id] = 1; persist();
-    const names = L.introduce.map(tp => `<b>${topicName(tp)}</b>`).join(', ');
-    tut(t('new_topic', { names }), 0); sfx('feature', { vol: 0.5 });
-    introHold = { html: $('tut').innerHTML, t0: Date.now(), token };     // giữ tới nước đi đầu tiên (review #9)
-    track('topic_intro', { level: levelIdx + 1, topics: L.introduce.join(',') });
+  // Câu đầu level: chủ đề mới (introduce) và/hoặc biến thể cấu trúc của level sinh (tip: 3 quầy, bao thư lớn, quầy mở sẵn;
+  // plan mục 3.4). Cờ "đã xem" chỉ ghi ở nước đi đầu (releaseIntro): thoát trước nước đầu thì lần sau vẫn thấy (QA N7).
+  const intro = L.introduce && L.introduce.length && !save.seen['intro_' + L.id];
+  const tipKey = L.tip && !save.seen['ltip_' + L.tip] ? L.tip : null;
+  if (intro || tipKey) {
+    const parts = [];
+    if (intro) parts.push(t('new_topic', { names: L.introduce.map(tp => `<b>${topicName(tp)}</b>`).join(', ') }));
+    if (tipKey) parts.push(t('ltip_' + tipKey));
+    tut(parts.join('<br>'), 0); sfx('feature', { vol: 0.5 });
+    introHold = { html: $('tut').innerHTML, t0: Date.now(), token, flags: [...(intro ? ['intro_' + L.id] : []), ...(tipKey ? ['ltip_' + tipKey] : [])],
+      redo: () => [intro && t('new_topic', { names: L.introduce.map(tp => `<b>${topicName(tp)}</b>`).join(', ') }), tipKey && t('ltip_' + tipKey)].filter(Boolean).join('<br>') };     // giữ tới nước đi đầu tiên (review #9)
+    if (intro) track('topic_intro', { level: levelIdx + 1, topics: L.introduce.join(',') });
+    if (tipKey) track('level_tip', { level: levelIdx + 1, tip: tipKey });
   }
   tutorialCheck();
   resetIdleHint();
@@ -2665,6 +2817,7 @@ function releaseIntro() {
   const h = introHold;
   introHold = null;
   if (!h) return;
+  if (h.flags && h.flags.length) { for (const f of h.flags) save.seen[f] = 1; persist(); }
   setTimeout(() => {
     if (h.token === levelToken && $('tut').innerHTML === h.html) tut(null);
     if (!script && !ended && h.token === levelToken) tutorialCheck();   // tip đã nhường chỗ cho câu này thì giờ mới được hiện
@@ -2678,7 +2831,7 @@ function levelBanner() {
   const el = document.createElement('div');
   bannerEl = el;
   const sp = specialOf(L);
-  el.innerHTML = (sp ? `<div class="hard-pill">${t(sp === 'superhard' ? 'superhard' : 'hard')}</div>` : '') + `<div style="font-size:${fs(110)};line-height:1">${t('level', { n: levelIdx + 1 })}</div>
+  el.innerHTML = (sp ? `<div class="hard-pill">${t(sp === 'superhard' ? 'superhard' : 'hard')}</div>` : '') + `<div style="font-size:${fs(dailyRun ? 96 : 110)};line-height:1">${curTitle()}</div>${dailyRun ? `<div style="font-size:${fs(44)};margin-top:8px">${dailyDateText(dailyRun.day)}</div>` : ''}
     <div style="margin-top:22px;display:inline-block;max-width:960px;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.25);font-size:${fs(48)}">
       ${t('goal', { n: tp.total - tp.done, moves: L.moves == null ? t('goalInf') : t('goalMoves', { n: L.moves }) })}</div>`;
   el.style.cssText = `position:absolute;left:0;right:0;top:${660 + (STAGE_H - 1920) / 2}px;padding:40px 0 46px;text-align:center;color:#fff;background:rgba(50,32,20,.55);
@@ -2748,16 +2901,126 @@ function featureIntro(force = false) {
   });
 }
 
+// ============================================================ Thư hôm nay + Sổ dấu ngày (L2, liveops-30-days.md F1, F2)
+// Mở khi đã thắng L5 (bảng mục 2: "theo level đã thắng"). Mỗi ngày lịch (giờ máy, chống lùi giờ) 1 lá thư. Thắng lần đầu:
+// 40 xu + 1 dấu ngày. Chơi lại: không thưởng. Thua: chơi lại không mất gì. Chơi bù được thư hôm qua (1 ngày): 20 xu + dấu.
+// Sổ dấu ngày: trang 20 ô, đầy trang thì 150 xu + 1 decor kỷ niệm (art rare_postbox chưa có: hiện con dấu sáp thay thế).
+// Không có chữ "mất chuỗi", không đếm ngược, không hết hạn (mục 10 "Không FOMO").
+const DAILY_REWARD = { today: 40, catchup: 20, page: 150 };
+const STAMP_PAGE = 20;
+let dailyPool = null;
+const getDailyPool = () => (dailyPool = dailyPool || buildDailyPool({ daily: LEVELS_DAILY, campaign: LEVELS }));
+function dailySave() {
+  const D = save.daily = save.daily || {};
+  D.won = D.won || {}; D.hist = D.hist || {}; D.stamps = D.stamps || [];
+  D.pages = D.pages || 0; D.keepsakes = D.keepsakes || 0;
+  return D;
+}
+const wonLevel = () => Math.max(0, Math.min(save.unlocked, LEVELS.length + 1) - 1);
+const dailyOn = () => LIVE.featureOn('daily', wonLevel()) && getDailyPool().length > 0;
+const today = () => LIVE.effectiveDay(save.live);
+/** Lá thư của ngày `day`: { key, day, lv, src }, hoặc null. Đã mở thư ngày đó thì giữ đúng lá cũ (pickDaily đọc hist). */
+function dailyFor(day) {
+  if (!Number.isFinite(day)) return null;
+  const cur = curLevel();
+  const e = pickDaily(getDailyPool(), day, dailySave().hist, x => !x.tuned && x.lv.id >= cur && x.lv.id < cur + 10);
+  if (!e) return null;
+  const key = LIVE.dayKey(day);
+  return { key, day, src: e.src, lv: dailyLevel(e, key) };
+}
+/** Ngày chơi bù được: hôm qua, chưa thắng, không trước ngày cài app. */
+function catchupDay() {
+  const D = dailySave(), y = today() - 1;
+  return y >= (save.live.firstOpenDay ?? y) && !D.won[y] ? y : null;
+}
+function dailyDateText(day) {
+  const d = new Date(day * 864e5);
+  const m = d.getUTCMonth(), dd = d.getUTCDate();
+  return getLang() === 'vi' ? `${dd}/${m + 1}` : `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m]} ${dd}`;
+}
+function startDaily(day, { resume = null } = {}) {
+  const run = dailyFor(day);
+  if (!run) return;
+  const D = dailySave();
+  if (!D.hist[day]) { D.hist[day] = run.src; persist(); }
+  run.catchup = day < today();
+  run.replay = !!D.won[day];
+  startLevel(0, { daily: run, resume });
+}
+/** Các ô của trang Sổ dấu ngày đang mở (trang đầy thì sang trang mới). */
+function stampBookHtml() {
+  const D = dailySave();
+  const n = D.stamps.length, inPage = n % STAMP_PAGE, page = Math.floor(n / STAMP_PAGE) + 1;
+  const from = n - inPage;
+  const cells = Array.from({ length: STAMP_PAGE }, (_, i) => {
+    const day = D.stamps[from + i];
+    return day != null ? `<div class="sb-cell on"><span>${dailyDateText(day)}</span></div>` : '<div class="sb-cell"></div>';
+  }).join('');
+  const keep = D.keepsakes ? `<div class="sb-keep"><i></i>${t('book_keepsakes', { n: D.keepsakes })}</div>` : '';
+  return `<div class="sb"><div class="sb-head">${t('book_title')} · ${t('book_page', { n: page })} · ${inPage}/${STAMP_PAGE}</div><div class="sb-grid">${cells}</div>${keep}</div>`;
+}
+function dailyPanel(source = 'home') {
+  if (!dailyOn()) return;
+  LIVE.touch(save.live); persist();
+  const D = dailySave(), td = today();
+  const won = !!D.won[td];
+  const run = loadDailyRun(LIVE.dayKey(td));
+  const cu = catchupDay();
+  const cuRun = cu != null ? loadDailyRun(LIVE.dayKey(cu)) : null;
+  track('daily_open', { source, day: LIVE.dayKey(td), won, catchup: cu != null, stamps: D.stamps.length });
+  const buttons = [];
+  if (!won) buttons.push({ label: run ? t('daily_continue') : t('daily_play'), act: () => startDaily(td, { resume: run }) });
+  if (cu != null) buttons.push({ label: t('daily_catchup', { n: DAILY_REWARD.catchup }), cls: won ? '' : 'brown', act: () => startDaily(cu, { resume: cuRun }) });
+  if (won) buttons.push({ label: t('daily_replay'), cls: 'brown', act: () => startDaily(td) });
+  buttons.push({ label: t('close'), cls: 'orange', act: () => refreshHome() });
+  panel({ title: t('daily_title'), kind: 'tall daily',
+    body: `<div class="postmark${won ? ' done' : ''}"><b>${dailyDateText(td)}</b><small>${t('daily_word')}</small></div>
+      <p>${won ? t('daily_done') : t('daily_body', { n: DAILY_REWARD.today })}</p>${stampBookHtml()}`,
+    buttons });
+}
+/** Lần đầu thấy nút Thư hôm nay: 1 popup (1 câu, 1 hình, 1 nút "Xem"), theo luật mở khoá mục 2. */
+function dailyIntro() {
+  if (!dailyOn() || save.seen.feat_daily || panelOpen) return false;
+  save.seen.feat_daily = 1; persist();
+  track('feature_unlock', { feature: 'daily', level: wonLevel() });
+  sfx('feature');
+  panel({ title: t('feat_new'), radial: true,
+    body: `<div class="feature-icon" style="background-image:url(assets/ui/ic_daily.png)"></div><p>${t('daily_intro')}</p>`,
+    buttons: [{ label: t('feat_see'), act: () => dailyPanel('intro') }] });
+  return true;
+}
+/** Nút Thư hôm nay trên màn chính: ẩn trước khi mở khoá, chấm đỏ khi chưa giao thư hôm nay, dấu tích khi đã giao. */
+function refreshDailyBtn() {
+  const b = $('dailyBtn');
+  if (!b) return;
+  const on = dailyOn();
+  b.classList.toggle('off', !on);
+  if (!on) return;
+  const won = !!dailySave().won[today()];
+  b.classList.toggle('new', !won);
+  b.classList.toggle('done', won);
+  b.querySelector('.lbl').textContent = t('daily_btn');
+}
+function refreshHome() { if (!$('home').classList.contains('off')) { LIVE.touch(save.live); persist(); refreshDailyBtn(); } }
+$('dailyBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); dailyPanel('home'); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshHome(); });   // qua nửa đêm khi app ở nền: màn chính cập nhật khi quay lại
+
 // ============================================================ home / pause
-function goHome(chId) {
+// Level hiện tại để hiển thị (save cũ có thể mở xa hơn số level đang có: không hạ unlocked, chỉ kẹp khi hiển thị)
+const curLevel = () => Math.max(1, Math.min(save.unlocked, LEVELS.length));
+const chPages = ch => Math.max(1, Math.ceil((Math.min(ch.to, LEVELS.length) - ch.from + 1) / 10));
+function goHome(chId, page) {
   endWin();
   setMusicScene('home');
-  homeCh = CHAPTERS.find(c => c.id === chId) || chapterOf(save.unlocked);
+  homeCh = CHAPTERS.find(c => c.id === chId && c.from <= LEVELS.length) || chapterOf(curLevel());
+  homePage = Number.isFinite(page) ? Math.max(0, Math.min(chPages(homeCh) - 1, page))
+    : Math.max(0, Math.min(chPages(homeCh) - 1, Math.floor((Math.min(Math.max(curLevel(), homeCh.from), homeCh.to) - homeCh.from) / 10)));
   if (levelActive && S) {
     saveRun();
-    const run = loadRun();
-    track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000), resumable: !!(run && run.idx === levelIdx) });
+    const run = dailyRun ? loadDailyRun(dailyRun.key) : loadRun();
+    trackQuit({ resumable: !!(run && (dailyRun || run.idx === levelIdx)) });
   }
+  dailyRun = null;
   levelActive = false;
   document.body.classList.remove('hard');
   levelToken++;
@@ -2772,54 +3035,84 @@ function goHome(chId) {
   const grid = $('grid');
   grid.innerHTML = '';
   const run = loadRun();
-  LEVELS.forEach((_, i) => {
-    const lv = i + 1;
-    if (lv < homeCh.from || lv > homeCh.to) return;          // chỉ hiện level của chương đang xem
+  const pFrom = homeCh.from + homePage * 10, pTo = Math.min(homeCh.to, pFrom + 9, LEVELS.length);
+  for (let lv = pFrom; lv <= pTo; lv++) {      // chỉ hiện 10 level của trang đang xem
+    const i = lv - 1;
     const el = document.createElement('div');
     el.className = 'lvl' + (lv > save.unlocked ? ' locked' : '') + (save.stars[lv] ? ' done' : '') + (lv === save.unlocked ? ' cur' : '') + (run && run.idx === i ? ' resume' : '');
     el.innerHTML = `${lv}${save.stars[lv] ? `<span class="pts">${'<i></i>'.repeat(save.stars[lv])}</span>` : ''}`;
     el.addEventListener('pointerup', () => { unlockAudio(); if (lv <= save.unlocked || DEBUG) { sfx('click'); playLevel(i); } else sfx('deny'); });
     grid.append(el);
-  });
-  // Thanh chương ngay dưới lưới level: [← chương trước] tên chương đang xem [chương sau →].
-  // Chương sau còn khoá: nút có ổ khoá, bấm xem giới thiệu (chương 2: teaser Bến Cảng) -> luôn thấy "thị trấn còn gì" (concept mục 7).
+  }
+  // Thanh chương ngay dưới lưới level: [‹] biển gỗ tên chương + tiến độ chương [›]. Chương 20 level có 2 trang:
+  // mũi tên đi từng trang rồi sang chương. Chương sau còn khoá: nút có ổ khoá, bấm xem teaser (bưu thiếp, tem mới, cư dân).
   const nav = document.createElement('div');
   nav.className = 'ch-nav';
-  const prev = CHAPTERS.find(c => c.id === homeCh.id - 1);
-  const next = CHAPTERS.find(c => c.id === homeCh.id + 1 && c.from <= LEVELS.length);
-  const nextOpen = next && save.unlocked >= next.from;
-  nav.innerHTML = `<div class="ch-arrow${prev ? '' : ' none'}">‹</div>
-    <div class="ch-lbl"><small>${t('ch_word', { n: homeCh.id })}</small>${t('ch_place_' + homeCh.id)}</div>
-    <div class="ch-arrow${next ? '' : ' none'}${next && !nextOpen ? ' locked' : ''}">${next && !nextOpen ? '<i></i>' : '›'}</div>`;
+  const prevCh = CHAPTERS.find(c => c.id === homeCh.id - 1);
+  const nextCh = CHAPTERS.find(c => c.id === homeCh.id + 1 && c.from <= LEVELS.length);
+  const pages = chPages(homeCh);
+  const hasPrev = homePage > 0 || !!prevCh, nextIsPage = homePage < pages - 1;
+  const hasNext = nextIsPage || !!nextCh;
+  const nextOpen = nextIsPage || (nextCh && save.unlocked >= nextCh.from);
+  const chTo = Math.min(homeCh.to, LEVELS.length);
+  const doneN = Array.from({ length: chTo - homeCh.from + 1 }, (_, k) => homeCh.from + k).filter(l => save.stars[l]).length;
+  const totalN = chTo - homeCh.from + 1;
+  nav.innerHTML = `<div class="ch-arrow${hasPrev ? '' : ' none'}" role="button" aria-label="${t('ch_page_prev')}">‹</div>
+    <div class="ch-lbl"><small>${t('ch_word', { n: homeCh.id })}${pages > 1 ? ` · ${pFrom}–${pTo}` : ''}</small><span class="ch-name">${chPlace(homeCh)}</span>
+      <span class="ch-prog"><span class="ch-bar"><b style="width:${Math.round(100 * doneN / totalN)}%"></b></span><span class="ch-cnt">${doneN}/${totalN}</span></span></div>
+    <div class="ch-arrow${hasNext ? '' : ' none'}${hasNext && !nextOpen ? ' locked' : ''}" role="button" aria-label="${t('ch_page_next')}">${hasNext && !nextOpen ? '<i></i>' : '›'}</div>`;
   const [aPrev, , aNext] = nav.children;
-  if (prev) aPrev.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); goHome(prev.id); });
-  if (next) aNext.addEventListener('pointerup', () => {
+  if (hasPrev) aPrev.addEventListener('pointerup', () => { unlockAudio(); sfx('click'); if (homePage > 0) goHome(homeCh.id, homePage - 1); else goHome(prevCh.id, chPages(prevCh) - 1); });
+  if (hasNext) aNext.addEventListener('pointerup', () => {
     unlockAudio(); sfx('click');
-    if (nextOpen) goHome(next.id);
-    else if (next.id === 2) openCh2('home_tile');
-    else panel({ title: t('ch_name_' + next.id), body: `<p>${t('ch_locked', { n: next.from - 1 })}</p>`,
-      buttons: [{ label: t('play', { n: save.unlocked }), act: () => startLevel(save.unlocked - 1) }, { label: t('close'), cls: 'orange', act: () => {} }] });
+    if (nextIsPage) goHome(homeCh.id, homePage + 1);
+    else if (nextOpen) goHome(nextCh.id, 0);
+    else openChapterTeaser(nextCh, 'home_tile');
   });
   grid.append(nav);
   // có ván dở: nút chính là "Chơi tiếp Level N" (vào thẳng ván dở, không hỏi lại)
-  $('playBtn').textContent = run ? t('play_resume', { n: run.idx + 1 }) : allDone() ? t('more_soon') : t('play', { n: save.unlocked });
+  $('playBtn').textContent = run ? t('play_resume', { n: run.idx + 1 }) : allDone() ? t('more_soon') : t('play', { n: curLevel() });
+  refreshDailyBtn();
   renderDecor();
   $('home').classList.remove('off');
+  if (!panelOpen && !booting) dailyIntro();
 }
+const chPlace = ch => t(ch.named ? 'ch_place_' + ch.id : 'ch_place_x');
+const chName = ch => (ch.named ? t('ch_name_' + ch.id) : `${t('ch_word', { n: ch.id })} · ${t('ch_place_x')}`);
 // ============================================================ Bưu điện nhỏ (decor màn hình chính, mua bằng Tem Điểm)
-const ch2Open = () => LEVELS.length >= CHAPTERS[1].from && save.unlocked >= CHAPTERS[1].from;
 const allDone = () => !!save.stars[LEVELS.length];
+// Art decor / bưu thiếp chương 3+ đang được vẽ (art-batch-1.md): kiểm tra bằng cách tải thử ảnh, có đủ 6 món mới bật decor.
+// Chưa đủ thì panel Trang trí báo "sắp có" (giữ hành vi cũ). Kết quả nhớ trong phiên.
+const imgOk = new Map();
+function probeImg(url) {
+  if (!imgOk.has(url)) imgOk.set(url, new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; }));
+  return imgOk.get(url);
+}
+const decorState = new Map();      // chương id -> true (đủ art) | false | undefined (đang kiểm tra)
+function decorOf(ch) {
+  if (ch.id <= 2) return ch.decor;
+  if (!ch.decor.length) return [];
+  if (!decorState.has(ch.id)) {
+    decorState.set(ch.id, undefined);
+    Promise.all(ch.decor.map(d => probeImg(`assets/decor/${d.id}.png`))).then(r => {
+      decorState.set(ch.id, r.every(Boolean));
+      if (r.every(Boolean) && homeCh === ch && !$('home').classList.contains('off')) renderDecor();
+    });
+  }
+  return decorState.get(ch.id) ? ch.decor : [];
+}
 function renderDecor(justPlaced = -1) {
-  const DECOR = homeCh.decor;
+  const DECOR = decorOf(homeCh);
   const n = save[homeCh.key] || 0;
+  // chương 3+: class theo chỗ đặt (dc-s0..dc-s5), dùng chung 6 chỗ của nền với chương 1–2
   $('decor').innerHTML = DECOR.map((d, i) => (i < n || i === n)
-    ? `<img class="dc dc-${d.id}${i === n ? ' ghost' : ''}${i === justPlaced ? ' new' : ''}" src="assets/decor/${d.id}.png" alt="">` : '').join('');
+    ? `<img class="dc dc-${d.id}${homeCh.id > 2 ? ' dc-s' + i : ''}${i === n ? ' ghost' : ''}${i === justPlaced ? ' new' : ''}" src="assets/decor/${d.id}.png" alt="">` : '').join('');
   $('decorBtn').innerHTML = `${t('decorate')} ${pointsLeft()}<i></i>`;
   const next = DECOR[n];
   $('decorBtn').classList.toggle('ready', !!next && pointsLeft() >= next.cost);
 }
 function decorPanel() {
-  const DECOR = homeCh.decor;
+  const DECOR = decorOf(homeCh);
   const n = save[homeCh.key] || 0;
   const d = DECOR[n];
   const left = pointsLeft();
@@ -2856,32 +3149,62 @@ $('playBtn').addEventListener('pointerup', () => {
   const run = loadRun();
   if (run) startLevel(run.idx, { resume: run });
   else if (allDone()) panel({ title: t('more_soon'), body: `<p>${t('more_soon_body')}</p>`, buttons: [{ label: t('close'), act: () => {} }] });
-  else startLevel(save.unlocked - 1);
+  else startLevel(curLevel() - 1);
 });
-// Chương 2 "Bến Cảng" sắp mở (concept-little-post-office.md mục 3.1): teaser khu mới + tem mới + cư dân + decor.
-// Hook thay cho story: "thị trấn còn gì". Đo ý định quay lại bằng chapter2_teaser_open / chapter2_notify.
-// Khi chương 2 đã mở, cùng màn này thành màn giới thiệu chương (dấu "OPEN", nút chơi level đầu chương).
-const CH2_TOPICS = ['Sailboats', 'Seafood', 'Shells', 'Nautical'];
-function openCh2(source) {
-  const open = ch2Open();
+// Teaser chương (R5, tổng quát từ teaser chương 2, concept-little-post-office.md mục 3.1): bưu thiếp khu mới, tem mới,
+// cư dân, decor. Hook thay cho story: "thị trấn còn gì". Chương đã mở: cùng màn này thành màn giới thiệu chương (dấu "OPEN").
+// Bưu thiếp đọc assets/chN/postcard.jpg; chưa có art thì hiện bưu thiếp giấy kem có tên khu (placeholder).
+// Tem mới lấy từ trường introduce của level trong chương (luôn là chủ đề có art thật, kể cả khi đang dùng fallback).
+// Sự kiện: chapter_teaser_open (chương 2 vẫn ghi thêm chapter2_teaser_open để so với số liệu cũ).
+let teaserCh = null;
+const chOpen = ch => LEVELS.length >= ch.from && save.unlocked >= ch.from;
+const chLevel = ch => Math.min(ch.to, LEVELS.length, Math.max(ch.from, save.unlocked));
+function chTopics(ch) {
+  const out = [];
+  for (const l of LEVELS) if (l.id >= ch.from && l.id <= ch.to) for (const tp of l.introduce || []) if (!out.includes(tp)) out.push(tp);
+  return out.slice(0, 4);
+}
+function openChapterTeaser(ch, source) {
+  teaserCh = ch;
+  const open = chOpen(ch);
+  const prev = CHAPTERS.find(c => c.id === ch.id - 1) || CHAPTERS[0];
   $('ch2').classList.toggle('open', open);
-  $('ch2StampRow').innerHTML = CH2_TOPICS.map(tp => `<div class="ch2-st"><div><img src="${iconUrl(tp)}" alt=""></div>${topicName(tp)}</div>`).join('');
-  $('ch2Sub').textContent = open ? t('ch2_sub_open') : t('ch2_sub_locked', { n: CHAPTERS[0].to });
-  $('ch2Soon').textContent = open ? t('ch2_open') : t('ch2_lock_stamp', { n: CHAPTERS[0].to });
+  $('ch2Title').textContent = t('ch_word', { n: ch.id });
+  $('ch2Sub').textContent = open ? t('ch_sub_open', { place: chPlace(ch) }) : t('ch_sub_locked', { place: chPlace(ch), n: prev.to });
+  $('ch2Soon').textContent = open ? t('ch2_open') : t('ch2_lock_stamp', { n: prev.to });
+  const card = $('ch2').querySelector('.ch2-card');
+  const img = card.querySelector('img');
+  card.classList.remove('ph');
+  card.dataset.place = chPlace(ch);
+  img.src = ch.postcard;
+  probeImg(ch.postcard).then(okImg => { if (teaserCh === ch && !okImg) card.classList.add('ph'); });
+  const tps = chTopics(ch);
+  $('ch2Stamps').textContent = t('ch_new_stamps');
+  $('ch2Stamps').style.display = tps.length ? '' : 'none';
+  $('ch2StampRow').innerHTML = tps.map(tp => `<div class="ch2-st"><div><img src="${iconUrl(tp)}" alt=""></div>${topicName(tp)}</div>`).join('');
+  $('ch2Npc').innerHTML = ch.id === 2 ? t('ch2_npc') : t(ch.named ? 'ch_npc_' + ch.id : 'ch_npc_x');
+  $('ch2Decor').textContent = t('ch_new_decor');
+  const drow = $('ch2DecorRow');
+  const showDecor = items => { drow.innerHTML = items.map(d => `<img src="assets/decor/${d.id}.png" alt="">`).join(''); $('ch2Decor').style.display = drow.style.display = items.length ? '' : 'none'; };
+  const pick = ch.decor.length >= 6 ? [ch.decor[3], ch.decor[1], ch.decor[0]] : [];
+  showDecor(ch.id <= 2 ? pick : []);
+  if (ch.id > 2 && pick.length) Promise.all(ch.decor.map(d => probeImg(`assets/decor/${d.id}.png`))).then(r => { if (teaserCh === ch && r.every(Boolean)) showDecor(pick); });
+  $('ch2Tip').textContent = t('ch2_tip');
   const nb = $('ch2Notify');
-  nb.textContent = t('play', { n: open ? ch2Level() : save.unlocked });
+  nb.textContent = t('play', { n: open ? chLevel(ch) : curLevel() });
   nb.classList.remove('done');
   $('ch2').classList.remove('off');
   const soon = $('ch2Soon');
   soon.style.animation = 'none'; void soon.offsetWidth; soon.style.animation = '';   // chạy lại hiệu ứng đóng dấu
   setTimeout(() => sfx('stamp', { rate: 0.9 }), 280);
-  track('chapter2_teaser_open', { source, open, points_left: pointsLeft(), decor: save.decor || 0 });
+  track('chapter_teaser_open', { chapter: ch.id, source, open, points_left: pointsLeft() });
+  if (ch.id === 2) track('chapter2_teaser_open', { source, open, points_left: pointsLeft(), decor: save.decor || 0 });
 }
-const ch2Level = () => Math.min(CHAPTERS[1].to, LEVELS.length, Math.max(CHAPTERS[1].from, save.unlocked));
 $('ch2Notify').addEventListener('pointerup', () => {
-  // chương đã mở: chơi level đầu chương; còn khoá: chơi tiếp level đang dở để mở chương
+  // chương đã mở: chơi level đầu chương (hoặc level đang tới trong chương); còn khoá: chơi tiếp level đang dở để mở chương
   unlockAudio(); sfx('click'); $('ch2').classList.add('off');
-  playLevel((ch2Open() ? ch2Level() : save.unlocked) - 1);
+  const ch = teaserCh || CHAPTERS[1];
+  playLevel((chOpen(ch) ? chLevel(ch) : curLevel()) - 1);
 });
 $('ch2Close').addEventListener('pointerup', () => { sfx('close'); $('ch2').classList.add('off'); });
 $('pauseBtn').addEventListener('pointerup', () => {
@@ -2895,7 +3218,7 @@ $('pauseBtn').addEventListener('pointerup', () => {
 function pausePanel() {
   panel({
     title: t('paused'),
-    body: `<p>${t('level', { n: levelIdx + 1 })}</p>`,
+    body: `<p>${curTitle()}</p>`,
     buttons: [
       { label: t('resume'), act: () => {} },
       { label: t('howto'), cls: 'brown', act: () => showRules() },
@@ -2950,24 +3273,26 @@ function applyLang() {
   relabelCards();
   if (S && L) { updateSlotLabels(); updateHUD(); }
   if (script) tut(t(scriptStep() && scriptStep().booster ? 'script_' + scriptStep().booster : `script_${L.id}_${script.i}`));
+  else if (introHold && introHold.redo) { tut(introHold.redo(), 0); introHold.html = $('tut').innerHTML; }   // QA N6: câu "Tem mới" đang giữ
+  if (extraEl && S && L) { const lvEl = extraEl.querySelector('.lv'); if (lvEl && levelIdx + 1 >= UNLOCK_AT.slot) lvEl.textContent = t('extra_label'); }   // QA N6
   if (!$('home').classList.contains('off')) goHome(homeCh.id);
 }
 $('gearBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); settingsPanel(); });
 // Giữa ván (đã đi ít nhất 1 nước) mới hỏi; nút an toàn "Chơi tiếp" đứng đầu, nút làm mất ván màu nâu
 const midLevel = () => levelActive && !ended && S && S.used > 0;
 function confirmRestart() {
-  if (!midLevel()) { startLevel(levelIdx); return; }
+  if (!midLevel()) { restartCur(); return; }
   track('confirm_open', { level: levelIdx + 1, kind: 'restart', moves_used: S.used });
   panel({ title: t('confirm_restart_title'), body: `<p>${t('confirm_restart_body')}</p>`, buttons: [
     { label: t('keep_playing'), act: () => track('confirm_choice', { level: levelIdx + 1, kind: 'restart', choice: 'keep' }) },
-    { label: t('confirm_restart_yes'), cls: 'brown', act: () => { track('confirm_choice', { level: levelIdx + 1, kind: 'restart', choice: 'yes' }); startLevel(levelIdx); } },
+    { label: t('confirm_restart_yes'), cls: 'brown', act: () => { track('confirm_choice', { level: levelIdx + 1, kind: 'restart', choice: 'yes' }); restartCur(); } },
   ] });
 }
 function confirmHome() {
   if (!midLevel()) { goHome(); return; }
   saveRun();
-  const run = loadRun();
-  const saved = !!(run && run.idx === levelIdx);
+  const run = dailyRun ? loadDailyRun(dailyRun.key) : loadRun();
+  const saved = !!(run && (dailyRun || run.idx === levelIdx));
   track('confirm_open', { level: levelIdx + 1, kind: 'home', moves_used: S.used, saved });
   panel({ title: t('confirm_home_title'), body: `<p>${t(saved ? 'confirm_home_saved' : 'confirm_home_lost')}</p>`, buttons: [
     { label: t('keep_playing'), act: () => track('confirm_choice', { level: levelIdx + 1, kind: 'home', choice: 'keep' }) },
@@ -3034,7 +3359,13 @@ window.__game = { variant: VARIANT, get S() { return S; }, get level() { return 
   // R12/R13: màn thắng, cài đặt, các bảng (tests/win-screen.browser.js, tests/settings.browser.js)
   get win() { return winInfo && { level: winInfo.level, reward: winInfo.reward, paid: winInfo.paid(), ended: !!(winTL && winTL.ended), skipped: !!(winTL && winTL.skipped), active: !!winTL }; },
   settings: { get: getSetting, set: setSetting, music: isMusicOn, haptics: hapticsEnabled, sfx: sfxVolume, reduceMotion },
-  settingsPanel, pausePanel, showRules: () => showRules(() => {}, 'test'), openAlbum, askResume, confirmRestart, outOfMoves, finishWin };
+  settingsPanel, pausePanel, showRules: () => showRules(() => {}, 'test'), openAlbum, askResume, confirmRestart, outOfMoves, finishWin,
+  // R5, L1, L2 (tests/r5-chapters.browser.js, tests/daily.browser.js)
+  get levels() { return LEVELS.map(l => ({ id: l.id, source: l.source || 'base', role: l.role, tip: l.tip || '' })); },
+  chapters: CHAPTERS, get homeCh() { return homeCh.id; }, get homePage() { return homePage; }, openChapterTeaser, chapterReward, get daily() { return dailyRun && { key: dailyRun.key, catchup: !!dailyRun.catchup, replay: !!dailyRun.replay, src: dailyRun.src }; },
+  get save() { return save; }, persist, curLevel, decorOf, startDaily, dailyPanel, dailyFor, loadDailyRun, refreshHome, dailyPool: () => getDailyPool().map(e => e.src),
+  live: { setNow(v) { const off = (typeof v === 'number' ? v : new Date(v).getTime()) - Date.now(); LIVE.setClock(() => Date.now() + off); }, reset() { LIVE.setClock(null); },
+    state: () => LIVE.liveState(save.live, LIVE.nowMs(), wonLevel()), today: () => LIVE.dayKey(today()), touch() { LIVE.touch(save.live); persist(); } } };
 
 // đổi ngôn ngữ giữa ván: viết lại tên chủ đề trên lá vương miện
 function relabelCards() {
@@ -3062,9 +3393,11 @@ function applyStaticCopy() {
   $('albumClose').textContent = t('close');
   $('gearBtn').textContent = t('settings');
 }
+let booting = true;            // lúc mở app: hộp "Chơi tiếp ván dở" được ưu tiên hơn popup tính năng mới (tối đa 1 popup)
 (async function boot() {
   applyStaticCopy();
   initFx($('fx'));
+  setFxSize(STAGE_H);
   applySettings();
   buildDebug();
   try { manifest = await (await fetch('assets/manifest.json')).json(); } catch (e) { manifest = {}; }
@@ -3077,4 +3410,6 @@ function applyStaticCopy() {
   const m = location.search.match(/level=(\d+)/);
   if (m) playLevel(+m[1] - 1);
   else { const run = loadRun(); if (run) askResume(run); }     // mở lại app có ván dở: hỏi chơi tiếp (R10)
+  booting = false;
+  if (!panelOpen && !m) dailyIntro();
 })();

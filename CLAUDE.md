@@ -18,6 +18,7 @@ Dự án nghiên cứu và thiết kế game puzzle mobile, lấy **Stamp Solita
 - `research/apk/com.stamp.solit/levels/` – level data đã giải mã (JSON/CSV). Teardown đã xác nhận: `docs/design/teardown-video-apk-0.9.5.md`.
 - `tools/ocr_frames.swift` – OCR hàng loạt frame video bằng macOS Vision (đọc moves, deck, bộ đếm ô) để xác minh luật từ video.
 - `tools/level_spec.mjs`, `tools/level_rules.mjs`, `tools/gen_levels.mjs`, `tools/validate_levels.mjs` – sinh level theo tham số cho L21–L240 (luật A, có ứng viên layout ABI) và kiểm bằng 4 người chơi mô phỏng. Ghi chú: `docs/design/level-pipeline-r1-r3.md`. Kế hoạch 30 ngày: `docs/design/30-day-plan.md`, tính năng và event theo mẫu Grand Games: `docs/design/liveops-30-days.md`.
+- `prototype/stamp/src/chapters.js` (13 chương, decor, teaser), `liveops.js` (lịch tính năng theo đồng hồ máy), `daily.js` (Thư hôm nay, Sổ dấu ngày); test `tests/liveops.test.mjs`, `tests/r5-chapters.browser.js`, `tests/daily.browser.js`. Ghi chú: `docs/design/r5-l1-l2-tech-notes.md`.
 - `tools/difficulty_report.mjs` – đo độ khó 10 level bằng người chơi mô phỏng không nhìn trộm (giỏi / phí 10% / phí 25%). Mốc UA và level "khó nhưng không thể thua": `docs/design/difficulty-and-ua-milestones.md`.
 - `prototype/stamp/tests/drag-scenarios.browser.js`, `naive-drag.browser.js` – test kéo thả kiểu người mới (chạy trong trình duyệt, PointerEvent thật). Kết quả: `docs/design/ftue-copy.md` mục 7.
 - Giao diện concept B (cửa sổ bưu điện, tràn màn hình, safe area) và kết quả review UI/UX: `docs/design/ui-concept-b.md`.

@@ -691,6 +691,38 @@ test('levels APK: 40 level L21-L60, id liên tục, chương 3-6, cấu trúc v�
     ok(Number.isInteger(L.moves) && L.moves >= Math.ceil(L.solverMoves * 1.3), `L${L.id} moves ${L.moves} < 1.3 x ${L.solverMoves}`);
   });
 });
+// R5: L21+ sinh bởi tools/gen_levels.mjs (levels_gen.js, có thể chưa có). Kiểm cấu trúc, art, id liền mạch, không lặp art
+// trong chủ đề (luật A), solver giải được trong số moves; và chiến dịch ghép (sinh trước, APK lấp chỗ chưa sinh) liền mạch.
+const LEVELS_GEN = await import('../src/levels_gen.js').then(m => m.LEVELS_GEN || [], () => []);
+test(`levels_gen: ${LEVELS_GEN.length} level sinh, id liên tục từ 21, cấu trúc + art hợp lệ, giải được trong moves`, () => {
+  LEVELS_GEN.forEach((L, k) => {
+    eq(L.id, 21 + k, 'id');
+    const all = [...L.columns.flat(), ...L.deck, ...(L.preplaced || []).flat()];
+    eq(new Set(all.map(c => c.id)).size, all.length, `L${L.id} id trùng`);
+    ok(L.foundations >= 3 && L.foundations <= 5, `L${L.id} số ô ${L.foundations}`);
+    for (const t of new Set(all.map(c => c.t))) {
+      const tc = all.filter(c => c.t === t && c.k === 'topic');
+      eq(tc.length, 1, `L${L.id} topic ${t} số lá topic`);
+      const st = all.filter(c => c.t === t && c.k === 'stamp');
+      eq(st.length, tc[0].n, `L${L.id} topic ${t} số stamp vs n`);
+      eq(new Set(st.map(c => c.art)).size, st.length, `L${L.id} topic ${t} lặp art`);
+      ok(existsSync(join(ROOT, 'assets/cards', slug(t), 'icon_line.png')), `L${L.id} thiếu icon_line ${t}`);
+    }
+    for (const c of all.filter(x => x.k === 'stamp')) ok(existsSync(join(ROOT, 'assets/cards', slug(c.t), c.art + '.png')), `L${L.id} thiếu ${slug(c.t)}/${c.art}.png`);
+    ok(Number.isInteger(L.moves) && L.moves >= L.solverMoves, `L${L.id} moves ${L.moves} < solver ${L.solverMoves}`);
+    const r = solve(E.createState(L), { width: QUICK ? 300 : 800 });
+    ok(r && r.moves <= L.moves, `L${L.id} solver ${r ? r.moves : 'không giải được'} > moves ${L.moves}`);
+  });
+});
+test('chiến dịch ghép (main.js): L1–L20 + level sinh, chỗ chưa sinh lấy APK cùng số, id liền mạch', () => {
+  const gen = new Map(LEVELS_GEN.map(l => [l.id, l])), apk = new Map(LEVELS_APK.map(l => [l.id, l]));
+  const tail = [];
+  for (let id = 21; ; id++) { const lv = gen.get(id) || apk.get(id); if (!lv) break; tail.push(lv); }
+  const all = LEVELS.concat(tail);
+  all.forEach((l, i) => eq(l.id, i + 1, 'id liền mạch'));
+  ok(all.length >= 20 + LEVELS_GEN.length, `độ dài ${all.length}`);
+  for (const l of LEVELS_GEN) ok(all[l.id - 1] === l, `L${l.id} phải là level sinh`);
+});
 test('candidateActions đều thực thi được trên các level', () => {
   for (const L of LEVELS) {
     const s = E.createState(L);

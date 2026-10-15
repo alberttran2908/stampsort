@@ -29,7 +29,7 @@ export function killKey(prefix) {
   for (const t of tweens) if (t.key && t.key.startsWith(prefix)) { tweens.delete(t); t.resolve(); }
 }
 /** Xoá mọi hạt (khi đổi level giữa chừng). */
-export function clearParticles() { parts.length = 0; if (cx) cx.clearRect(0, 0, 1080, 1920); }
+export function clearParticles() { parts.length = 0; clearAll(); }
 export function killTweens(obj) {
   for (const t of tweens) if (t.obj === obj) { tweens.delete(t); t.resolve(); }
 }
@@ -64,15 +64,23 @@ const imgCache = {};
 let lastT = 0;
 let LITE = false;
 let PSCALE = 1;          // hệ số số hạt
+let FX_H = 1920;         // QA N2: chiều cao stage thật (màn cao > 1920), bitmap canvas phải bằng, không giãn
 export function initFx(canvas) { cv = canvas; cx = canvas.getContext('2d'); }
+/** Xoá toàn bộ bitmap (không phụ thuộc transform / chiều cao cũ): confetti rơi dưới y 1920 không còn đọng vệt. */
+function clearAll() { if (!cx) return; cx.save(); cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height); cx.restore(); }
+/** main.js fit(): đặt chiều cao stage (toạ độ stage 1080 x h). */
+export function setFxSize(h) { FX_H = Math.max(1920, Math.round(h || 1920)); applySize(); }
+function applySize() {
+  if (!cv) return;
+  const k = LITE ? 0.5 : 1;
+  if (cv.width !== Math.round(1080 * k) || cv.height !== Math.round(FX_H * k)) { cv.width = Math.round(1080 * k); cv.height = Math.round(FX_H * k); }
+  cx.setTransform(k, 0, 0, k, 0, 0);
+}
 /** Máy yếu: canvas hiệu ứng nửa độ phân giải (ít pixel/frame 4 lần), ít hạt hơn, hạt vẽ fillRect không xoay. */
 export function setLite(on) {
   LITE = !!on;
   PSCALE = LITE ? 0.4 : 1;
-  if (!cv) return;
-  const k = LITE ? 0.5 : 1;
-  cv.width = 1080 * k; cv.height = 1920 * k;
-  cx.setTransform(k, 0, 0, k, 0, 0);
+  applySize();
 }
 function img(src) {
   if (!imgCache[src]) { const i = new Image(); i.src = src; imgCache[src] = i; }
@@ -122,7 +130,7 @@ function particlesStep(now) {
   if (!cx) return;
   const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016);
   lastT = now;
-  cx.clearRect(0, 0, 1080, 1920);
+  clearAll();
   const coin = img('assets/ui/coin.png');
   for (let i = parts.length - 1; i >= 0; i--) {
     const p = parts[i];

@@ -21,7 +21,7 @@ touch "$OUT/.nojekyll"
 # Chống cache JS cũ (GitHub Pages cache 10 phút): gắn ?v=<phiên bản> vào script và mọi import nội bộ
 VER="$(git rev-parse --short HEAD)-$(date +%s)"
 sed -i '' "s#src/main.js\"#src/main.js?v=$VER\"#" "$OUT/index.html"
-for f in "$OUT"/src/*.js; do sed -i '' -E "s#from '\./([a-z]+)\.js'#from './\1.js?v=$VER'#g" "$f"; done
+for f in "$OUT"/src/*.js; do sed -i '' -E "s#from '\./([a-z_0-9]+)\.js'#from './\1.js?v=$VER'#g; s#import\('\./([a-z_0-9]+)\.js'\)#import('./\1.js?v=$VER')#g" "$f"; done
 # Cloudflare trước GitHub Pages cache ảnh/âm thanh 4 giờ theo URL: đổi tên assets/, sfx/, music/ theo mã băm nội dung
 # (chỉ đổi khi art/âm thanh đổi) rồi sửa mọi đường dẫn 'assets/... (assets/... `sfx/... `music/... trong index.html và src/*.js
 for d in assets sfx music; do
