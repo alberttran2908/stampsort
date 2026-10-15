@@ -5,8 +5,9 @@
 // Mặc định cho người lớn tuổi (older-players-pass.md): chữ Lớn, SFX Vừa.
 
 const KEY = 'ss_settings';
-const DEFAULTS = { text: 1, sfx: 2, motion: 'auto' };
-const VALID = { text: [0, 1, 2], sfx: [0, 1, 2], motion: ['auto', 'reduce'] };
+// L11: rest = nhắc nghỉ 45 phút (mặc định bật), notif = thông báo nhẹ (mặc định TẮT, chỉ bật sau khi người chơi đồng ý), notif_hour = giờ nhắc
+const DEFAULTS = { text: 1, sfx: 2, motion: 'auto', rest: 1, notif: 0, notif_hour: 9 };
+const VALID = { text: [0, 1, 2], sfx: [0, 1, 2], motion: ['auto', 'reduce'], rest: [0, 1], notif: [0, 1], notif_hour: [9, 15, 19] };
 /** Hệ số cỡ chữ cho 3 mức Thường / Lớn / Rất lớn (biến CSS --fs). */
 export const TEXT_SCALE = [1, 1.15, 1.3];
 

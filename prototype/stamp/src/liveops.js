@@ -5,12 +5,13 @@
 // Chu kỳ 28 ngày: k = floor((pd - 1) / 28), cd = ((pd - 1) mod 28) + 1. Chống lùi giờ: lưu maxSeenDay, ngày hiệu dụng
 // không bao giờ nhỏ hơn (mục 3.3): lùi giờ không tạo Thư hôm nay mới, không tạo quà mới.
 
-export const CYCLE = 28;
+export const CYCLE = 28;                                   // mặc định; giá trị đang dùng ở SCHED.cycle (L13: liveops.json đọc đè)
+export const SCHED = { cycle: CYCLE, mode: 'player' };
 // Bảng mở khoá theo level ĐÃ THẮNG (mục 2). Chỉ F1/F2 có UI ở vòng này; còn lại dùng cho liveState và các vòng sau.
 export const FEATURES = { daily: 5, stampbook: 5, weekly: 5, weekend: 8, morning: 5, welcome: 5, gentleRetry: 11, route: 12, mailbag: 15, season: 20, errands: 30 };
 // Event lớn theo ngày trong chu kỳ cd (mục 3.2, 3.4). Chu kỳ đầu E1 bắt đầu cd 2 (D1 là ngày học chơi), từ chu kỳ 2 bắt đầu cd 1.
 export const BIG_EVENTS = [
-  { id: 'route', from: 2, to: 7, minLevel: 12 },
+  { id: 'route', from: 2, to: 7, minLevel: 12, fromNext: 1 },   // fromNext: từ chu kỳ 2 bắt đầu ở cd 1
   { id: 'season', from: 8, to: 21, minLevel: 20 },
   { id: 'errands', from: 22, to: 28, minLevel: 30 },
 ];
@@ -73,10 +74,10 @@ export function liveState(live, ms = clock(), wonLevel = 0, opts = {}) {
   const first = Number.isFinite(live.firstOpenDay) ? live.firstOpenDay : real;
   const day = Number.isFinite(live.maxSeenDay) ? Math.max(real, live.maxSeenDay) : real;
   const pd = day - first + 1;
-  const k = Math.floor((pd - 1) / CYCLE), cd = ((pd - 1) % CYCLE) + 1;
+  const k = Math.floor((pd - 1) / SCHED.cycle), cd = ((pd - 1) % SCHED.cycle) + 1;
   let win = null;
   for (const e of BIG_EVENTS) {
-    const from = e.id === 'route' && k >= 1 ? 1 : e.from;
+    const from = k >= 1 && e.fromNext != null ? e.fromNext : e.from;
     if (cd >= from && cd <= e.to) { win = e; break; }
   }
   const big = win && wonLevel >= win.minLevel ? win.id : null;
@@ -141,6 +142,7 @@ export function mergeRewards(list) {
 export function pickPopup(due, trigger = 'home') {
   if (due.resume && trigger === 'boot') return 'resume';
   if (due.welcome || due.gifts || due.morning) return 'gifts';
+  if (due.notif) return 'notif';                         // L11: hỏi bật thông báo (1 lần, sau Thư hôm nay thứ 3)
   if (due.feature && !due.featureShown) return 'feature';
   return null;
 }

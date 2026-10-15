@@ -2,6 +2,7 @@
 // cuối tuần x2, tem mùa, việc vặt, thử lại nhẹ tay. Chạy: node prototype/stamp/tests/events.test.mjs
 import * as LIVE from '../src/liveops.js';
 import * as EV from '../src/events.js';
+import { existsSync } from 'node:fs';
 
 const results = [];
 function test(name, fn) { try { fn(); results.push([true, name]); } catch (e) { results.push([false, name, e.message]); } }
@@ -60,12 +61,13 @@ test('E2: Thư hôm nay luôn có 1 lá tem mùa; chiến dịch L21–L240 có 
   ok(share >= 0.45 && share <= 0.55, 'tỉ lệ ' + share.toFixed(3));
   ok(EV.seasonCollect(s, 'D1') === 1 && EV.seasonCollect(s, 'D1') == null && !EV.seasonCardFor(mk('D1', true), 0, s, 'D1'), 'nhận 1 lần');
 });
-test('E2: 24 tem đủ 3 bộ (bộ 3 có trang tem mùa + Tem Vàng), thêm tối đa 2 bộ 30 xu; hình theo tháng thật', () => {
+test('E2: 24 tem đủ 3 bộ (bộ 3: decor hiếm theo mùa + trang tem mùa + Tem Vàng), thêm tối đa 2 bộ 30 xu; hình theo tháng thật', () => {
   const s = { key: 'season#0', n: 40, got: {}, claimed: {} };
   const ms = EV.milestones('season', s);
   ok(ms.filter(m => m.reached).length === 5, 'mốc');
   const r3 = EV.claim('season', s, 's24');
-  ok(r3.joker === 1 && r3.seasonPage === 1, JSON.stringify(r3));
+  ok(r3.joker === 1 && r3.seasonPage === 1 && r3.rareDecor === 1 && !r3.coins, JSON.stringify(r3));
+  ok(['flower', 'shell', 'leaf', 'snow'].every(m => EV.SEASON.rare_decor[m] && (existsSync(new URL(`../assets/decor/${EV.SEASON.rare_decor[m]}.png`, import.meta.url)))), 'decor hiếm theo mùa có art');
   ok(EV.progress('season', s).p === 24, 'tiến độ ô Event dừng ở 24');
   ok([3, 6, 9, 12].map(EV.SEASON_MOTIF).join() === 'flower,shell,leaf,snow' && EV.SEASON_MOTIF(2) === 'snow', 'mùa');
 });

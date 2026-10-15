@@ -4,7 +4,7 @@
 // Nguyên tắc chung (mục 10 "Không FOMO"): thua không mất tiến độ, không đếm ngược, không "mất chuỗi". Quà đã đạt mà chưa
 // nhận thì khi event kết thúc được chuyển vào save.gifts (phong bì quà gộp ở màn chính, L4). Mỗi mốc quà chỉ nhận 1 lần.
 // Trạng thái event lưu theo "phiên" key = id + '#' + chu kỳ k: chu kỳ mới là phiên mới, phiên cũ được chốt (finalize).
-import { liveState, featureOn } from './liveops.js';
+import { liveState, featureOn, BIG_EVENTS } from './liveops.js';
 
 // Hằng số phần thưởng (L13 sẽ đọc đè từ liveops.json)
 export const WEEKEND = { mult: 2 };
@@ -16,7 +16,9 @@ export const ROUTE = {
 };
 export const SEASON = {
   set: 8,
-  sets: [{ at: 8, stamper: 1, coins: 50 }, { at: 16, hint: 1, pack: 1 }, { at: 24, joker: 1, coins: 100, page: 1 }],
+  sets: [{ at: 8, stamper: 1, coins: 50 }, { at: 16, hint: 1, pack: 1 }, { at: 24, joker: 1, page: 1, rare: 1 }],
+  // decor hiếm theo mùa (art đợt 6), trao ở bộ 3 theo hình tem của tháng thật
+  rare_decor: { flower: 'rare_sakura_postbox', shell: 'rare_shell_lantern', leaf: 'rare_maple_mailbox', snow: 'rare_snow_mailbox' },
   extra: { len: 8, coins: 30, max: 2 },
 };
 // Pool việc vặt (mục 6.2 E4). Không việc nào buộc tiêu xu hay dùng booster (test quét `on`).
@@ -31,7 +33,8 @@ export const ERRAND_POOL = [
 ];
 export const ERRANDS = { pick: 5, box: { hint: 1, pack: 1, stamper: 1 } };
 export const GENTLE = { losses: 2, moves: 3, minLevel: 11 };
-export const KILL = { gentle_retry: false, weekend: false, route: false, season: false, errands: false, mailbag: false };
+// Công tắc tắt từng tính năng (L13: liveops.json "kill_switch" đọc đè). main.js đọc cả daily/weekly/morning/welcome/rest/notifications.
+export const KILL = { daily: false, weekly: false, morning: false, welcome: false, gentle_retry: false, weekend: false, route: false, season: false, errands: false, mailbag: false, rest: false, notifications: false };
 
 export function hash(s) { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 
@@ -58,7 +61,7 @@ export const mailbagNext = bag => MAILBAG.cycle[(bag.i || 0) % MAILBAG.cycle.len
 export function currentEvent(live, ms, wonLevel) {
   const st = liveState(live, ms, wonLevel);
   if (!st.big || KILL[st.big]) return null;
-  const to = { route: 7, season: 21, errands: 28 }[st.big];
+  const to = (BIG_EVENTS.find(e => e.id === st.big) || {}).to;
   return { id: st.big, k: st.k, key: st.big + '#' + st.k, cd: st.cd, endCd: to, month: new Date(st.day * 864e5).getUTCMonth() + 1 };
 }
 const blank = (id, key) => ({ route: { key, p: 0, claimed: {} }, season: { key, n: 0, got: {}, claimed: {} }, errands: { key, c: {}, claimed: {} } }[id]);
@@ -107,7 +110,7 @@ export function syncEvents(ev, cur) {
   if (cur && !ev[cur.id]) ev[cur.id] = blank(cur.id, cur.key);
   return { cur: cur ? ev[cur.id] : null, gifts };
 }
-const rewardOnly = r => { const o = {}; for (const k of ['coins', 'hint', 'pack', 'stamper', 'joker']) if (r[k]) o[k] = r[k]; if (r.stamp) o.routeStamp = 1; if (r.page) o.seasonPage = 1; return o; };
+const rewardOnly = r => { const o = {}; for (const k of ['coins', 'hint', 'pack', 'stamper', 'joker']) if (r[k]) o[k] = r[k]; if (r.stamp) o.routeStamp = 1; if (r.page) o.seasonPage = 1; if (r.rare) o.rareDecor = 1; return o; };
 export { rewardOnly };
 
 /** Nhận 1 mốc (1 lần). Trả phần quà hoặc null. */

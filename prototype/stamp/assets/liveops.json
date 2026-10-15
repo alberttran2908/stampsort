@@ -1,0 +1,231 @@
+{
+  "_note": "Cấu hình LiveOps đóng gói cùng bản build (L13, docs/design/liveops-30-days.md mục 3.4). Đọc lúc khởi động bởi src/config.js; thiếu khoá hoặc sai kiểu thì dùng mặc định trong code. Cùng khoá với Remote Config sau này.",
+  "version": 1,
+  "schedule_mode": "player",
+  "cycle": 28,
+  "features": {
+    "daily": 5,
+    "stampbook": 5,
+    "weekly": 5,
+    "weekend": 8,
+    "morning": 5,
+    "welcome": 5,
+    "gentleRetry": 11,
+    "route": 12,
+    "mailbag": 15,
+    "season": 20,
+    "errands": 30
+  },
+  "big_events": [
+    {
+      "id": "route",
+      "from": 2,
+      "to": 7,
+      "minLevel": 12,
+      "fromNext": 1
+    },
+    {
+      "id": "season",
+      "from": 8,
+      "to": 21,
+      "minLevel": 20
+    },
+    {
+      "id": "errands",
+      "from": 22,
+      "to": 28,
+      "minLevel": 30
+    }
+  ],
+  "weekend_event": {
+    "days": [
+      6,
+      0
+    ],
+    "min_level": 8
+  },
+  "rewards": {
+    "daily": {
+      "today": 40,
+      "catchup": 20,
+      "page": 150,
+      "page_size": 20
+    },
+    "weekly": {
+      "need": 5,
+      "coins": 100,
+      "hint": 1,
+      "pack": 1
+    },
+    "morning": {
+      "coins": 20,
+      "hintEvery": 7
+    },
+    "welcome": {
+      "minAway": 3,
+      "bigAway": 7,
+      "hint": 1,
+      "pack": 1,
+      "moves": 5,
+      "joker": 1
+    },
+    "weekend": {
+      "mult": 2
+    },
+    "mailbag": {
+      "need": 12,
+      "cycle": [
+        "hint",
+        "pack",
+        "stamper",
+        "hint",
+        "pack",
+        "joker"
+      ]
+    },
+    "route": {
+      "stations": 20,
+      "milestones": [
+        {
+          "at": 5,
+          "coins": 50
+        },
+        {
+          "at": 10,
+          "hint": 1
+        },
+        {
+          "at": 15,
+          "pack": 1
+        },
+        {
+          "at": 20,
+          "joker": 1,
+          "stamp": 1
+        }
+      ],
+      "trip": {
+        "len": 5,
+        "coins": 30,
+        "max": 3
+      }
+    },
+    "season": {
+      "set": 8,
+      "sets": [
+        {
+          "at": 8,
+          "stamper": 1,
+          "coins": 50
+        },
+        {
+          "at": 16,
+          "hint": 1,
+          "pack": 1
+        },
+        {
+          "at": 24,
+          "joker": 1,
+          "page": 1,
+          "rare": 1
+        }
+      ],
+      "rare_decor": {
+        "flower": "rare_sakura_postbox",
+        "shell": "rare_shell_lantern",
+        "leaf": "rare_maple_mailbox",
+        "snow": "rare_snow_mailbox"
+      },
+      "extra": {
+        "len": 8,
+        "coins": 30,
+        "max": 2
+      }
+    },
+    "errands": {
+      "pick": 5,
+      "box": {
+        "hint": 1,
+        "pack": 1,
+        "stamper": 1
+      },
+      "pool": [
+        {
+          "id": "win8",
+          "on": "win",
+          "need": 8,
+          "coins": 50
+        },
+        {
+          "id": "daily4",
+          "on": "daily_day",
+          "need": 4,
+          "coins": 40
+        },
+        {
+          "id": "big6",
+          "on": "deliver_big",
+          "need": 6,
+          "coins": 40
+        },
+        {
+          "id": "stars3",
+          "on": "stars3",
+          "need": 3,
+          "coins": 40
+        },
+        {
+          "id": "decor1",
+          "on": "decor",
+          "need": 1,
+          "coins": 30
+        },
+        {
+          "id": "hard1",
+          "on": "hard_win",
+          "need": 1,
+          "coins": 40
+        },
+        {
+          "id": "deliver15",
+          "on": "deliver",
+          "need": 15,
+          "coins": 30
+        }
+      ]
+    },
+    "gentle_retry": {
+      "losses": 2,
+      "moves": 3,
+      "minLevel": 11
+    }
+  },
+  "rest": {
+    "minutes": 45,
+    "away_reset_minutes": 10
+  },
+  "notifications": {
+    "days": 7,
+    "hours": [
+      9,
+      15,
+      19
+    ],
+    "default_hour": 9,
+    "ask_after_daily": 3
+  },
+  "kill_switch": {
+    "daily": false,
+    "weekly": false,
+    "morning": false,
+    "welcome": false,
+    "gentle_retry": false,
+    "weekend": false,
+    "route": false,
+    "season": false,
+    "errands": false,
+    "mailbag": false,
+    "rest": false,
+    "notifications": false
+  }
+}

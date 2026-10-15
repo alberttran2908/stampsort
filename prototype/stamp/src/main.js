@@ -17,6 +17,12 @@ import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens
 import { candidateActions, isDeadlocked } from './solver.js';
 import { track as trackRaw, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js';
 import * as EV from './events.js';
+import { loadConfig, CONF, configInfo } from './config.js';
+import * as NT from './notify.js';
+import { stampPoints } from './points.js';
+// L13: liveops.json đóng gói (phần thưởng, ngưỡng mở khoá, lịch event, kill_switch). Đọc trước mọi thứ dùng các hằng đó.
+// Thiếu file / hỏng: chạy bằng mặc định trong code. ?debug&liveops=<đường dẫn> để test file khác.
+const CFG_INFO = await loadConfig((/debug/.test(location.search) && (location.search.match(/[?&]liveops=([^&]+)/) || [])[1]) ? decodeURIComponent(location.search.match(/[?&]liveops=([^&]+)/)[1]) : 'assets/liveops.json');
 // L9: bộ đếm Tuần việc vặt lấy từ chính các sự kiện analytics (level_complete, daily_complete, deliver, decor_place)
 function track(name, data = {}) { trackRaw(name, data); try { onMeta(name, data); } catch (e) { /* đếm việc vặt không được làm hỏng ván */ } }
 import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js';
@@ -2164,13 +2170,9 @@ function isStuck() { return isDeadlocked(S); }
 const pointsEarned = () => Object.values(save.stars).reduce((a, b) => a + b, 0);
 const pointsSpent = () => CHAPTERS.reduce((sum, c) => sum + c.decor.slice(0, save[c.key] || 0).reduce((a, d) => a + d.cost, 0), 0);
 const pointsLeft = () => pointsEarned() - pointsSpent();
-// Sao theo phần moves dư so với lời giải tối ưu (gdd-core.md mục 5): slack = moves - tối ưu.
-// 3★ nếu còn >= 50% slack, 2★ nếu >= 20%. Luật cũ (>= 25% ngân sách) gần như không ai đạt 3★.
+// R11: luật Tem Điểm mới (points.js): thắng trong số nước 3 hoặc 2 điểm, Ca tối ở level khó 2 điểm.
 function stars() {
-  if (overtime) return 1;
-  if (L.moves == null) return 3;
-  const slack = Math.max(1, L.moves - (L.solverMoves || Math.round(L.moves * 0.8)));
-  return S.moves >= 0.5 * slack ? 3 : S.moves >= 0.2 * slack ? 2 : 1;
+  return stampPoints({ levelMoves: L.moves, solverMoves: L.solverMoves, movesLeft: S.moves === Infinity ? 0 : S.moves, overtime });
 }
 // ============================================================ màn thắng dàn dựng (R12 + P6, benchmark-grand-games.md mục 4.3)
 // Dòng thời gian (giây, tính từ lúc vào màn thắng):
@@ -2432,7 +2434,7 @@ function dailyWinSequence() {
     if (D.stamps.length % STAMP_PAGE === 0) { pageDone = true; D.pages++; D.keepsakes++; }
     // F3 Thẻ tuần (L3): ô thứ 5 của tuần chứa ngày lá thư -> hộp mở ngay
     const w = weekly(run.day);
-    if (w.ready) {
+    if (w.ready && !EV.KILL.weekly) {
       save.weekly[w.week] = 1;
       wkBox = { coins: LIVE.WEEKLY.coins, hint: LIVE.WEEKLY.hint, pack: LIVE.WEEKLY.pack };
       save.hint = (save.hint || 0) + wkBox.hint; save.pack = (save.pack || 0) + wkBox.pack;
@@ -2442,6 +2444,7 @@ function dailyWinSequence() {
   const total = reward + (pageDone ? DAILY_REWARD.page : 0) + (wkBox ? wkBox.coins : 0);
   persist();
   const evLines = winMeta();
+  notifSync('daily_win');                          // L11: hôm nay đã giao thư -> bỏ thông báo của hôm nay
   track('daily_complete', { day: run.key, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? 0 : S.moves, catchup: !!run.catchup,
     replay: !first, reward: total, stamps: D.stamps.length, time_s: Math.round((Date.now() - play.start) / 1000), src: L.src });
   if (first && run.catchup) track('daily_catchup', { day: run.key });
@@ -2520,7 +2523,8 @@ function openAlbum() {
   // L7, L8: tem tuyến (xong 20 trạm) và trang tem mùa (đủ 3 bộ) đứng đầu album, sau Sổ dấu ngày
   const rs = save.routeStamps || [], sp = save.seasonPages || [];
   const extra = (rs.length ? `<div class="al-special"><div class="sb-head">${t('album_route')} · ${rs.length}</div><div class="al-rs">${rs.map(r => { const sc = routeScene(r.k); return `<div class="al-rst"><img src="${sc.postcard}" alt=""><span>${chPlace(sc)}</span></div>`; }).join('')}</div></div>` : '')
-    + (sp.length ? `<div class="al-special"><div class="sb-head">${t('album_season')} · ${sp.length}</div><div class="al-rs">${sp.map(x => `<div class="al-sp"><i style="background-image:url(${motifUrl(x.motif)})"></i><span>${t('season_' + x.motif)}</span></div>`).join('')}</div></div>` : '');
+    + (sp.length ? `<div class="al-special"><div class="sb-head">${t('album_season')} · ${sp.length}</div><div class="al-rs">${sp.map(x => `<div class="al-sp"><i style="background-image:url(assets/ui/season_all.png)"></i><span>${t('season_' + x.motif)}</span></div>`).join('')}</div></div>` : '')
+    + ((save.rareDecor || []).length ? `<div class="al-special"><div class="sb-head">${t('album_rare')} · ${save.rareDecor.length}</div><div class="al-rs">${save.rareDecor.map(x => `<div class="al-sp"><i style="background-image:url(assets/decor/${x.id}.png)"></i><span>${t('decor_rare_' + x.motif)}</span></div>`).join('')}</div></div>` : '');
   $('albumBody').innerHTML = (dailyOn() ? stampBookHtml() : '') + extra + rows;   // L2: trang Sổ dấu ngày đầu album
   $('albumCount').textContent = t('album_count', { n: have, total });
   $('album').classList.remove('off');
@@ -2918,7 +2922,7 @@ function levelBanner() {
   const sp = specialOf(L);
   el.innerHTML = (sp ? `<div class="hard-pill">${t(sp === 'superhard' ? 'superhard' : 'hard')}</div>` : '') + `<div style="font-size:${fs(dailyRun ? 96 : 110)};line-height:1">${curTitle()}</div>${dailyRun ? `<div style="font-size:${fs(44)};margin-top:8px">${dailyDateText(dailyRun.day)}</div>` : ''}
     <div style="margin-top:22px;display:inline-block;max-width:960px;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.25);font-size:${fs(48)}">
-      ${t('goal', { n: tp.total - tp.done, moves: L.moves == null ? t('goalInf') : t('goalMoves', { n: L.moves }) })}</div>`;
+      ${t('goal', { n: tp.total - tp.done, moves: L.moves == null ? t('goalInf') : t('goalMoves', { n: L.moves }) })}</div>${sp ? `<div class="hard-calm" style="margin-top:16px;font-size:${fs(44)}">${t('hard_calm')}</div>` : ''}`;
   el.style.cssText = `position:absolute;left:0;right:0;top:${660 + (STAGE_H - 1920) / 2}px;padding:40px 0 46px;text-align:center;color:#fff;background:rgba(50,32,20,.55);
     text-shadow:0 5px 0 #5a3a26,3px 0 0 #5a3a26,-3px 0 0 #5a3a26,0 -3px 0 #5a3a26;z-index:4000;pointer-events:none`;
   overlay.append(el);
@@ -2926,7 +2930,7 @@ function levelBanner() {
   const o = calm ? { y: 0, a: 0, s: 1 } : { y: -60, a: 0, s: 0.6 };
   const draw = () => { el.style.transform = `translateY(${o.y}px) scale(${o.s})`; el.style.opacity = o.a; };
   draw();
-  if (sp) { sfx('boom', { vol: 0.5 }); shake(3); }
+  if (sp) sfx('feature', { vol: 0.4, rate: 0.9 });   // R11: bỏ tiếng boom và rung ở banner level khó, chỉ một tiếng chuông nhỏ
   return tween(o, { y: 0, a: 1, s: 1 }, { dur: calm ? 250 : 380, easing: calm ? ease.linear : ease.outBack, onUpdate: draw })
     .then(() => wait(sp ? 2300 : 1700))
     .then(() => tween(o, { y: calm ? 0 : -40, a: 0 }, { dur: 260, onUpdate: draw }))
@@ -2991,8 +2995,8 @@ function featureIntro(force = false) {
 // 40 xu + 1 dấu ngày. Chơi lại: không thưởng. Thua: chơi lại không mất gì. Chơi bù được thư hôm qua (1 ngày): 20 xu + dấu.
 // Sổ dấu ngày: trang 20 ô, đầy trang thì 150 xu + 1 decor kỷ niệm (art rare_postbox chưa có: hiện con dấu sáp thay thế).
 // Không có chữ "mất chuỗi", không đếm ngược, không hết hạn (mục 10 "Không FOMO").
-const DAILY_REWARD = { today: 40, catchup: 20, page: 150 };
-const STAMP_PAGE = 20;
+const DAILY_REWARD = CONF.daily;                 // L13: liveops.json rewards.daily
+const STAMP_PAGE = CONF.daily.page_size;
 let dailyPool = null;
 const getDailyPool = () => (dailyPool = dailyPool || buildDailyPool({ daily: LEVELS_DAILY, campaign: LEVELS }));
 function dailySave() {
@@ -3002,7 +3006,7 @@ function dailySave() {
   return D;
 }
 const wonLevel = () => Math.max(0, Math.min(save.unlocked, LEVELS.length + 1) - 1);
-const dailyOn = () => LIVE.featureOn('daily', wonLevel()) && getDailyPool().length > 0;
+const dailyOn = () => !EV.KILL.daily && LIVE.featureOn('daily', wonLevel()) && getDailyPool().length > 0;
 const today = () => LIVE.effectiveDay(save.live);
 /** Lá thư của ngày `day`: { key, day, lv, src }, hoặc null. Đã mở thư ngày đó thì giữ đúng lá cũ (pickDaily đọc hist). */
 function dailyFor(day) {
@@ -3094,6 +3098,7 @@ function dailyIntro() {
 // ngay lúc thắng (không đợi Chủ nhật): 1 Gợi ý, 1 Nam châm, 100 xu. Tuần mới thẻ mới. Không có chữ "mất chuỗi".
 function weekly(day = today()) { save.weekly = save.weekly || {}; return LIVE.weeklyCard(dailySave().won, day, save.weekly); }
 function weeklyHtml() {
+  if (EV.KILL.weekly) return '';
   const w = weekly(), td = today(), names = t('wd_short').split(',');
   const cells = w.days.map((d, i) => `<div class="wk-cell${w.cells[i] ? ' on' : ''}${d === td ? ' today' : ''}"><b></b>${names[i]}</div>`).join('');
   return `<div class="wk-card${w.claimed ? ' done' : ''}"><div class="wk-head">${t('weekly_title')} · ${Math.min(w.count, w.need)}/${w.need}</div>
@@ -3110,7 +3115,8 @@ function giftChips(r) {
   if (r.joker) out.push(chip('assets/ui/ic_wild.png', `${t('b_joker')} +${r.joker}`));
   if (r.moves) out.push(chip('assets/ui/plus.png', t('wb_moves', { n: r.moves })));
   if (r.stamp || r.routeStamp) out.push(chip('assets/ui/ic_album.png', t('route_stamp')));
-  if (r.page || r.seasonPage) out.push(chip('assets/ui/ic_album.png', t('season_page')));
+  if (r.page || r.seasonPage) out.push(chip('assets/ui/season_all.png', t('season_page')));
+  if (r.rare || r.rareDecor) { const m = motifNow(); out.push(chip(`assets/decor/${EV.SEASON.rare_decor[m]}.png`, t('decor_rare_' + m))); }
   return `<div class="gift-list">${out.join('')}</div>`;
 }
 /** Nút Thư hôm nay trên màn chính: ẩn trước khi mở khoá, chấm đỏ khi chưa giao thư hôm nay, dấu tích khi đã giao, huy hiệu Thẻ tuần n/5. */
@@ -3125,7 +3131,7 @@ function refreshDailyBtn() {
   b.classList.toggle('done', won);
   b.querySelector('.lbl').textContent = t('daily_btn');
   const w = weekly(), wk = b.querySelector('.wk');
-  wk.classList.toggle('on', w.count > 0 || w.claimed);
+  wk.classList.toggle('on', !EV.KILL.weekly && (w.count > 0 || w.claimed));
   wk.classList.toggle('full', w.claimed);
   wk.textContent = `${Math.min(w.count, w.need)}/${w.need}`;
 }
@@ -3138,8 +3144,9 @@ function refreshEventTile() {
   const el = $('eventTile');
   const won = wonLevel();
   const st = LIVE.liveState(save.live, LIVE.nowMs(), won);
-  const id = st.big || st.bigPending;
-  const ui = st.big && EVENT_UI[st.big];
+  const id0 = st.big || st.bigPending;
+  const id = id0 && !EV.KILL[id0] ? id0 : null;            // L13: kill_switch.<event> = true -> ô Event trống trong cửa sổ đó
+  const ui = id && st.big && EVENT_UI[st.big];
   const show = !!id && LIVE.featureOn('daily', won);      // không function meta nào trước L5 (mục 2 quy tắc 1)
   el.classList.toggle('off', !show);
   el.classList.toggle('on', !!(show && ui));
@@ -3168,8 +3175,8 @@ function giftsDue() {
   const st = LIVE.liveState(save.live, LIVE.nowMs(), won);
   // chưa qua L5: không đón (không function meta nào trước L5), bỏ luôn lần vắng này để sau này không đón nhầm
   if (save.live.awayDue && !LIVE.featureOn('welcome', won)) { delete save.live.awayDue; persist(); }
-  return { day: st.day, welcome: LIVE.welcomeDue(save.live, won) ? save.live.awayDue : 0, gifts: (save.gifts || []).length > 0,
-    morning: LIVE.morningDue(save.morning, st.day, st.pd, won) };
+  return { day: st.day, welcome: !EV.KILL.welcome && LIVE.welcomeDue(save.live, won) ? save.live.awayDue : 0, gifts: (save.gifts || []).length > 0,
+    morning: !EV.KILL.morning && LIVE.morningDue(save.morning, st.day, st.pd, won) };
 }
 function giftPopup(due) {
   const parts = [];
@@ -3216,7 +3223,8 @@ function evState() {
     for (const g of r.gifts) {
       if (g.routeStamp) addRouteStamp();
       if (g.seasonPage) addSeasonPage();
-      delete g.routeStamp; delete g.seasonPage;
+      if (g.rareDecor) addRareDecor();
+      delete g.routeStamp; delete g.seasonPage; delete g.rareDecor;
       if (['coins', 'hint', 'pack', 'stamper', 'joker'].some(k => g[k])) keep.push(g);
     }
     save.gifts = (save.gifts || []).concat(keep);
@@ -3253,6 +3261,13 @@ function addRouteStamp() {
   save.routeStamps = save.routeStamps || [];
   save.routeStamps.push({ k: e ? e.k : (save.routeStamps.length), day: today() });
 }
+/** Decor hiếm theo mùa (bộ 3 Tem theo mùa): vào bộ sưu tập, hiện ở album (chưa có chỗ đặt thứ 7 trên tường, để R17). */
+function addRareDecor() {
+  const motif = motifNow(), id = EV.SEASON.rare_decor[motif];
+  save.rareDecor = save.rareDecor || [];
+  if (id && !save.rareDecor.some(x => x.id === id)) save.rareDecor.push({ id, motif, day: today() });
+  track('season_rare_decor', { id, motif });
+}
 function addSeasonPage() {
   save.seasonPages = save.seasonPages || [];
   save.seasonPages.push({ motif: EV.SEASON_MOTIF(new Date(today() * 864e5).getUTCMonth() + 1), day: today() });
@@ -3260,13 +3275,14 @@ function addSeasonPage() {
 // cảnh tuyến theo chu kỳ: bưu thiếp chương 2..13 xoay vòng (Phố Chính không có bưu thiếp)
 const routeScene = k => CHAPTERS[1 + (k % 12)] || CHAPTERS[1];
 const motifNow = () => EV.SEASON_MOTIF(new Date(today() * 864e5).getUTCMonth() + 1);
-const motifUrl = (m = motifNow()) => `assets/ui/season_${m}.svg`;
+const motifUrl = (m = motifNow()) => `assets/ui/season_${m}.png`;   // art đợt 6
 /** Cộng 1 phần quà (từ mốc event, túi thư). Xu cộng ngay, booster vào kho, tem tuyến/trang mùa vào album. */
 function applyReward(r) {
   if (r.coins) save.coins += r.coins;
   for (const k of ['hint', 'pack', 'stamper', 'joker']) if (r[k]) save[k] = (save[k] || 0) + r[k];
   if (r.routeStamp) addRouteStamp();
   if (r.seasonPage) addSeasonPage();
+  if (r.rareDecor) addRareDecor();
   persist();
 }
 /** Đếm việc vặt (E4) từ sự kiện chơi. */
@@ -3392,6 +3408,54 @@ function refreshWeekendBag() {
   bb.querySelector('.bb-next').style.backgroundImage = `url(assets/ui/${icon}.png)`;
   bb.setAttribute('aria-label', `${t('bag_title')} ${bag.n || 0}/${EV.MAILBAG.need}`);
 }
+// ============================================================ L11: Thông báo nhẹ (F9) và Nhắc nghỉ (F10), notify.js
+// F9: mặc định tắt. Chỉ trên app native có plugin; web bỏ qua êm (không hỏi, không có dòng trong Cài đặt).
+const notifOk = () => NT.notifSupported() && !EV.KILL.notifications;
+const notifAskDue = () => notifOk() && !save.seen.notif_ask && getSetting('notif') !== 1 && dailySave().stamps.length >= CONF.notifications.ask_after_daily;
+function notifTexts(kind) { return { title: t('notif_' + kind + '_title'), body: t('notif_' + kind + '_body') }; }
+async function notifSync(reason = 'open') {
+  if (!notifOk()) return 0;
+  if (getSetting('notif') !== 1) { await NT.cancelAll(); return 0; }
+  const td = today();
+  const list = NT.buildSchedule(save.live, LIVE.nowMs(), wonLevel(), { hour: getSetting('notif_hour'), days: CONF.notifications.days, dailyOn: dailyOn(), kill: EV.KILL,
+    skipDay: dailySave().won[td] ? td : null });
+  const n = await NT.reschedule(list, notifTexts);
+  trackRaw('notif_schedule', { n, reason, hour: getSetting('notif_hour'), kinds: list.map(x => x.kind[0]).join('') });
+  return n;
+}
+function notifPrompt() {
+  save.seen.notif_ask = 1; persist();
+  track('notif_prompt', { daily_done: dailySave().stamps.length });
+  panel({ title: t('notif_title'), kind: 'tall gift', body: `<div class="gift-art"></div><p>${t('notif_body', { h: getSetting('notif_hour') })}</p><p class="small">${t('notif_note')}</p>`,
+    buttons: [
+      { label: t('notif_yes'), act: async () => {
+        const ok = await NT.requestPermission();
+        track('notif_enable', { granted: ok });
+        if (ok) { setSetting('notif', 1); notifSync('enable'); toast(t('notif_on', { h: getSetting('notif_hour') }), 1800); }
+        else toast(t('notif_denied'), 2200);
+      } },
+      { label: t('notif_later'), cls: 'sec', act: () => track('notif_later', {}) },
+    ] });
+  return true;
+}
+// F10: đếm thời gian app ở tiền cảnh. Tới 45 phút thì chờ lúc rảnh (không có bảng, không đang kéo, không giữa màn thắng)
+// rồi hiện 1 tấm giấy nhỏ, tự ẩn sau 9 giây, chạm để ẩn. Không chặn thao tác, không có nút bắt buộc.
+const restT = NT.restTimer({ minutes: CONF.rest.minutes, awayResetMinutes: CONF.rest.away_reset_minutes });
+let restPending = false;
+function restShow() {
+  restPending = false; restT.reset();
+  const el = $('restNote');
+  el.innerHTML = `<i></i><span>${t('rest_note', { n: CONF.rest.minutes })}</span>`;
+  el.classList.add('on');
+  track('rest_reminder', { minutes: CONF.rest.minutes, level: levelActive ? levelIdx + 1 : 0, screen: $('home').classList.contains('off') ? 'level' : 'home' });
+  clearTimeout(restShow.t); restShow.t = setTimeout(() => el.classList.remove('on'), 9000);
+}
+$('restNote').addEventListener('pointerdown', ev => { ev.stopPropagation(); $('restNote').classList.remove('on'); });
+setInterval(() => {
+  if (EV.KILL.rest || getSetting('rest') !== 1) { restT.reset(); return; }
+  if (restT.tick(5000, !document.hidden)) restPending = true;
+  if (restPending && !document.hidden && !panelOpen && !winTL && !drag && !busyInput) restShow();
+}, 5000);
 // Hàng đợi popup tự hiện ở màn chính (mục 4): tối đa 1 popup mỗi lần mở app (boot, quay lại từ nền) và mỗi lần về màn chính.
 // Ưu tiên: hỏi chơi tiếp ván dở (chỉ lúc mở app) > phong bì quà (F6 > quà event cũ > F4, gộp 1 phong bì) > "Tính năng mới"
 // (tối đa 1 mỗi phiên). Thứ chưa hiện được thì đợi lần sau; quà đã đạt không mất.
@@ -3402,12 +3466,13 @@ function homePopups(trigger = 'home') {
   if (!$('album').classList.contains('off') || !$('ch2').classList.contains('off')) return null;
   const g = giftsDue();
   const run = trigger === 'boot' ? loadRun() : null;
-  const pick = LIVE.pickPopup({ resume: !!run, welcome: !!g.welcome, gifts: g.gifts, morning: g.morning, feature: featureDue(), featureShown }, trigger);
+  const pick = LIVE.pickPopup({ resume: !!run, welcome: !!g.welcome, gifts: g.gifts, morning: g.morning, notif: notifAskDue(), feature: featureDue(), featureShown }, trigger);
   if (!pick) return null;
   popupUsed = popupVisit;
   popupLog.push({ visit: popupVisit, trigger, pick, t: Date.now() });
   if (pick === 'resume') askResume(run);
   else if (pick === 'gifts') giftPopup(g);
+  else if (pick === 'notif') notifPrompt();
   else if (pick === 'feature') { featureShown = true; dailyIntro(); }
   return pick;
 }
@@ -3424,7 +3489,7 @@ let hiddenAt = 0, hiddenDay = null;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); hiddenDay = today(); return; }
   refreshHome();
-  if (hiddenAt && (Date.now() - hiddenAt >= 30 * 60e3 || today() !== hiddenDay)) { newVisit(); setTimeout(() => homePopups('resume'), 300); }
+  if (hiddenAt && (Date.now() - hiddenAt >= 30 * 60e3 || today() !== hiddenDay)) { newVisit(); setTimeout(() => homePopups('resume'), 300); notifSync('resume'); }
   hiddenAt = 0;
 });
 
@@ -3670,6 +3735,9 @@ function settingsPanel({ back = null, instant = false } = {}) {
     ${row(t('set_music'), onOff('music', isMusicOn()), true)}
     ${row(t('set_haptics'), onOff('haptics', hapticsEnabled()), true)}
     ${row(t('set_motion'), onOff('motion', getSetting('motion') === 'reduce'), true)}
+    ${EV.KILL.rest ? '' : row(t('set_rest'), onOff('rest', getSetting('rest') === 1), true)}
+    ${notifOk() ? row(t('set_notif'), onOff('notif', getSetting('notif') === 1), true) : ''}
+    ${notifOk() && getSetting('notif') === 1 ? row(t('set_notif_hour'), segs('notif_hour', CONF.notifications.hours.map(h => [h, `${h}:00`]), getSetting('notif_hour'))) : ''}
     ${row(t('set_lang'), segs('lang', [['en', 'English'], ['vi', 'Tiếng Việt']], getLang()))}
   </div>`;
   const p = panel({ title: t('settings'), kind: 'tall', instant, body,
@@ -3680,7 +3748,7 @@ function settingsPanel({ back = null, instant = false } = {}) {
     const key = b.parentElement.dataset.key, raw = b.dataset.v;
     const v = key === 'lang' ? raw : Number(raw);
     const from = { text: getSetting('text'), sfx: sfxVolume(), music: isMusicOn() ? 1 : 0, haptics: hapticsEnabled() ? 1 : 0,
-      motion: getSetting('motion') === 'reduce' ? 1 : 0, lang: getLang() }[key];
+      motion: getSetting('motion') === 'reduce' ? 1 : 0, lang: getLang(), rest: getSetting('rest'), notif: getSetting('notif'), notif_hour: getSetting('notif_hour') }[key];
     if (from === v) return;
     if (key === 'text') setSetting('text', v);
     else if (key === 'sfx') setSetting('sfx', v);
@@ -3688,6 +3756,12 @@ function settingsPanel({ back = null, instant = false } = {}) {
     else if (key === 'haptics') { setHapticsEnabled(!!v); if (v) haptic('tap'); }
     else if (key === 'motion') setSetting('motion', v ? 'reduce' : 'auto');
     else if (key === 'lang') { setLang(v); applyLang(); }
+    else if (key === 'rest') setSetting('rest', v);
+    else if (key === 'notif') {
+      if (v) { NT.requestPermission().then(ok => { if (ok) { setSetting('notif', 1); notifSync('setting'); } else toast(t('notif_denied'), 2200); settingsPanel({ back, instant: true }); }); return; }
+      setSetting('notif', 0); notifSync('setting');
+    }
+    else if (key === 'notif_hour') { setSetting('notif_hour', v); notifSync('setting'); }
     track('setting_change', { key, from, to: v, level: levelActive ? levelIdx + 1 : 0 });
     sfx('click', { vol: 0.7 });                    // nghe thử mức âm lượng vừa chọn
     settingsPanel({ back, instant: true });
@@ -3797,6 +3871,8 @@ window.__game = { variant: VARIANT, get S() { return S; }, get level() { return 
   // L3–L5 (tests/home-liveops.browser.js): về màn chính như từ một level, hàng đợi popup, Thẻ tuần, điểm chạm
   returnHome(chId) { $('home').classList.add('off'); goHome(chId); }, homePopups, get popupLog() { return popupLog.slice(); }, newVisit,
   weekly: () => weekly(), giftsDue, refreshEventTile,
+  config: () => configInfo(), CONF,
+  notif: { sync: notifSync, prompt: notifPrompt, askDue: () => notifAskDue(), NT }, rest: { add(ms) { restT.st.active += ms; }, get state() { return { ...restT.st, pending: restPending }; } },
   // L6–L10 (tests/events.browser.js)
   ev: { state: () => { const e = evState(); return e.cur ? { id: e.cur.id, k: e.cur.k, key: e.cur.key, s: JSON.parse(JSON.stringify(e.s)) } : null; }, panel: eventPanel,
     get seasonCard() { return seasonCard; }, get seasonKey() { return seasonKey; }, EV },
@@ -3845,10 +3921,13 @@ let booting = true;            // lúc mở app: hộp "Chơi tiếp ván dở" 
     .map(n => `assets/ui/${n}.png`).concat(['assets/ui/bg_game_tall.jpg']));
   preloadFx();
   initAudio();
+  track('config_load', { source: CFG_INFO.source, warnings: CFG_INFO.warnings.length, version: CFG_INFO.cfg.version });
+  if (CFG_INFO.warnings.length && DEBUG) console.warn('liveops.json:', CFG_INFO.warnings.join(' | '));
   track('app_open', { lite: LITE, ab_hard: AB.hard ? AB.hard.join('-') : 'default', ab_safety: AB.safety || 'default' });
   goHome();
   const m = location.search.match(/level=(\d+)/);
   booting = false;
   if (m) playLevel(+m[1] - 1);
   else { newVisit(); homePopups('boot'); }       // tối đa 1 popup lúc mở app: ván dở (R10) > phong bì quà > tính năng mới
+  notifSync('open');                             // L11: xếp lại lịch 7 ngày mỗi lần mở app (chỉ app native, khi đã bật)
 })();
