@@ -47,7 +47,7 @@ const DESIGN = [
     note: 'Video L7: ô Marine Animal mở sẵn để dạy Stamper.' },
   // Review 2026-10-10: Raw meat nhầm với Grilled (bít tết sống/nướng) và lệch tone -> đổi sang Ship. Dango (Desserts) đã vẽ lại thành macaron.
   { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: 75, target: 0.97, newbieTarget: 0.85, unlock: null,
-    topics: { Footwear: 4, Ship: 5, Outerwear: 5, Cocktail: 5, Desserts: 5, Grilled: 5, Bouquet: 5 }, note: 'Video L8 (Raw meat -> Ship).' },
+    topics: { Footwear: 4, Ship: 5, Outerwear: 5, Juice: 5, Desserts: 5, Grilled: 5, Bouquet: 5 }, note: 'Video L8 (Raw meat -> Ship).' },
   // Review 2026-10-10: số liệu cho thấy L9 là level nghỉ (biên 25%) -> nhãn breather. Balloon (bóng sư tử nhầm với Zoo) -> Candy (kẹo bông đã vẽ lại).
   { role: 'breather', F: 4, cols: [3, 4, 5, 6], moves: 110, target: 0.97, unlock: 'joker',
     topics: { Zoo: 5, Sculpture: 5, Pizza: 5, Sashimi: 5, Candy: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 },
@@ -68,7 +68,7 @@ const DESIGN = [
   { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.92, slack: 1.18, newbieMin: 0.85, unlock: null, chapter: 2, introduce: ['Shells'],
     topics: { Shells: 5, Sailboats: 5, Float: 5, Soda: 5, Footwear: 4, Tree: 4, Bird: 3 }, note: 'Giới thiệu Shells.' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.9, slack: 1.14, newbieMin: 0.8, unlock: null, chapter: 2, introduce: ['Seafood'],
-    topics: { Seafood: 5, Sailboats: 6, Cocktail: 5, Flower: 5, Hat: 4, Cake: 5, Insect: 4 }, note: 'Giới thiệu Seafood.' },
+    topics: { Seafood: 5, Sailboats: 6, Juice: 5, Flower: 5, Hat: 4, Cake: 5, Insect: 4 }, note: 'Giới thiệu Seafood.' },
   { role: 'bump', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.85, slack: 1.1, newbieMin: 0.8, unlock: null, chapter: 2, introduce: ['Nautical'],
     topics: { Nautical: 6, Shells: 6, 'Ice cream': 6, Kite: 5, Bird: 3, Coffee: 5, Bouquet: 5, Footwear: 4 }, note: 'Giới thiệu Nautical, 8 chủ đề, bump trước mốc khó.' },
   { role: 'hard', special: 'hard', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.2, skilledTarget: 0.45, maxStuck: 0.25, unlock: null, chapter: 2,
@@ -77,13 +77,13 @@ const DESIGN = [
   { role: 'breather', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.97, slack: 1.3, newbieMin: 0.9, unlock: null, chapter: 2,
     topics: { Float: 5, Tree: 5, Flower: 5, Cake: 5, Sailboats: 5, Time: 5, Bird: 3 }, note: 'Level nghỉ sau mốc khó.' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: null, target: 0.88, slack: 1.12, newbieMin: 0.8, unlock: null, chapter: 2,
-    topics: { Nautical: 6, Seafood: 6, Kite: 5, Tea: 5, Glasses: 6, Cocktail: 5, Insect: 4 }, note: '' },
+    topics: { Nautical: 6, Seafood: 6, Kite: 5, Tea: 5, Glasses: 6, Juice: 5, Insect: 4 }, note: '' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.85, slack: 1.1, newbieMin: 0.8, unlock: null, chapter: 2,
     topics: { Shells: 6, Sailboats: 6, Soda: 6, 'Ice cream': 6, Footwear: 4, Bouquet: 5, Dog: 6 }, note: '' },
   { role: 'bump', F: 4, cols: [3, 4, 5, 7], moves: null, target: 0.8, slack: 1.08, newbieMin: 0.75, unlock: null, chapter: 2,
     topics: { Seafood: 6, Nautical: 6, Float: 6, Fruit: 6, Coffee: 6, Flower: 5, Hat: 4, Bird: 3 }, note: '8 chủ đề trước finale.' },
   { role: 'superhard', special: 'superhard', F: 5, cols: [3, 4, 5, 6, 7], moves: null, target: 0.25, unlock: null, chapter: 2,
-    topics: { Sailboats: 6, Shells: 6, Nautical: 6, 'Ice cream': 6, Cocktail: 5, Kite: 5, Glasses: 5, Tree: 5, Coffee: 5 },
+    topics: { Sailboats: 6, Shells: 6, Nautical: 6, 'Ice cream': 6, Juice: 5, Kite: 5, Glasses: 5, Tree: 5, Coffee: 5 },
     note: 'Finale chương 2. MỐC siêu khó, hết moves vào Overtime, không thể thua.' },
 ];
 
@@ -101,19 +101,19 @@ const VARIANT_B = {
   5: { topics: { Dog: 6, Train: 6, Tree: 5, Soda: 6, 'Ice cream': 6, Fruit: 6 } },
   6: { topics: { 'Soft drink': 6, Planet: 5, Beast: 4, Notes: 5, Bird: 3, Vegetable: 6 } },
   7: { topics: { 'Sea life': 6, Glasses: 6, Tea: 5, Notes: 4, Car: 5, Cake: 5 } },
-  8: { topics: { Footwear: 4, Ship: 5, Outerwear: 5, Cocktail: 5, Desserts: 5, Bouquet: 5 } },
+  8: { topics: { Footwear: 4, Ship: 5, Outerwear: 5, Juice: 5, Desserts: 5, Bouquet: 5 } },
   9: { topics: { Zoo: 5, Pizza: 5, Candy: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 } },
   10: { topics: { Cat: 6, Coffee: 6, 'Music Inst': 6, Aircraft: 6, Mushroom: 6, Gems: 5 } },
   11: { topics: { Sailboats: 5, 'Ice cream': 5, Fruit: 5, Kite: 4, Glasses: 5, Hat: 4 } },
   12: { topics: { Shells: 5, Sailboats: 5, Float: 5, Soda: 5, Footwear: 4, Tree: 4 } },
-  13: { topics: { Seafood: 5, Sailboats: 6, Cocktail: 5, Flower: 5, Hat: 4, Cake: 5 } },
+  13: { topics: { Seafood: 5, Sailboats: 6, Juice: 5, Flower: 5, Hat: 4, Cake: 5 } },
   14: { topics: { Nautical: 6, Shells: 6, 'Ice cream': 6, Kite: 5, Coffee: 5, Bouquet: 5 } },
   15: { topics: { Sailboats: 6, Seafood: 6, Nautical: 6, 'Soft drink': 6, Fruit: 6, Glasses: 5 } },
   16: { topics: { Float: 5, Tree: 5, Flower: 5, Cake: 5, Sailboats: 5, Time: 5 } },
-  17: { topics: { Nautical: 6, Seafood: 6, Kite: 5, Tea: 5, Glasses: 6, Cocktail: 5 } },
+  17: { topics: { Nautical: 6, Seafood: 6, Kite: 5, Tea: 5, Glasses: 6, Juice: 5 } },
   18: { topics: { Shells: 6, Sailboats: 6, Soda: 6, 'Ice cream': 6, Bouquet: 5, Dog: 6 } },
   19: { topics: { Seafood: 6, Nautical: 6, Float: 6, Fruit: 6, Coffee: 6, Flower: 5 } },
-  20: { F: 4, topics: { Sailboats: 6, Shells: 6, Nautical: 6, 'Ice cream': 6, Cocktail: 5, Kite: 5 } },   // 6 chủ đề + 5 khay thì quá dễ (casual 67%) -> 4 khay
+  20: { F: 4, topics: { Sailboats: 6, Shells: 6, Nautical: 6, 'Ice cream': 6, Juice: 5, Kite: 5 } },   // 6 chủ đề + 5 khay thì quá dễ (casual 67%) -> 4 khay
 };
 const VARIANT = (process.argv.find(a => a.startsWith('--variant=')) || '').slice(10) || 'a';
 if (VARIANT === 'b') {

@@ -42,7 +42,7 @@ Grab a cup of tea and start sorting the mail!
 | Mục | Giá trị | Ghi chú |
 |---|---|---|
 | Category | Games, phụ: Puzzle, Card | |
-| Age Rating | **13+** (Mỹ và 172 nước; Brazil 12+) | Tính từ bảng câu hỏi ngày 2026-10-15. Chỉ có 1 câu trả lời khác None: "Alcohol, Tobacco, or Drug Use or References: Infrequent", do bộ tem **Cocktail** (martini, margarita; dùng ở L1–20 và L21–60). Muốn về **4+**: vẽ lại bộ này thành nước trái cây/mocktail hoặc thay chủ đề, rồi sửa câu trả lời thành None |
+| Age Rating | **4+** (Brazil L, Việt Nam 00+) | Bảng câu hỏi trả lời None/No hết. Lần đầu (2026-10-15) ra 13+ vì bộ tem Cocktail (martini, margarita) dính câu "Alcohol, Tobacco, or Drug Use or References". Đã đổi chủ đề thành **Juice / Nước ép** (vẽ lại qua ChatGPT) và sửa câu trả lời. Build 2 trên TestFlight vẫn là art cocktail, build 3 trở đi là nước ép |
 | Price | Free | Không có in-app purchase. Đã lưu giá $0.00 cho 175 nước. **App Availability chưa đặt** (chọn nước phát hành là quyết định lúc release) |
 | App Privacy | Data Not Collected (đã lưu, **chưa bấm Publish**) | Không SDK quảng cáo/phân tích/theo dõi; tiến trình chỉ lưu trên máy (`prototype/stamp/privacy.html`) |
 | Content Rights | **Để trống** | **Đúng cho bản phát hành sau khi bỏ 40 level APK.** Bản TestFlight nội bộ hiện tại vẫn còn 40 level đó |
@@ -63,7 +63,7 @@ Grab a cup of tea and start sorting the mail!
 ## Trạng thái trên App Store Connect (2026-10-15)
 
 Đã điền và lưu:
-- App Information: subtitle, category Games (Puzzle, Card), Age Rating.
+- App Information: subtitle, category Games (Puzzle, Card), Age Rating 4+.
 - Pricing: Free.
 - App Privacy: privacy URL, Data Not Collected.
 - Version 1.0: promo text, description, keywords, support/marketing URL, copyright, 5 ảnh iPhone, 5 ảnh iPad 13".

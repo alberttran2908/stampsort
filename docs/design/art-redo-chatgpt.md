@@ -54,7 +54,15 @@ Nền level khó: tải nền ban ngày lên, yêu cầu vẽ lại cùng bố c
 
 Decor "Bưu điện nhỏ" và icon Tem Điểm: một lưới (`gen/lpo_decor_a.png`), hàng 1 là cờ dây trải ngang. Cắt bằng `python3 tools/art_slice.py paths <lưới> -,decor/bunting,-,decor/frame,... --apply`. Hàng 2–3 dùng thêm `--fixed` vì khung tem dính với hòm thư. Cờ dây cắt lại ở độ phân giải gốc (1201 px) vì hiển thị rộng 1020 px.
 
-## 6. Còn lại
+## 6. Đổi Cocktail thành Juice (age rating 4+, 2026-10-15)
+
+Bộ tem Cocktail (martini có ô liu, margarita) làm App Store xếp app 13+ ở câu hỏi về rượu. Chủ đề được đổi thành **Juice** (VI "Nước ép"):
+- Một lưới 3×3 vẽ qua ChatGPT, gửi kèm lưới Soda và Coffee làm mẫu style (`research/art-redo/gen/lpo_topic_juice.png`). Lệnh vẽ cấm ly chân dài, ô cocktail và ô liu.
+- Cắt bằng `python3 tools/art_slice.py cards <lưới> juice/0,juice/2,juice/3,juice/4,-,juice/6,-,-,juice/icon --apply`. Giữ đúng 5 chỉ số art level đang dùng (0, 2, 3, 4, 6), nên bố cục level không đổi. Ô 9 là icon chủ đề; icon nét sinh lại bằng `tools/icon_line.py`.
+- Thư mục `assets/cards/cocktail` thành `assets/cards/juice`. Đổi tên trong `manifest.json`, `levels*.js`, `gen_proto_levels.mjs`, `copy.js`. Save cũ: album `Cocktail` tự chuyển sang `Juice` khi tải (`main.js`).
+- Các chủ đề đồ uống khác (Soda, Soft drink, Coffee, Tea) đã soát, không có hình rượu bia.
+
+## 7. Còn lại
 
 - ~~Âm thanh APK~~: đã thay bằng SFX tự tổng hợp (`tools/synth_sfx.py`, `prototype/stamp/sfx/`). `prototype/stamp/assets/` được commit, chỉ còn ignore `assets/audio/`.
 - ~~Level 7 có Zoo cạnh Sea life và Float~~: đã đổi Zoo → Cake (P0).

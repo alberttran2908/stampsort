@@ -104,6 +104,12 @@ const defaultSave = () => ({ unlocked: 1, coins: 500, stars: {}, hint: 0, pack: 
 let save = defaultSave();
 try { save = { ...defaultSave(), ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') }; } catch (e) { /* ignore */ }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
+// Chủ đề Cocktail đổi thành Juice (age rating 4+, 2026-10-15): chuyển tem đã sưu tầm trong album sang tên mới
+if (save.album && save.album.Cocktail) {
+  save.album.Juice = [...new Set([...(save.album.Juice || []), ...save.album.Cocktail])];
+  delete save.album.Cocktail;
+  persist();
+}
 // Save của bản 10 level dừng ở unlocked = 10 dù đã thắng L10: mở level kế tiếp level cao nhất đã thắng
 {
   const won = Object.keys(save.stars).map(Number).filter(n => save.stars[n]);
