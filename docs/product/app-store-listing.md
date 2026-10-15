@@ -42,10 +42,10 @@ Grab a cup of tea and start sorting the mail!
 | Mục | Giá trị | Ghi chú |
 |---|---|---|
 | Category | Games, phụ: Puzzle, Card | |
-| Age Rating | 4+ | Không bạo lực, không cờ bạc, không nội dung người lớn, không web, không UGC |
-| Price | Free | Không có in-app purchase |
-| App Privacy | Data Not Collected | Không SDK quảng cáo/phân tích/theo dõi; tiến trình chỉ lưu trên máy (`prototype/stamp/privacy.html`) |
-| Content Rights | Không dùng nội dung bên thứ ba có bản quyền | **Đúng cho bản phát hành sau khi bỏ 40 level APK.** Bản TestFlight nội bộ hiện tại vẫn còn 40 level đó |
+| Age Rating | **13+** (Mỹ và 172 nước; Brazil 12+) | Tính từ bảng câu hỏi ngày 2026-10-15. Chỉ có 1 câu trả lời khác None: "Alcohol, Tobacco, or Drug Use or References: Infrequent", do bộ tem **Cocktail** (martini, margarita; dùng ở L1–20 và L21–60). Muốn về **4+**: vẽ lại bộ này thành nước trái cây/mocktail hoặc thay chủ đề, rồi sửa câu trả lời thành None |
+| Price | Free | Không có in-app purchase. Đã lưu giá $0.00 cho 175 nước. **App Availability chưa đặt** (chọn nước phát hành là quyết định lúc release) |
+| App Privacy | Data Not Collected (đã lưu, **chưa bấm Publish**) | Không SDK quảng cáo/phân tích/theo dõi; tiến trình chỉ lưu trên máy (`prototype/stamp/privacy.html`) |
+| Content Rights | **Để trống** | **Đúng cho bản phát hành sau khi bỏ 40 level APK.** Bản TestFlight nội bộ hiện tại vẫn còn 40 level đó |
 | Encryption | Không (ITSAppUsesNonExemptEncryption = NO) | |
 
 ## Ảnh
@@ -59,3 +59,21 @@ Grab a cup of tea and start sorting the mail!
     3. Deliver mail to friendly neighbors
     4. Decorate your little post office
     5. Collect them all in your album
+
+## Trạng thái trên App Store Connect (2026-10-15)
+
+Đã điền và lưu:
+- App Information: subtitle, category Games (Puzzle, Card), Age Rating.
+- Pricing: Free.
+- App Privacy: privacy URL, Data Not Collected.
+- Version 1.0: promo text, description, keywords, support/marketing URL, copyright, 5 ảnh iPhone, 5 ảnh iPad 13".
+
+Chưa làm, có chủ ý:
+- **Add for Review**: không nộp, vì build còn 40 level của ABI.
+- **App Privacy > Publish**: để chủ tài khoản bấm.
+- **Content Rights**: build hiện tại có level của ABI, nên cả "No" lẫn "Yes, I have rights" đều sai. Chỉ khai sau khi thay 40 level.
+- **App Availability, chọn Build cho version, App Review Information** (liên hệ, ghi chú): làm lúc chuẩn bị nộp thật.
+
+Ghi chú:
+- Apple (2026) bắt buộc khay ảnh **iPhone 6.1"/6.3"** (1206×2622 hoặc 1179×2556), không còn là 6.9". Ảnh iPhone đã thu nhỏ từ 1320×2868 xuống 1206×2622 (`research/store/final_iphone63/`). iPad 13" vẫn là 2064×2752.
+- Ảnh ghép khung có thể dựng lại: chụp bằng Chrome headless theo cảnh (seed save, play, new, win, home, album), rồi ghép khung HTML 1 trang. Script nằm trong scratchpad phiên làm việc, không nằm trong repo.
