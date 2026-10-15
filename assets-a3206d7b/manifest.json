@@ -167,8 +167,8 @@
   "dir": "cards/outerwear",
   "arts": 8
  },
- "Cocktail": {
-  "dir": "cards/cocktail",
+ "Juice": {
+  "dir": "cards/juice",
   "arts": 7
  },
  "Desserts": {

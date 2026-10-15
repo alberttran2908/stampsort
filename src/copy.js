@@ -215,7 +215,7 @@ const TOPIC_VI = {
   Leaf: 'Lá cây', Train: 'Tàu hỏa', Tree: 'Cây', Soda: 'Nước ngọt', 'Ice cream': 'Kem', Truck: 'Xe tải', Kite: 'Diều',
   'Soft drink': 'Đồ uống', Planet: 'Hành tinh', Beast: 'Thú hoang', Notes: 'Âm nhạc', Sailboats: 'Thuyền buồm', Seafood: 'Hải sản', Shells: 'Vỏ ốc', Nautical: 'Hàng hải', Sauce: 'Nước sốt', Vegetable: 'Rau củ',
   Insect: 'Côn trùng', 'Sea life': 'Sinh vật biển', Float: 'Đồ đi biển', Tea: 'Trà', Zoo: 'Sở thú', Footwear: 'Giày dép',
-  'Raw meat': 'Thịt sống', Outerwear: 'Áo khoác', Cocktail: 'Cocktail', Desserts: 'Tráng miệng', Grilled: 'Đồ nướng',
+  'Raw meat': 'Thịt sống', Outerwear: 'Áo khoác', Juice: 'Nước ép', Desserts: 'Tráng miệng', Grilled: 'Đồ nướng',
   Bouquet: 'Bó hoa', Sculpture: 'Tượng', Sashimi: 'Sashimi', 'Pet Care': 'Đồ thú cưng', 'Water Plants': 'Cây thủy sinh',
   Gardening: 'Làm vườn', Coffee: 'Cà phê', 'Music Inst': 'Nhạc cụ', Cake: 'Bánh ngọt', Aircraft: 'Máy bay', Mushroom: 'Nấm',
   Gems: 'Đá quý', Sushi: 'Sushi', Tool: 'Dụng cụ',
@@ -255,7 +255,7 @@ const RESIDENT_OF = {
   Time: 'Finch', Tool: 'Finch', Phone: 'Finch', Glasses: 'Finch', Chess: 'Finch', Train: 'Finch', Car: 'Finch', Truck: 'Finch', Aircraft: 'Finch',
   Flower: 'Lina', Bouquet: 'Lina', Gardening: 'Lina', Leaf: 'Lina', Tree: 'Lina', 'Water Plants': 'Lina', Mushroom: 'Lina', Insect: 'Lina',
   Ship: 'Bo', 'Sea life': 'Bo', Float: 'Bo', Sashimi: 'Bo', Sushi: 'Bo', Planet: 'Bo', Kite: 'Bo', Bird: 'Bo',
-  Tea: 'Ines', Coffee: 'Ines', Cocktail: 'Ines', Soda: 'Ines', 'Soft drink': 'Ines', Notes: 'Ines', 'Music Inst': 'Ines', Sculpture: 'Ines',
+  Tea: 'Ines', Coffee: 'Ines', Juice: 'Ines', Soda: 'Ines', 'Soft drink': 'Ines', Notes: 'Ines', 'Music Inst': 'Ines', Sculpture: 'Ines',
   Cat: 'Pip', Pets: 'Pip', 'Pet Care': 'Pip', Dog: 'Pip',
 };
 export function residentOf(topic) { return RESIDENT_OF[topic] || 'Otto'; }

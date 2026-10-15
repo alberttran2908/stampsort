@@ -1,13 +1,13 @@
-import { LEVELS as LEVELS_A } from './levels.js?v=e66cb1c-1792022057';
+import { LEVELS as LEVELS_A } from './levels.js?v=34c7f0c-1792025086';
 import { LEVELS as LEVELS_B } from './levels_b.js';
 import { LEVELS_APK } from './levels_apk.js';   // L21-L60: level APK 0.9.5 (tools/import_apk_levels.mjs)
-import * as E from './engine.js?v=e66cb1c-1792022057';
-import { hint as solverHint, solve } from './solver.js?v=e66cb1c-1792022057';
-import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=e66cb1c-1792022057';
-import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=e66cb1c-1792022057';
-import { candidateActions, isDeadlocked } from './solver.js?v=e66cb1c-1792022057';
-import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js?v=e66cb1c-1792022057';
-import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js?v=e66cb1c-1792022057';
+import * as E from './engine.js?v=34c7f0c-1792025086';
+import { hint as solverHint, solve } from './solver.js?v=34c7f0c-1792025086';
+import { initAudio, unlockAudio, sfx, comboSfx, haptic, setMuted, isMuted } from './audio.js?v=34c7f0c-1792025086';
+import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js?v=34c7f0c-1792025086';
+import { candidateActions, isDeadlocked } from './solver.js?v=34c7f0c-1792025086';
+import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js?v=34c7f0c-1792025086';
+import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js?v=34c7f0c-1792025086';
 
 // ============================================================ constants
 // Lá dựng trong DOM ở kích thước gốc 165x214 rồi phóng to bằng CK khi đặt vị trí (applyTransform, .slot dùng --ck).
@@ -71,10 +71,10 @@ setCommon({ variant: VARIANT });
 const specialOf = lv => ((AB.hard ? AB.hard.includes(lv.id) : !!lv.special) ? (lv.special || 'hard') : null);
 const safetyOf = lv => (specialOf(lv) ? (AB.safety || lv.safety || 'overtime') : 'none');
 const BOOSTERS = [
-  { id: 'hint', name: 'Hint', icon: 'assets-fb222fc2/ui/ic_hint.png' },
-  { id: 'pack', name: 'Pack', icon: 'assets-fb222fc2/ui/ic_pack.png' },
-  { id: 'stamper', name: 'Stamper', icon: 'assets-fb222fc2/ui/ic_stamper.png' },
-  { id: 'joker', name: 'Joker', icon: 'assets-fb222fc2/ui/ic_joker.png' },
+  { id: 'hint', name: 'Hint', icon: 'assets-a3206d7b/ui/ic_hint.png' },
+  { id: 'pack', name: 'Pack', icon: 'assets-a3206d7b/ui/ic_pack.png' },
+  { id: 'stamper', name: 'Stamper', icon: 'assets-a3206d7b/ui/ic_stamper.png' },
+  { id: 'joker', name: 'Joker', icon: 'assets-a3206d7b/ui/ic_joker.png' },
 ];
 
 const $ = id => document.getElementById(id);
@@ -104,6 +104,12 @@ const defaultSave = () => ({ unlocked: 1, coins: 500, stars: {}, hint: 0, pack: 
 let save = defaultSave();
 try { save = { ...defaultSave(), ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') }; } catch (e) { /* ignore */ }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
+// Chủ đề Cocktail đổi thành Juice (age rating 4+, 2026-10-15): chuyển tem đã sưu tầm trong album sang tên mới
+if (save.album && save.album.Cocktail) {
+  save.album.Juice = [...new Set([...(save.album.Juice || []), ...save.album.Cocktail])];
+  delete save.album.Cocktail;
+  persist();
+}
 // Save của bản 10 level dừng ở unlocked = 10 dù đã thắng L10: mở level kế tiếp level cao nhất đã thắng
 {
   const won = Object.keys(save.stars).map(Number).filter(n => save.stars[n]);
@@ -170,10 +176,10 @@ const toStage = e => ({ x: (e.clientX - stageLeft) / scale, y: (e.clientY - stag
 // ============================================================ assets
 let manifest = {};
 const slug = t => t.toLowerCase().replace(/ /g, '_').replace(/&/g, 'and');
-const artUrl = c => `assets-fb222fc2/cards/${slug(c.t)}/${c.art}.png`;
-const iconUrl = t => `assets-fb222fc2/cards/${slug(t)}/icon.png`;
+const artUrl = c => `assets-a3206d7b/cards/${slug(c.t)}/${c.art}.png`;
+const iconUrl = t => `assets-a3206d7b/cards/${slug(t)}/icon.png`;
 // Lá chủ đề vương miện: icon chỉ có nét, không màu (tools/icon_line.py) để không lẫn với tem thường có màu
-const lineIconUrl = t => `assets-fb222fc2/cards/${slug(t)}/icon_line.png`;
+const lineIconUrl = t => `assets-a3206d7b/cards/${slug(t)}/icon_line.png`;
 const decoded = new Map();     // giữ tham chiếu để trình duyệt không bỏ bitmap đã giải mã
 function preload(urls) {
   return Promise.all(urls.map(u => {
@@ -308,7 +314,7 @@ function makeView(card) {
   } else if (card.k === E.JOKER) {
     el.classList.add('joker');
   } else {
-    front.style.backgroundImage = `url(assets-fb222fc2/ui/face_${faceIndex(card)}.png)`;
+    front.style.backgroundImage = `url(assets-a3206d7b/ui/face_${faceIndex(card)}.png)`;
     front.innerHTML = `<img class="art" src="${artUrl(card)}" draggable="false">`;
   }
   inner.append(front, back);
@@ -877,7 +883,7 @@ function applyPull(k, kind) {
 }
 function stampSlam(x, y) {
   const el = document.createElement('div');
-  el.style.cssText = 'position:absolute;left:0;top:0;width:200px;height:203px;background:url(assets-fb222fc2/ui/ic_stamper.png) center/contain no-repeat;z-index:3800;pointer-events:none';
+  el.style.cssText = 'position:absolute;left:0;top:0;width:200px;height:203px;background:url(assets-a3206d7b/ui/ic_stamper.png) center/contain no-repeat;z-index:3800;pointer-events:none';
   board.append(el);
   const o = { y: y - 420, s: 1.2, a: 0 };
   const draw = () => { el.style.transform = `translate(${x - 100}px,${o.y - 150}px) scale(${o.s})`; el.style.opacity = o.a; };
@@ -899,7 +905,7 @@ function onExtraSlot(e) {
   if (levelIdx + 1 < UNLOCK_AT.slot) { toast(t('unlocks', { n: UNLOCK_AT.slot })); sfx('deny'); return; }
   panel({
     title: t('extra_title'),
-    body: `<div class="feature-icon" style="background-image:url(assets-fb222fc2/ui/slot_tray.png);width:230px;height:224px"></div><p>${t('extra_body')}</p>`,
+    body: `<div class="feature-icon" style="background-image:url(assets-a3206d7b/ui/slot_tray.png);width:230px;height:224px"></div><p>${t('extra_body')}</p>`,
     buttons: [
       { label: t('free_ad'), cls: 'orange', act: () => fakeAd(unlockExtra) },
       { label: t('coins', { n: COSTS.slot }), act: () => {
@@ -1760,7 +1766,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   await wait(170);
   // phong bì
   const env = document.createElement('div');
-  env.style.cssText = `position:absolute;left:0;top:0;width:230px;height:193px;background:url(assets-fb222fc2/ui/envelope_closed.png) center/contain no-repeat;z-index:3600;pointer-events:none`;
+  env.style.cssText = `position:absolute;left:0;top:0;width:230px;height:193px;background:url(assets-a3206d7b/ui/envelope_closed.png) center/contain no-repeat;z-index:3600;pointer-events:none`;
   board.append(env);
   const e = { x: cx - 115, y: cy - 96, s: 0.1, r: -8, a: 1 };
   const drawEnv = () => { env.style.transform = `translate(${e.x}px,${e.y}px) rotate(${e.r}deg) scale(${e.s})`; env.style.opacity = e.a; };
@@ -1772,7 +1778,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   vs.forEach(v => { v.el.remove(); views.delete(v.id); });
   // sáp
   const wax = document.createElement('div');
-  wax.style.cssText = `position:absolute;left:0;top:0;width:84px;height:100px;background:url(assets-fb222fc2/ui/wax.png) center/contain no-repeat;z-index:3700;pointer-events:none`;
+  wax.style.cssText = `position:absolute;left:0;top:0;width:84px;height:100px;background:url(assets-a3206d7b/ui/wax.png) center/contain no-repeat;z-index:3700;pointer-events:none`;
   board.append(wax);
   const w = { s: 3.2, a: 0 };
   const drawWax = () => { wax.style.transform = `translate(${cx - 42}px,${cy - 50}px) scale(${w.s})`; wax.style.opacity = w.a; };
@@ -2018,7 +2024,7 @@ function chapterReward(ch = CHAPTERS[0]) {
   track('chapter_complete', { chapter: ch.id });
   sfx('chapter');
   panel({ title: t('chapter_title', { n: ch.id }), radial: true,
-    body: `<div class="feature-icon" style="background-image:url(assets-fb222fc2/ui/envelope_closed.png)"></div><p>${t('chapter_body_' + ch.id)}</p><div class="coins-line"><i></i><span>+200</span></div>`,
+    body: `<div class="feature-icon" style="background-image:url(assets-a3206d7b/ui/envelope_closed.png)"></div><p>${t('chapter_body_' + ch.id)}</p><div class="coins-line"><i></i><span>+200</span></div>`,
     buttons: next
       ? [{ label: t('next_ch', { n: next.id }), act: () => startLevel(next.from - 1) }, { label: t('open_album'), cls: 'orange', act: () => { goHome(next.id); openAlbum(); } }]
       : [{ label: t('open_album'), act: () => { goHome(ch.id); openAlbum(); } }, { label: t('home'), cls: 'orange', act: () => goHome(ch.id) }],
@@ -2251,16 +2257,16 @@ function levelBanner() {
 function rulesHtml() {
   // hình minh hoạ ghép từ chính sprite trong game (lá vương miện Cat, tem mèo, phong bì, ô MOVES)
   const box = inner => `<div style="position:relative;flex:0 0 96px;height:124px">${inner}</div>`;
-  const crownCard = box(`<div style="position:absolute;inset:0;background:url(assets-fb222fc2/ui/topic_frame.png) center/100% 100%"></div>
+  const crownCard = box(`<div style="position:absolute;inset:0;background:url(assets-a3206d7b/ui/topic_frame.png) center/100% 100%"></div>
     <img src="${lineIconUrl('Cat')}" style="position:absolute;left:20px;top:30px;width:56px;height:56px">
-    <div style="position:absolute;left:30px;top:-12px;width:36px;height:34px;background:url(assets-fb222fc2/ui/crown.png) center/contain no-repeat"></div>`);
-  const stampCard = box(`<div style="position:absolute;inset:0;background:url(assets-fb222fc2/ui/face_3.png) center/100% 100%"></div>
-    <img src="assets-fb222fc2/cards/cat/5.png" style="position:absolute;left:12px;top:16px;width:72px;height:72px">`);
-  const env = box(`<div style="position:absolute;inset:8px -6px;background:url(assets-fb222fc2/ui/envelope_closed.png) center/contain no-repeat"></div>
-    <div style="position:absolute;left:30px;top:40px;width:36px;height:42px;background:url(assets-fb222fc2/ui/wax.png) center/contain no-repeat"></div>`);
-  const moves = box(`<div style="position:absolute;inset:0;background:url(assets-fb222fc2/ui/hud_moves.png) center/100% 100%"></div>
+    <div style="position:absolute;left:30px;top:-12px;width:36px;height:34px;background:url(assets-a3206d7b/ui/crown.png) center/contain no-repeat"></div>`);
+  const stampCard = box(`<div style="position:absolute;inset:0;background:url(assets-a3206d7b/ui/face_3.png) center/100% 100%"></div>
+    <img src="assets-a3206d7b/cards/cat/5.png" style="position:absolute;left:12px;top:16px;width:72px;height:72px">`);
+  const env = box(`<div style="position:absolute;inset:8px -6px;background:url(assets-a3206d7b/ui/envelope_closed.png) center/contain no-repeat"></div>
+    <div style="position:absolute;left:30px;top:40px;width:36px;height:42px;background:url(assets-a3206d7b/ui/wax.png) center/contain no-repeat"></div>`);
+  const moves = box(`<div style="position:absolute;inset:0;background:url(assets-a3206d7b/ui/hud_moves.png) center/100% 100%"></div>
     <div style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:44px;color:#4a2a1a">12</div>`);
-  const undo = box(`<div style="position:absolute;left:4px;top:14px;width:88px;height:88px;background:url(assets-fb222fc2/ui/btn_undo.png) center/contain no-repeat"></div>`);
+  const undo = box(`<div style="position:absolute;left:4px;top:14px;width:88px;height:88px;background:url(assets-a3206d7b/ui/btn_undo.png) center/contain no-repeat"></div>`);
   const row = (fig, txt) => `<div style="display:flex;align-items:center;gap:24px;margin:0 0 14px;text-align:left">${fig}
     <div style="font-size:38px;line-height:1.22;color:#5a3a26">${txt}</div></div>`;
   return `<div>${row(crownCard, t('r1'))}${row(stampCard, t('r2'))}${row(env, t('r3'))}${row(moves, t('r4'))}${row(undo, t('r6'))}
@@ -2278,7 +2284,7 @@ function featureIntro(force = false) {
   deferredIntro = false;
   clearHint();
   save.seen['unlock_' + u] = 1;
-  const icons = { hint: 'assets-fb222fc2/ui/ic_hint.png', pack: 'assets-fb222fc2/ui/ic_pack_big.png', stamper: 'assets-fb222fc2/ui/ic_stamper.png', joker: 'assets-fb222fc2/ui/joker_card.png' };
+  const icons = { hint: 'assets-a3206d7b/ui/ic_hint.png', pack: 'assets-a3206d7b/ui/ic_pack_big.png', stamper: 'assets-a3206d7b/ui/ic_stamper.png', joker: 'assets-a3206d7b/ui/joker_card.png' };
   const info = { title: t('booster', { name: t('b_' + u) }), icon: icons[u], text: t('bi_' + u), name: t('b_' + u) };
   save[u] = (save[u] || 0) + GIFTS[u];
   persist();
@@ -2356,7 +2362,7 @@ function renderDecor(justPlaced = -1) {
   const DECOR = homeCh.decor;
   const n = save[homeCh.key] || 0;
   $('decor').innerHTML = DECOR.map((d, i) => (i < n || i === n)
-    ? `<img class="dc dc-${d.id}${i === n ? ' ghost' : ''}${i === justPlaced ? ' new' : ''}" src="assets-fb222fc2/decor/${d.id}.png" alt="">` : '').join('');
+    ? `<img class="dc dc-${d.id}${i === n ? ' ghost' : ''}${i === justPlaced ? ' new' : ''}" src="assets-a3206d7b/decor/${d.id}.png" alt="">` : '').join('');
   $('decorBtn').innerHTML = `${t('decorate')} ${pointsLeft()}<i></i>`;
   const next = DECOR[n];
   $('decorBtn').classList.toggle('ready', !!next && pointsLeft() >= next.cost);
@@ -2375,7 +2381,7 @@ function decorPanel() {
   const ok = left >= d.cost;
   panel({
     title: t('decorate'),
-    body: `<div class="feature-icon" style="background-image:url(assets-fb222fc2/decor/${d.id}.png)"></div>
+    body: `<div class="feature-icon" style="background-image:url(assets-a3206d7b/decor/${d.id}.png)"></div>
       <p><b>${t('decor_' + d.id)}</b> · ${n + 1}/${DECOR.length}</p>
       <div class="pts-line">${t('pts_have', { n: left })}</div>
       ${ok ? '' : `<p style="font-size:36px;margin:0">${pointsEarned() ? t('pts_need', { n: d.cost - left }) : t('pts_first')}</p>`}`,
@@ -2522,10 +2528,10 @@ function applyStaticCopy() {
   initFx($('fx'));
   setLite(LITE);
   buildDebug();
-  try { manifest = await (await fetch('assets-fb222fc2/manifest.json')).json(); } catch (e) { manifest = {}; }
+  try { manifest = await (await fetch('assets-a3206d7b/manifest.json')).json(); } catch (e) { manifest = {}; }
   await preload(['back', 'topic_frame', 'crown', 'slot_tray', 'tray_front', 'btn_undo_off', 'hud_moves', 'token', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'tem_diem', 'lock', 'plus', 'recycle', 'radial', 'logo',
     'face_1', 'face_2', 'face_3', 'face_4', 'face_5', 'face_6', 'ic_hint', 'ic_joker', 'banner', 'bar_track', 'tipbox', 'ribbon', 'btn_yellow', 'btn_blue',
-    'btn_pause', 'btn_undo', 'deck_tag', 'panel'].map(n => `assets-fb222fc2/ui/${n}.png`).concat(['assets-fb222fc2/ui/bg_game.jpg']));
+    'btn_pause', 'btn_undo', 'deck_tag', 'panel'].map(n => `assets-a3206d7b/ui/${n}.png`).concat(['assets-a3206d7b/ui/bg_game.jpg']));
   initAudio();
   track('app_open', { lite: LITE, ab_hard: AB.hard ? AB.hard.join('-') : 'default', ab_safety: AB.safety || 'default' });
   goHome();
