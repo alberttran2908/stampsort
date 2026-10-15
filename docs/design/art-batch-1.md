@@ -1,6 +1,6 @@
 # Đợt art 1: 27 chủ đề tem mới, decor, bưu thiếp và art polish
 
-**Ngày:** 2026-10-15 · **Người soạn:** Polish Dev · **Trạng thái:** sẵn sàng chạy ChatGPT, chưa có ảnh nào.
+**Ngày:** 2026-10-15 · **Người soạn:** Polish Dev · **Trạng thái:** đã vẽ xong 51/51 ảnh (2026-10-15), đã cắt vào `assets` và nén. Nhật ký, ghi chú duyệt và việc tiếp theo ở mục 7 cuối tài liệu.
 **Nguồn nhu cầu:** `30-day-plan.md` mục 2.2–2.3 (27 chủ đề, 54 decor, 9 bưu thiếp, icon booster, decor hiếm) và `benchmark-grand-games.md` mục 10 (P3 nền cao, P5 hạt theo theme, P6 túi thư màn thắng, P9 icon và biển màn chính, P11 hệ nút).
 **Quy trình gốc:** `art-redo-chatgpt.md` (lưới 3×3, style ref, cắt bằng `tools/art_slice.py`). Tài liệu này chỉ ghi phần mới.
 
@@ -869,3 +869,84 @@ Trước mỗi lệnh cắt: `mv ~/Downloads/lpo_postcard_chN.png research/art-r
 - `prototype/stamp/assets/manifest.json`: thêm 27 khoá (`{"dir": "cards/<slug>", "arts": 8}`), chỉ thêm, không đổi khoá cũ. Thêm trước không làm hỏng gì: `level_rules.mjs` chỉ nhận chủ đề có art và `icon_line.png` (vẫn 61 chủ đề nền), `main.js` chỉ tải file, không duyệt khoá. 14/14 test `level_spec.test.mjs` vẫn qua.
 - `tools/art_slice.py`: thêm `--grid`, hậu tố `@N`/`@WxH`, `postcard`, `bg`. `--no-icon` bỏ đúng ô icon. Tự tạo thư mục mới khi `--apply`.
 - `tools/art_take.sh`: chủ đề mới (không có lưới mẫu APK) thì cắt cả icon, chạy `icon_line.py`, làm ảnh xem nhanh ở cỡ lá thật.
+
+---
+
+## 7. Nhật ký chạy (Art agent, 2026-10-15)
+
+Chạy trên ChatGPT web (gói Plus) bằng tab Chrome của người dùng. Ảnh gốc ở `research/art-redo/gen/` (gitignore). Mọi PNG đã nén `pngquant --quality 70-90`.
+
+### Đợt 1: xong 12/12
+
+| Mã | Kết quả | Ghi chú duyệt |
+|---|---|---|
+| T01 Lantern | Xong, 8 tem + icon + icon nét | Cắt `--fixed` (ô 1 báo `THIẾU` vì tua rua chạm sát). Lồng đèn nào cũng có nắp/khung, không lẫn bóng bay |
+| T02 Knitting | Xong | Cắt `--fixed` (khăn ô 3 chạm mép) |
+| T03 Acorn | Xong | Không có lá. Cả bộ cùng tông nâu, phân biệt bằng dáng |
+| T04 Winter | Xong | Lần 1 ChatGPT báo lỗi công cụ vẽ, gửi lại thì được. 4 tem đầu đều là người tuyết (khác nhau ở mũ, bịt tai, cặp đôi); mặt người tuyết có miệng cười nhỏ. Level Dev cân nhắc không cho 0–3 cùng một level nhỏ nếu thấy khó phân biệt |
+| T05 Candle | Xong | Không có lồng đèn, không có bánh |
+| T06 Gift | Xong | |
+| P5 hạt | Xong, `assets/fx/` 9 file 128 px | Đúng palette 5 màu |
+| P6+P9 UI | Xong, `assets/ui/mailbag_open, mailbag_full, pip_wait, ic_settings, ic_daily, ic_album, ic_decor, level_pin, ic_event` | Cắt `--fixed` (ô 1 báo `THIẾU`). Pip đội mũ bưu tá xanh, giống `decor/cat.png` |
+| P11 nút | Xong, `assets/ui/btn_primary(_down,_off), btn_secondary(_down,_off), chapter_sign, btn_close` | Lần 1 (`gen/lpo_buttons_try1_darkbg.png`) nền nâu sẫm có quầng tối, biển gỗ tràn sang ô bên: vẽ lại 1 lần trên nền xám phẳng. Lần 2: biển gỗ vẫn lấn hàng 3, nên `chapter_sign` và `btn_primary_off` được cắt tay theo toạ độ (dùng `remove_bg` + `tight`/`stretch` của `art_slice.py`). Trạng thái nhấn chỉ tối hơn và gờ mỏng hơn, khác biệt nhẹ: Feature Dev nên thêm dịch xuống 2–4 px khi nhấn. Lát 9-slice cần đo lại (góc trang trí nằm trong khoảng 90 px mỗi bên ở canvas 868×194) |
+| B1–B3 nền cao | Xong, `assets/ui/bg_game_tall.jpg`, `bg_hard_tall.jpg` | Đường nối 1.26/255 và 1.00/255 (cần < 6). Kệ gỗ đúng 18% đáy, không cần chỉnh `--soften`. Nền tối: tia nắng qua cửa sổ vẫn còn (hơi lạ với buổi tối) nhưng tông dịu, đèn bàn ấm bên phải |
+
+Thêm (yêu cầu ưu tiên của người điều phối): `research/art-redo/gen/lpo_staff_work2.png`, 9 nhân sự văn phòng ảo ở tư thế đang làm việc, giữ đúng thứ tự và trang phục của `lpo_staff_work.png`.
+
+### Đợt 2: xong 13/13
+
+| Mã | Kết quả | Ghi chú duyệt |
+|---|---|---|
+| T07 Luggage | Xong | Cắt `--fixed` |
+| T08 Umbrella | Xong | Cắt `--fixed`. Không có chấm bi (ô đỏ chỉ có núm tròn ở đầu nan) |
+| T09 Camera | Xong | Icon tô cam nhạt thay vì kem, vẫn đọc tốt ở 48 px |
+| T10 Lighthouse | Xong | Cắt `--fixed` (4 ô báo `THIẾU`). Icon mất hai tia sáng nhỏ khi cắt, vẫn nhận ra hải đăng |
+| T11 Treasure | Xong | Không có vương miện, xu rời, chìa, vũ khí |
+| T12 Cactus | Xong | Cắt `--fixed`. Ô 7 (lẽ ra xương rồng hình sao) ra dạng tròn có hoa vàng, khá giống ô 2 (tròn có hoa hồng); khác màu hoa nên vẫn dùng |
+| T13 Bread | Xong | Bánh bagel có thể gần với chủ đề donut/bánh ngọt nếu có (giả thuyết, Level Dev xem) |
+| T14 Cheese | Xong | |
+| T15 Pottery | Xong | Cắt `--fixed`. Không có ấm trà, hũ mật |
+| D3 decor ch3 | Xong: `decor/knit_bunting, tea_shelf, tea_painting, daisy_pot, copper_kettle, yarn_basket`, `ui/ic_wild` | ChatGPT trả nền trong suốt và không xếp đúng lưới (hàng 2–3 lệch), nên 6 món dưới được cắt tay theo hộp toạ độ, giữ vùng liên thông lớn (`python3 research/art-redo/decor_boxcut.py <lưới> tên:x0,y0,x1,y1[@cỡ] ...`, cùng hàm `remove_bg`/`tight` của `art_slice.py`). Cờ dây cắt bằng lệnh gốc |
+| D4 decor ch4 | Xong: `decor/string_lights, wreath, stockings, scarf_hook, apple_basket, gift_bed`, `ui/ic_magnet` | Hàng 3 cắt tay như D3. Tất có bông tuyết và cây thông nhỏ (đồ trang trí mùa đông, không phải tem nên không ảnh hưởng cặp dễ nhầm) |
+| C3 bưu thiếp | Xong: `assets/ch3/postcard.jpg` | |
+| C4 bưu thiếp | Xong: `assets/ch4/postcard.jpg` | |
+
+### Đợt 3: xong 12/12
+
+| Mã | Kết quả | Ghi chú duyệt |
+|---|---|---|
+| T16 Fishing | Xong | Không có cá, giun |
+| T17 Picnic | Xong | **Cặp dễ nhầm mới (đã thấy trên ảnh thật):** Picnic/0 (giỏ mây có quai da) gần giống Fishing/5 (giỏ câu mây có quai da); Picnic/7 (hộp cơm inox có quai) gần giống Fishing/6 (xô mồi inox có quai). Cả ba chủ đề Fishing, Picnic, Painting cùng chương 8. Level Dev nên thêm `fishing↔picnic` vào `CONFUSE` hoặc bỏ 2 cặp tem này khỏi cùng level |
+| T18 Painting | Xong | Painting/6 (lon sơn xanh) cũng là lon kim loại, nhưng có sơn xanh chảy nên dễ phân biệt hơn |
+| T19 Stationery | Xong | Không có bút lông hay sơn, tách rõ với Painting |
+| T20 Wooden Toys | Xong | Ô 8 (cầu vồng xếp chồng) có thể gần Weather/2 (cầu vồng) ở chương 11, khác chương nên ít rủi ro |
+| T21 Honey | Xong | Cả bộ cùng tông vàng mật, phân biệt bằng dáng |
+| T22 Fireworks | Xong | Pháo nở đặt trên đĩa trời đêm như yêu cầu, không lẫn hoa. Icon 8 tia ở 48 px hơi giống mặt trời/hoa cúc |
+| T23 Mask | Xong | Không mặt nạ đáng sợ. Ô 7 (mặt nạ hình bướm) có thể gần chủ đề bướm/côn trùng nếu có (giả thuyết) |
+| T24 Bell | Xong | Cắt `--fixed` |
+| T25 Weather | Xong | Không bông tuyết, không ô. Ô 7 có con gà trống trên chong chóng gió (nếu có chủ đề gia cầm/nông trại thì Level Dev xem) |
+| T26 Origami | Xong | Không thuyền, máy bay giấy |
+| T27 Keys | Xong | Không ổ khoá, rương |
+
+### Đợt 4: xong 14/14
+
+Các lưới decor đợt 4 đều trả nền trong suốt và lệch lưới, nên cắt bằng `python3 research/art-redo/decor_autosplit.py <lưới> <TRÊN>@1200 <ô4> ... <ô9>` (logic: tách blob alpha, gom chấm nhỏ vào blob gần nhất, hàng 1 là món TRÊN, còn lại theo hàng rồi theo x). Tên file đúng như lệnh cắt trong tài liệu.
+
+| Mã | Kết quả | Ghi chú duyệt |
+|---|---|---|
+| D5 decor ch5 | Xong: `decor/station_clock, signal_lamp, departure_board, travel_poster, old_suitcases, suitcase_bed, bench` | Đồng hồ ga vẽ thành giá treo ngang 2 mặt đồng hồ, nên xuất `station_clock` rộng 1200 (như món TRÊN khác) thay vì 600. Bảng giờ chỉ có biểu tượng tàu và đồng hồ, không chữ số |
+| D6 decor ch6 | Xong: `decor/hammock, globe, sea_chest, cactus_pot, lighthouse_model, shell_bed, rare_postbox` | `rare_postbox` có bảng tên trơn, không chữ |
+| D7 decor ch7 | Xong: `decor/awning, wicker_basket, chalk_board, brass_scale, bread_basket, flour_bed, flour_bed_b` | |
+| D8 decor ch8 | Xong: `decor/fishing_rods, ice_skates, lake_painting, picnic_shelf, easel, gingham_bed, storm_lantern` | |
+| D9 decor ch9 | Xong: `decor/flower_garland, pencil_cup, bookshelf, rocking_horse, windmill_model, book_bed, wildflower_vase` | Ngựa bập bênh là decor, không đụng luật cấm ngựa của tem Wooden Toys |
+| D10 decor ch10 | Xong: `decor/festival_lights, masks, music_box, door_bell, flag_stand, party_bed, party_bed_b` | |
+| D11 decor ch11 | Xong: `decor/crane_string, key_hooks, raincoat_peg, thermometer, pinwheel_pot, cloud_bed, cloud_bed_b` | |
+| C5–C10 bưu thiếp | Xong: `assets/ch5…ch10/postcard.jpg` | C5–C10 vẽ chung một chat (6 ảnh, 1 lần đính kèm `REF-CARD`) thay vì tách 4C/4D, cùng số lượt upload. C5 có đồng hồ sân ga với vạch số rất nhỏ, không đọc được ở 900×600 |
+| C11 bưu thiếp | Xong: `assets/ch11/postcard.jpg` | Chat riêng, đính kèm `REF-CARD` |
+
+### Tổng kết và việc tiếp theo
+
+- 51/51 ảnh xong, không ảnh nào phải bỏ. Vẽ lại: 1 lần (P11 nút, nền tối và lấn ô). ChatGPT báo lỗi công cụ vẽ 1 lần (T04), gửi lại là được. Không gặp giới hạn upload hay hết lượt vẽ. Tổng 10 chat.
+- 27 chủ đề đủ 8 tem + `icon.png` + `icon_line.png`, đã nén. Không file nào đang được game dùng bị ghi đè (`git status` chỉ có file mới).
+- **Level Dev:** sinh lại chương 3–11 (`tools/gen_levels.mjs`); xem cặp dễ nhầm đã thấy trên ảnh thật: `fishing↔picnic` (giỏ mây có quai, xô/hộp inox có quai, cùng chương 8), Winter/0–3 (bốn người tuyết), Cactus/1 và /6 (hai cây tròn có hoa), cùng các cặp giả thuyết ở 1.7.
+- **Feature Dev:** gắn `CHAPTERS[2..10].decor` theo gợi ý từng lưới (`station_clock` nay rộng 1200 như món TRÊN); CSS nền `bg_*_tall.jpg`; hệ nút mới (đo lại 9-slice, thêm dịch xuống khi nhấn vì ảnh `_down` khác ít); icon màn chính, `level_pin`, túi thư `mailbag_open/full`, `pip_wait`; sprite hạt `fx/`; màn "Chương N sắp mở" đọc `assets/chN/postcard.jpg` (đã có ch3–ch11); icon booster `ui/ic_wild.png`, `ui/ic_magnet.png`; decor hiếm `decor/rare_postbox.png`.
