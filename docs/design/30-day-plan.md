@@ -4,6 +4,14 @@
 **Yêu cầu của người dùng:** "tối ưu gameplay, sản xuất level cho tới khi game đủ tính năng và level cho 30 ngày chơi".
 **Đối tượng:** người chơi lớn tuổi, tone chill (`older-players-pass.md`). Không có cốt truyện.
 
+> **Cập nhật 2026-10-15 (người dùng chốt, level dev ghi lại; ưu tiên hơn đề xuất GD bên dưới):**
+> 1. **Luật A là mặc định bản phát hành** (bám ABI: 7–10 chủ đề, 4 booster có Con dấu). Level L21+ sinh theo luật A. B chỉ còn là biến thể thử qua `?variant=b`.
+> 2. **Level thường vẫn thua** khi hết lượt (như ABI). Không có soft-fail "Thư đến trễ" ở level thường. Level khó (`special`) vẫn vào Ca tối.
+> 3. Duyệt 27 chủ đề mới và tên khu chương 3–11 (mục 2.2).
+> 4. **Level ABI là nguồn ứng viên hợp lệ** ("quan trọng là level tốt nhất, của ABI hay tự làm không quan trọng, tôi đã xin phép rồi"). Mỗi vị trí level chọn ứng viên tốt nhất giữa layout ABI (đổi chủ đề, chỉnh moves) và layout tự sinh, chấm bằng validator.
+>
+> Vẫn giữ ràng buộc cho người lớn tuổi: CONFUSE, moves hào phóng (chỉnh theo mục tiêu `o35`), ván không quá dài. Chi tiết số liệu R1–R3 và các quyết định level dev: `docs/design/level-pipeline-r1-r3.md`. Các mục bị ảnh hưởng (1.3, 3.3, 3.5, 4.2 M2, 5, 6, 7, 8) đã sửa hoặc đánh dấu bên dưới.
+
 **Nhãn nguồn:**
 
 | Nhãn | Nghĩa |
@@ -55,10 +63,12 @@ Thời lượng level lấy từ `[SIM]`: level thường của luật B (34–4
 | Hạng mục | Số level | Cơ sở |
 |---|---|---|
 | Chiến dịch | **200** (L1–L200) | Khoảng 1,9 lần persona đều đặn (L105 ở D30). Persona nhanh hết vào khoảng D28 |
-| Trong đó tự sinh mới | **180** (L21–L200) | Thay hẳn L21–L60 của ABI (`levels_apk.js` chỉ dùng nội bộ) |
-| L1–L20 | 20 (có sẵn) | Chỉnh lại bằng validator mới (R4). L1 phải dựng lại bố cục riêng, xem rủi ro #8 |
+| Trong đó sinh mới | **180** (L21–L200) | ~~Thay hẳn L21–L60 của ABI~~ **(sửa 2026-10-15)** Mỗi vị trí chọn giữa ứng viên ABI và tự sinh (`tools/gen_levels.mjs`). `levels_apk.js` (import nguyên ABI L21–L60) chỉ còn để so sánh |
+| L1–L20 | 20 (có sẵn) | Chỉnh lại bằng validator mới (R4), **bản A** |
 | Daily Post | **60** (pool) | 30 ngày cộng 100% buffer. Xoay vòng theo ngày lịch |
-| **Tổng level tự sinh mới** | **240** | 180 chiến dịch + 60 daily |
+| **Tổng level cần sinh** | **240** | 180 chiến dịch + 60 daily |
+
+**Thực tế nguồn ABI (đo 2026-10-15, `[APK]`):** trong 963 level, chỉ khoảng **20 layout khác nhau** vừa trần độ dài của mình (≤ 54 lá, n ≤ 8). 179 level là cùng một layout 36 lá, 3 khay, đổi chủ đề. Phần lớn level ABI sau L20 có 64–98 lá (o35 10–15 phút), vượt trần. Vì vậy ABI chỉ là nguồn phụ: ở ch3 có 2/20 level chọn từ ABI (L29, L35). Muốn dùng nhiều level ABI hơn thì phải nới trần độ dài, việc này cần PO quyết.
 
 Mốc dự phòng: nếu art chậm, có thể chốt **140 level (8 chương)** để chạy playtest 7 ngày trước. 140 vẫn hơn 1,3 lần persona đều đặn ở D30.
 
@@ -128,7 +138,25 @@ Art phụ thuộc vào trình duyệt của người dùng, nên các vòng art 
 - **Không bao giờ có 3 level liên tiếp** thuộc nhóm bump/HARD/SUPER mà không có br ở giữa.
 - Chương 1–2 giữ vai trò hiện có (HARD ở L5, L15; SUPER ở L10, L20 là mốc UA, `difficulty-and-ua-milestones.md`).
 
-### 3.3 Tham số theo chương (luật B: ≤ 6 chủ đề ở level thường)
+### 3.3 Tham số theo chương
+
+**Bảng đang dùng (luật A, 2026-10-15)**, nguồn sự thật là `TIERS` trong `tools/level_spec.mjs`:
+
+| Ch | Lá nor / br / bump / HARD / SUPER | Chủ đề nor / br / bump / HARD / SUPER | Khay | Cột | `n` | Deck | Slack sàn nor | `c25` / `o35` / `o35` +5 (nor) |
+|---|---|---|---|---|---|---|---|---|
+| 3 | 40–44 / 34–40 / 42–46 / 48–52 / 50–54 | 7 / 6 / 8 / 8 / 9 | 4 (br p16: 3, SUPER: 5) | 4 (SUPER 5) | 3–6 | 55% | 1.28 | 0.90 / 0.75 / 0.95 |
+| 4 | 40–45 / 34–40 / 42–46 / 48–52 / 50–54 | 7 / 6 / 8 / 8 / 9 | như trên | 4 | 3–7 (L41: một chủ đề `n = 8`) | 58% | 1.25 | 0.90 / 0.75 / 0.95 |
+| 5 | 41–45 / 36–41 / 43–46 / 48–52 / 50–54 | 7 / 6 / 8 / 9 / 10 | như trên | 4, 5 từ L66 | 3–7 | 60% | 1.22 | 0.88 / 0.72 / 0.95 |
+| 6 | như ch5 | 8 / 6 / 8 / 9 / 10 | như trên | 5 | 3–8 | 60% | 1.22 | 0.88 / 0.72 / 0.94 |
+| 7–8 | 42–46 / 37–42 / 44–46 / 48–52 / 50–54 | 8 / 6 / 9 / 9 / 10 | như trên | 5 | 3–8 | 62% | 1.20 | 0.85 / 0.70 / 0.93 |
+| 9–11 | như ch7–8 | 8 / 6 / 9 / 10 / 10 | như trên | 5 | 3–8 | 62% | 1.18 | 0.85 / 0.70 / 0.93 |
+
+- Cơ sở: level A L1–L20 hiện có (nor 7 chủ đề 38–46 lá, bump/hard 8 chủ đề 48–52 lá, super 9 chủ đề, 5 khay) và xu hướng ABI (sau L20 trung vị 10 chủ đề, 64 lá) `[APK]`, cắt theo trần độ dài.
+- **Trần (sửa cho luật A):** level thường ≤ 46 lá, trung vị `o35` ≤ 6 phút, **bump ≤ 6,5 phút**. Level khó ≤ 54 lá, ≤ 8 phút. Đo được: luật A (7–8 chủ đề) cần khoảng 1,9 nước/lá với `o35`, nên 6 phút tương đương khoảng 44 lá. Bump 45 lá ở bản spec đầu có 9/9 ứng viên vượt 6 phút.
+- Level khó có thêm biến thể deck +8 điểm (`colsAlt`). Generator xen kẽ hai biến thể vì nhiều lá ẩn làm hẹp khoảng cách `sk` − `c10`.
+- Mục tiêu `sk` ở level khó được nới trần thành **0.35–0.70 (HARD) và 0.30–0.65 (SUPER)**, xem bảng vai trò.
+
+**Bảng gốc của GD (luật B: ≤ 6 chủ đề ở level thường), giữ để tham khảo, không còn dùng cho L21+:**
 
 | Ch | Level | Lá (normal) | Chủ đề nor / bump / hard | Khay nor (bump, hard) | Cột (lá ban đầu) | `n` mỗi chủ đề | Deck | Slack sàn nor | `c25` nor ≥ | `o35` nor ≥ | `o35` +5 ≥ |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -150,12 +178,14 @@ Từ chương 7, độ khó **đi ngang**. Sự đa dạng đến từ chủ đ�
 | intro | như nor | như nor | như nor | như nor | Như nor. Vương miện của chủ đề mới ngửa trên cột hoặc nằm trong 3 lá rút đầu (`fair()` đã có) | 0.03 |
 | nor | bảng trên | bảng trên | bảng trên | bảng trên | Bảng trên | 0.03 (ch3–6), 0.05 (ch7+) |
 | bump | +10% | bảng trên | bớt 1 | 1.15 | `c25` ≥ 0.80, `o35` ≥ 0.60, `o35` +5 ≥ 0.90 | 0.05 |
-| HARD | +15% | tối đa 7 từ ch5 | 3–4 | 1.02 | `c10` trong moves 0.15–0.35, `sk` 0.35–0.55. Cờ `special: 'hard'`, Ca tối | 0.10 |
-| SUPER | +25%, ≤ 52 | tối đa 7 | 3–4 | 1.03 | `c10` 0.10–0.30, `sk` 0.30–0.50 | 0.15 |
+| HARD | +15% | tối đa 7 từ ch5 | 3–4 | 1.02 | `c10` trong moves 0.15–0.35, `sk` 0.35–~~0.55~~ **0.70**. Cờ `special: 'hard'`, Ca tối | 0.10 |
+| SUPER | +25%, ≤ 52 | tối đa 7 | 3–4 | 1.03 | `c10` 0.10–0.30, `sk` 0.30–~~0.50~~ **0.65** | 0.15 |
+
+(Cột Lá, Chủ đề, Khay ở bảng vai trò thuộc luật B. Luật A dùng bảng `TIERS` ở trên. Mục tiêu, slack sàn và ngưỡng kẹt vẫn giữ nguyên.) Lý do nới `sk`: đo trên seed check, A L15 có `sk` 0.71 và A L20 có `sk` 1.00. Ở ch3, thử 3 lần × 40 layout thì chỉ 1–2 layout có cả `c10` và `sk` trong khoảng cũ. Điều kiện chính của level khó vẫn là `c10` và kẹt.
 
 **Trần cứng (PO câu 6, mục 5):** level thường ≤ 46 lá và trung vị `o35` ≤ 6 phút (khoảng 80 nước). Level khó ≤ 52 lá và ≤ 8 phút. Slack ≤ 1.6 để level không quá dễ.
 
-**Daily Post:** 30–36 lá, 5 chủ đề, 4 khay, `c25` ≥ 0.97, `o35` ≥ 0.85. Chỉ dùng chủ đề nền và chủ đề chương 2–3, để không lộ chủ đề của chương người chơi chưa tới. Không có level khó.
+**Daily Post:** 30–36 lá, ~~5~~ **6 chủ đề (luật A, như level nghỉ; sửa 2026-10-15)**, 4 khay, `c25` ≥ 0.97, `o35` ≥ 0.85. Chỉ dùng chủ đề nền và chủ đề chương 2–3, để không lộ chủ đề của chương người chơi chưa tới. Không có level khó.
 
 ### 3.4 Mốc giới thiệu cơ chế
 
@@ -163,12 +193,12 @@ Sau L10 không có luật mới (giống ABI `[APK]`). Với người lớn tu�
 
 | Lần đầu ở | Biến thể | Engine | Tip lần đầu (VI) |
 |---|---|---|---|
-| L1–L9 | Vương miện, xếp chồng, bộ bài, Gợi ý (L2), Ô phụ (L2), Nam châm (L4), [Con dấu L7: bỏ ở luật B, câu 8], Tem Đa Năng (L9) | Có | Có sẵn |
+| L1–L9 | Vương miện, xếp chồng, bộ bài, Gợi ý (L2), Ô phụ (L2), Nam châm (L4), Con dấu (L7, **giữ ở luật A**), Tem Đa Năng (L9) | Có | Có sẵn |
 | L11 | Giới thiệu chủ đề mới đầu chương (`introduce`) | Có `[CODE 2219]` | Có sẵn |
-| L26 (ch3 p6) | Level 3 khay "Hôm nay mở ít quầy" | Có | "Hôm nay chỉ mở 3 quầy, cứ thong thả." |
+| ~~L26 (ch3 p6)~~ **L36 (ch3 p16, level nghỉ)** | Level 3 khay "Hôm nay mở ít quầy". Luật A: 3 khay đặt ở level nghỉ p16 của mỗi chương (ABI dùng 3 khay cho level nhỏ 6–7 chủ đề `[APK]` L22, L27, L36, L41). Bump 8 chủ đề với 3 khay thì quá dễ kẹt. Spec: `tip: 'few_counters'` | Có | "Hôm nay chỉ mở 3 quầy, cứ thong thả." |
 | L41 (ch4 p1) | "Bao thư lớn": 1 chủ đề `n = 8` | Có (cần ≥ 8 art) | "Bao thư lớn: cần 8 tem." |
 | L66 (ch5 p6) | Level 5 cột | Có | Không cần |
-| L70 (ch5 p10) | Level khó 7 chủ đề | Có | Không cần |
+| L70 (ch5 p10) | Level khó ~~7~~ **9 chủ đề (luật A)** | Có | Không cần |
 | L87 (ch6 p7) | Ô mở sẵn ở level nghỉ (`preplace`) | Có | "Một quầy đã mở sẵn." |
 | L107 (ch7 p7) | **Could:** "Cột ngửa", mọi lá trên bàn ngửa sẵn (level nghỉ) | Cần thêm cờ `openCols` trong `createState` | "Hôm nay thư đã mở sẵn." |
 | Từ ch8 | **Could:** "Tem hiếm" (lá Tem Đa Năng nằm sẵn trong bộ bài, concept mục 5) | Cần thêm loại lá mới | |
@@ -188,6 +218,9 @@ Giữ `tools/gen_proto_levels.mjs` cho L1–L20 (`DESIGN` viết tay). Thêm gen
 | E7 | CLI và đầu ra | `node tools/gen_levels.mjs --from=21 --to=40` ghi gộp vào `prototype/stamp/src/levels_gen.js` (`export const LEVELS_GEN`), giữ nguyên level ngoài khoảng. `--daily=60` ghi `levels_daily.js`. Report `prototype/stamp/levels-gen-report.json`: lá, chủ đề, khay, solver, moves, slack, win từng profile, kẹt, phút ước tính. `--md` in bảng |
 | E8 | Tất định | Cùng lệnh thì ra cùng file (so hash). Seed = `chapter × 100000 + p × 1000 + k` |
 | E9 | `tools/validate_levels.mjs` | Chạy được trên `levels_b.js`, `levels_gen.js`, `levels_daily.js`. Dùng seed `check`, so với `targets` của từng level (level cũ thì dùng mặc định theo vai trò). Thoát với mã 1 nếu có level trượt. Dùng cho QA và CI |
+| E10 (mới 2026-10-15) | Ứng viên ABI trong `gen_levels.mjs` | Layout ABI khử trùng theo cấu trúc. Lọc theo số lá, số chủ đề (±1), n ≤ 8 và biến thể cấu trúc của vị trí. Đổi chủ đề theo spec (chủ đề mới ở ô có vương miện nhìn thấy sớm, hạn mức, rồi chủ đề nền). Moves chỉnh như ứng viên tự sinh. Mỗi layout chỉ dùng 1 lần |
+
+**Trạng thái E1–E10 (2026-10-15):** đã làm cả 10 trong `tools/level_rules.mjs`, `tools/level_spec.mjs`, `tools/gen_levels.mjs`, `tools/validate_levels.mjs`. Riêng `--daily` (E7) để tới R15. `gen_proto_levels.mjs` chưa chuyển sang `level_rules.mjs`, để R4 làm. Seed: gen = `chương × 100000 + p × 1000 + k`, tune = `70000 + id`, check = `50000 + id`. Xếp hạng ứng viên chỉ dùng seed tune. Seed check dùng để kiểm tra và cho phép nới +2 moves (tối đa 3 lần) theo E5. Ở level khó thì bước nới là ±1 theo `c10`/`sk`.
 
 ---
 
@@ -224,7 +257,7 @@ Giữ `tools/gen_proto_levels.mjs` cho L1–L20 (`DESIGN` viết tay). Thêm gen
 | # | Tính năng | Mục đích (người chơi cảm thấy gì) | Quy tắc chính | Đo bằng |
 |---|---|---|---|---|
 | M1 | Lưu ván dở và hỏi "Chơi tiếp ván dở?" | Một cuộc gọi đến không làm mất 6 phút chơi | Lưu state sau mỗi nước và khi `visibilitychange`. Mở lại thì hỏi; chọn "Ván mới" thì không mất gì | `level_resume`, `level_abandon` |
-| M2 | "Thư đến trễ" (soft-fail, PO câu 1) | Không bao giờ thấy chữ "thua" | Hết moves thì vào Ca tối như level khó. Có 1 lựa chọn phụ "+5 lượt (quảng cáo)" để giữ 2 Tem Điểm. Không có tiếng `lose` | `overtime_start` ở level thường, `level_quit` |
+| ~~M2~~ | ~~"Thư đến trễ" (soft-fail, PO câu 1)~~ **Bỏ (2026-10-15): người dùng chốt level thường vẫn thua.** | Không bao giờ thấy chữ "thua" | Hết moves thì vào Ca tối như level khó. Có 1 lựa chọn phụ "+5 lượt (quảng cáo)" để giữ 2 Tem Điểm. Không có tiếng `lose` | `overtime_start` ở level thường, `level_quit` |
 | M3 | Daily Post "Thư hôm nay" | Lý do mở app mỗi ngày dù đang kẹt ở chiến dịch | Mở sau L5. Mỗi ngày lịch 1 level từ pool 60 (dễ, mục 3.3). Thắng được 1 **dấu ngày** vào "Sổ dấu ngày" (trang lịch trong album) và 40 xu. Chơi lại được nhưng không có thưởng. Không đếm ngược | `daily_start/complete`, D1/D7/D30 theo nhóm có chơi daily |
 | M4 | Thẻ tuần 5/7, **không phạt** | Thấy được sự đều đặn mà không sợ "mất chuỗi" | Mỗi tuần lịch có 7 ô. Đủ 5 dấu ngày thì mở hộp quà (1 Gợi ý, 1 Nam châm, 100 xu). Tuần mới bắt đầu thẻ mới. **Không có chuỗi bị reset** và không có copy kiểu "sắp mất" | `weekly_box_open`, phân bố số ngày chơi/tuần |
 | M5 | Decor và teaser cho ch3–11 | "Thị trấn còn gì" thay cho cốt truyện | 6 món mỗi chương. Giá lấy từ economy sim (R19). Chưa có art thì hiện bóng mờ ("đang đóng gói") nhưng vẫn mua được, sau này đổi sang ảnh thật | `decor_place` theo chương, % người mở chương mới trong 3 ngày |
@@ -257,14 +290,14 @@ Giữ `tools/gen_proto_levels.mjs` cho L1–L20 (`DESIGN` viết tay). Thêm gen
 
 | # | Câu hỏi | Đề xuất GD | Lý do ngắn |
 |---|---|---|---|
-| 1 | Level thường có được thua không? | **(b) Soft-fail "Thư đến trễ"** ở luật B: hết moves thì vào Ca tối, có lựa chọn phụ +5 lượt (quảng cáo). A giữ như ABI để A/B trên traffic UA | Pillar P4. `o35` vẫn thua 5–20% sau khi đã +5 `[SIM]`. Chỗ chi xu chuyển sang Gợi ý và Nam châm (để lấy đủ 3 Tem Điểm và gỡ kẹt). Kẹt cứng vẫn cần booster hoặc Undo |
+| 1 | Level thường có được thua không? | **ĐÃ CHỐT 2026-10-15: có, thua như ABI. Đề xuất cũ không dùng:** (b) Soft-fail "Thư đến trễ" ở luật B: hết moves thì vào Ca tối, có lựa chọn phụ +5 lượt (quảng cáo). A giữ như ABI để A/B trên traffic UA | Pillar P4. `o35` vẫn thua 5–20% sau khi đã +5 `[SIM]`. Chỗ chi xu chuyển sang Gợi ý và Nam châm (để lấy đủ 3 Tem Điểm và gỡ kẹt). Kẹt cứng vẫn cần booster hoặc Undo |
 | 2 | "Nhận x2 (quảng cáo)" | **Giữ, nhưng là nút phụ nhỏ** dưới "Tiếp tục". Chỉ hiện từ L11, không hiện ở màn hết chương. Ghi `ad_offer/ad_watch` | Vẫn đo được ARPDAU, nhưng không để người lớn tuổi bấm nhầm |
-| 3 | Tem Điểm ở level khó, giá decor | **Ca tối ở level khó: 2 điểm. Ca tối ở level thường: 1 điểm.** Thắng trong moves: 3 hoặc 2. Tổng giá decor mỗi chương = 90% số Tem Điểm `o35` kiếm được trong một lượt chơi (R19). Giá khởi điểm: ch1–2 2/2/3/3/4/5 (19), ch3+ 4/5/6/7/8/10 (40) | Level khó được thiết kế để vào Ca tối, nên không được phạt. `o35` hiện chỉ kiếm 19,6 trên 24 điểm ở ch1 (review GD v2) |
-| 4 | Luật nào cho người lớn tuổi | **B là mặc định của bản phát hành** (bỏ `?variant=b`). A chỉ chạy qua URL hoặc Remote Config cho A/B. Mọi level L21+ sinh theo luật B | Ít tải nhận thức hơn, ván ngắn hơn khoảng 20% `[DOC review v2]` |
+| 3 | Tem Điểm ở level khó, giá decor | **Ca tối ở level khó: 2 điểm.** ~~Ca tối ở level thường: 1 điểm~~ (level thường không có Ca tối, câu 1). Thắng trong moves: 3 hoặc 2. Tổng giá decor mỗi chương = 90% số Tem Điểm `o35` kiếm được trong một lượt chơi (R19). Giá khởi điểm: ch1–2 2/2/3/3/4/5 (19), ch3+ 4/5/6/7/8/10 (40) | Level khó được thiết kế để vào Ca tối, nên không được phạt. `o35` hiện chỉ kiếm 19,6 trên 24 điểm ở ch1 (review GD v2) |
+| 4 | Luật nào cho người lớn tuổi | **ĐÃ CHỐT 2026-10-15: A là mặc định, level L21+ sinh theo luật A. Đề xuất cũ không dùng:** B là mặc định của bản phát hành (bỏ `?variant=b`). A chỉ chạy qua URL hoặc Remote Config cho A/B. Mọi level L21+ sinh theo luật B | Ít tải nhận thức hơn, ván ngắn hơn khoảng 20% `[DOC review v2]` |
 | 5 | Làm Daily Post trước playtest 7 ngày không? | **Có**, bản tối thiểu (M3, M4) | Không có daily thì không đo được D7 |
 | 6 | Độ dài ván | **Trung vị `o35` ≤ 6 phút** ở level thường, ≤ 8 phút ở level khó. Tương đương ≤ 46 và ≤ 52 lá | Nằm trong khoảng một ván Klondike. 2 ván vừa một phiên 15 phút |
 | 7 | Thị trường và ngôn ngữ | **Song ngữ ngay từ đầu.** Playtest có điều phối bằng VI (dễ tuyển người). Soft launch và UA bằng EN (US), nơi có tệp người chơi của đối thủ `[STORE]`. Chọn chủ đề tem dễ hiểu ở cả hai thị trường (tránh Sashimi ở level đầu) | Không khoá sớm. Chi phí copy thấp vì câu ngắn |
-| 8 | Bộ booster | **Luật B gộp còn 3:** Gợi ý (Pip), Nam châm, Tem Đa Năng (đổi tên từ Tem Vàng/Joker). Cộng Undo và Ô phụ. Bỏ Con dấu khỏi B (bỏ kịch bản L7). A giữ 4 booster | Con dấu và Nam châm khác nhau quá tinh tế. Tên "Tem Vàng" trùng với "Tem Điểm" (review #12) |
+| 8 | Bộ booster | **ĐÃ CHỐT 2026-10-15 theo câu 4: A giữ 4 booster (có Con dấu). Đề xuất cũ chỉ còn áp cho biến thể B:** Luật B gộp còn 3: Gợi ý (Pip), Nam châm, Tem Đa Năng (đổi tên từ Tem Vàng/Joker). Cộng Undo và Ô phụ. Bỏ Con dấu khỏi B (bỏ kịch bản L7). A giữ 4 booster | Con dấu và Nam châm khác nhau quá tinh tế. Tên "Tem Vàng" trùng với "Tem Điểm" (review #12) |
 
 ---
 
@@ -278,19 +311,19 @@ Mỗi vòng khoảng 1–2 giờ dev, kết thúc bằng commit riêng. **AC** =
 
 | Vòng | Việc | AC |
 |---|---|---|
-| **R1** | E1 và E2: `level_rules.mjs` và `level_spec.mjs` (TIERS, ROLE_ADJ, PATTERN, CHAPTER_TOPICS kèm fallback, `specFor`). Thêm cặp `CONFUSE` mới. Chưa sinh level | `node tools/level_spec.mjs --print=21-200` in bảng 180 dòng. Test `tools/tests/level_spec.test.mjs` pass: level thường ≤ 6 chủ đề (hard ≤ 7), 0 cặp `CONFUSE`, `n ≤ art`, số lá nằm trong tier, chủ đề mới có ở level intro, đạt hạn mức 40%/20%, không có 3 đỉnh liên tiếp |
-| **R2** | E9: validator với 4 profile, seed `check`, mục tiêu theo vai trò. Thêm profile `o35` vào `difficulty_report.mjs` | Chạy trên `levels_b.js` L2–L20, in bảng markdown, ghi `prototype/stamp/validate-report_b.json`, mất dưới 3 phút. Phải **bắt được** L14 B (`o35` khoảng 0,39 < 0,60) như `[SIM]` |
-| **R3** | E3–E8: `gen_levels.mjs`. Sinh **ch3 (L21–40)** bằng topic dự phòng | Validator pass 20/20. Chạy lại 2 lần cho cùng hash. Report có cột phút ước tính, trung vị `o35` ≤ 6 phút. Sinh xong dưới 10 phút |
-| **R4** | Chỉnh lại L1–L20 B bằng validator: tách seed tune/check trong `gen_proto_levels.mjs`, nới moves L12/L14/L17/L19 (và L4–L8 nếu trượt). Sửa Ice cream 4 ↔ Coffee ở A L14, A L20, B L14. **Dựng lại L1** bằng bố cục riêng, giữ 8 bước dạy | Validator B L2–L20 pass. L1: kịch bản 8 bước chạy hết trong `drag-scenarios.browser.js`, layout khác video (khác chủ đề hoặc thứ tự lá). Fuzz pass |
-| **R5** | Nối vào game. B là mặc định (giữ save A cho tester: nếu chưa có save B thì chép từ A). `LEVELS = B + LEVELS_GEN`. `?apk=1` chỉ để test nội bộ. `src/chapters.js` sinh `CHAPTERS` cho 11 chương. Copy tên chương 7–11 và `chapter_body` (EN/VI). Teaser chương tổng quát hoá (dùng ảnh bưu thiếp, có placeholder) | Fuzz cập nhật và pass (kiểm `LEVELS_GEN`). Ảnh chụp màn hình chính ch3 và thông báo khoá ch4. `tools/deploy_web.sh --build-only`: grep "APK 0.9.5" trong thư mục build ra 0 |
+| **R1** ✅ | E1 và E2: `level_rules.mjs` và `level_spec.mjs` (TIERS, ROLE_ADJ, PATTERN, CHAPTER_TOPICS kèm fallback, `specFor`). Thêm cặp `CONFUSE` mới. Chưa sinh level. **Xong 2026-10-15, theo luật A** | `node tools/level_spec.mjs --print=21-200` in bảng 180 dòng. Test `tools/tests/level_spec.test.mjs` pass: ~~level thường ≤ 6 chủ đề (hard ≤ 7)~~ số chủ đề đúng tier A (thường ≤ 9, khó ≤ 10), 0 cặp `CONFUSE`, `n ≤ art`, số lá nằm trong tier, chủ đề mới có ở level intro, đạt hạn mức 40%/20%, không có 3 đỉnh liên tiếp. **Kết quả: 14/14 test pass (0,4 giây). 180 dòng. 42 cặp CONFUSE. Hạn mức đạt đúng 8/20 và 4/20 ở cả 9 chương. Chạy CLI 2 lần cho cùng hash** |
+| **R2** ✅ | E9: validator với 4 profile, seed `check`, mục tiêu theo vai trò. Thêm profile `o35` vào `difficulty_report.mjs`. **Xong 2026-10-15** | Chạy trên `levels_b.js` L2–L20, in bảng markdown, ghi `prototype/stamp/validate-report_b.json`, mất dưới 3 phút. Phải **bắt được** L14 B (`o35` khoảng 0,39 < 0,60) như `[SIM]`. **Kết quả: B L2–L20 mất 13,6 giây (14 luồng). L14 B trượt với `o35` 0,43 < 0,60, `c25` 0,74 < 0,80 và CONFUSE Coffee+Ice cream. B 8/19 pass. A (mặc định) L2–L20 8/19 pass, mất 18,3 giây. Danh sách trượt ở `level-pipeline-r1-r3.md`** |
+| **R3** ✅ | E3–E8: `gen_levels.mjs`. Sinh **ch3 (L21–40)** bằng topic dự phòng. **Sửa 2026-10-15:** mỗi vị trí chọn giữa ứng viên tự sinh và ứng viên ABI (đổi chủ đề, moves chỉnh theo mục tiêu), xếp hạng trên seed tune, kiểm tra trên seed check. Chưa nối vào game | Validator pass 20/20. Chạy lại 2 lần cho cùng hash. Report có cột phút ước tính, trung vị `o35` ≤ 6 phút. Sinh xong dưới 10 phút. **Kết quả: validator pass 20/20 trên seed check (generator và validator độc lập đều cho 20/20). 2 lần chạy cùng sha256 `e9175fe3a7469eaf`. Report có cột phút: `o35` 4,7–6,3 phút ở level thường và bump, 6,9–7,5 ở level khó. 2 level lấy từ ABI (L29, L35). Thời gian: CPU khoảng 3.600 giây; 474 giây khi máy rảnh, 751–1.163 giây khi agent khác chiếm CPU, nên AC thời gian chỉ đạt khi máy rảnh. Seed chưa dùng (90000, 300 ván): 18/20, hai trượt sát biên `o35` +5. Dùng art thật Lantern/Knitting/Acorn. Chi tiết ở `level-pipeline-r1-r3.md`** |
+| **R4** | Chỉnh lại L1–L20 **A** (mặc định, sửa 2026-10-15; B chỉ còn là biến thể) bằng validator: tách seed tune/check trong `gen_proto_levels.mjs` (hoặc cho `gen_levels.mjs` nhận spec viết tay cho L2–L20), chuyển sang `level_rules.mjs`. Nới moves các level trượt `o35`: A L4, L7, L8, L17, L18, L19. Sửa Ice cream ↔ Coffee ở A L14, A L20, B L14. Quyết định trần cho L9 (48 lá, 6,7 phút), L10/L20 (58–60 lá). ~~Dựng lại L1~~ (bỏ: người dùng đã xin phép dùng nội dung ABI, rủi ro #8) | Validator A L2–L20 pass. Fuzz pass |
+| **R5** | Nối vào game. **Luật A là mặc định (sửa 2026-10-15)**, không đổi save key. `LEVELS = A + LEVELS_GEN`. `?apk=1` chỉ để so sánh nội bộ. `src/chapters.js` sinh `CHAPTERS` cho 11 chương. Copy tên chương 7–11 và `chapter_body` (EN/VI). Teaser chương tổng quát hoá (dùng ảnh bưu thiếp, có placeholder). Game đọc `tip` của level (`few_counters`, `big_envelope`, `preplaced`) | Fuzz cập nhật và pass (kiểm `LEVELS_GEN`). Ảnh chụp màn hình chính ch3 và thông báo khoá ch4. ~~grep "APK 0.9.5" ra 0~~ Bản build không còn `levels_apk.js` (level ABI đã đi qua `gen_levels.mjs` và validator) |
 
 ### Giai đoạn 2: sinh level chương 3+
 
 | Vòng | Việc | AC |
 |---|---|---|
-| **R6** | Sinh ch4–ch5 (L41–80). Có "Bao thư lớn" ở L41, 3 khay ở bump, level khó 7 chủ đề từ L70 | Validator pass 40/40. Test spec pass. L41 có 1 chủ đề `n = 8` (hoặc ghi rõ fallback `n = 7` nếu art chưa đủ) |
-| **R7** | Sinh ch6–ch8 (L81–140), `preplace` ở L87 | Validator pass 60/60. Bảng tóm tắt theo chương: trung vị số lá, `o35`, phút |
-| **R8** | Sinh ch9–ch11 (L141–200) | Validator pass 60/60. Toàn bộ L21–200: level thường ≤ 46 lá, level khó ≤ 52 lá. Trung bình `o35` ở level thường từng chương nằm trong 0.72–0.85 (không chương nào dễ hẳn hoặc khó hẳn) |
+| **R6** | Sinh ch4–ch7 (L41–120): `node tools/gen_levels.mjs --from=41 --to=120`. Có "Bao thư lớn" ở L41, 3 khay ở level nghỉ p16, 5 cột từ L66, level khó 9 chủ đề từ L70, `preplace` ở L87. **Gộp R6 và R7 cũ (2026-10-15):** generator đã tự chọn ứng viên và tự kiểm tra, mất khoảng 9 phút mỗi chương | Validator pass 80/80. Test spec pass. L41 có 1 chủ đề `n = 8` (hoặc ghi rõ fallback `n = 7`). Bảng tóm tắt theo chương: trung vị số lá, `o35`, phút, số level ABI |
+| **R7** | Sinh ch8–ch11 (L121–200), gộp R8 cũ | Validator pass 80/80. Toàn bộ L21–200: level thường ≤ 46 lá, level khó ≤ 54 lá. Trung bình `o35` ở level thường từng chương nằm trong 0.72–0.95 (không chương nào dễ hẳn hoặc khó hẳn; sàn slack làm `o35` thực tế cao hơn mục tiêu, xem `level-pipeline-r1-r3.md`) |
+| ~~R8~~ | Gộp vào R7 (2026-10-15) | |
 
 ### Giai đoạn 3: tối ưu gameplay cho người lớn tuổi
 
@@ -298,10 +331,10 @@ Mỗi vòng khoảng 1–2 giờ dev, kết thúc bằng commit riêng. **AC** =
 |---|---|---|
 | **R9** | Chạm trượt (review #1). Hỏi xác nhận Chơi lại/Home (#11). Tip `info` ≥ 6 giây, câu "Tem mới" giữ tới nước đi đầu (#9). Tip "chạm để tự đi" (#8) | Mở rộng `naive-drag.browser.js`: trượt 5/8/12pt thì lá vẫn đi. Bấm Chơi lại hiện hộp hỏi. Test kéo cũ vẫn pass |
 | **R10** | M1: lưu và tiếp tục ván dở | Test trình duyệt: đi 5 nước, reload, chọn "Chơi tiếp": moves, cột, ô, bộ bài giống hệt. Chọn "Ván mới" thì không trừ gì. Có sự kiện `level_resume` |
-| **R11** | M2: "Thư đến trễ" ở B. Luật Tem Điểm mới (câu 3). Bỏ `boom` và rung ở banner khó, câu mới "Hôm nay hơi đông thư, cứ thong thả" (#16) | Unit test cho `stars()` theo 5 trường hợp. Ảnh chụp panel hết lượt ở B. Ở B không có đường gọi `sfx('lose')`. A giữ nguyên |
+| **R11** | ~~M2 "Thư đến trễ" ở B~~ (bỏ: level thường vẫn thua, 2026-10-15). Luật Tem Điểm mới (câu 3: Ca tối ở level khó được 2 điểm). Bỏ `boom` và rung ở banner khó, câu mới "Hôm nay hơi đông thư, cứ thong thả" (#16) | Unit test cho `stars()`. Ảnh chụp banner khó. Level thường hết lượt vẫn hiện panel thua như hiện nay |
 | **R12** | M7 phần màn thắng: "Tiếp tục" là nút chính, x2 thành nút phụ từ L11. M8: thêm sự kiện, `MAX` 5000 | Ảnh chụp màn thắng ở L3 (không có x2) và L12 (x2 nhỏ). Bảng Events có `tap_drift`, `win_button`, `ad_offer`, `app_hidden`, `idle_long` |
 | **R13** | M7 cỡ chữ (#3) và S3 Cài đặt (chữ 3 mức, âm lượng, rung, giảm chuyển động) | Ảnh chụp 375×812 ở mức Lớn: L1, L20, màn thắng, album, Pause. Script kiểm tra không có phần tử tràn (`scrollWidth > clientWidth`) trong panel. Lựa chọn được lưu sau khi reload |
-| **R14** | Câu 8: B dùng 3 booster, đổi tên Tem Đa Năng / Wild Stamp, bỏ kịch bản Con dấu ở L7 B. Cứu khi kẹt vẫn là Nam châm rồi Tem Đa Năng | Fuzz pass. Ảnh chụp L9 và L15 ở B. Copy EN/VI không còn "Tem Vàng" |
+| ~~R14~~ | Bỏ (2026-10-15): luật A giữ 4 booster có Con dấu. Việc đổi tên "Tem Vàng" thành Tem Đa Năng (review #12) gộp vào R12 nếu PO đồng ý | |
 
 ### Giai đoạn 4: tính năng retention
 
@@ -336,7 +369,7 @@ Mỗi vòng khoảng 1–2 giờ dev, kết thúc bằng commit riêng. **AC** =
 | A4 | Decor ch3–7 (5 lưới) và 5 bưu thiếp | Thay placeholder |
 | A5 | Decor ch8–11 (4 lưới), 4 bưu thiếp, icon booster | Thay placeholder |
 
-Thứ tự gợi ý: R1 → R5 → A1 (song song R6) → R6–R8 → R9–R14 → R15–R18 → R19–R20 → A2–A5 cộng sinh lại các chương có art mới → R21–R22.
+Thứ tự gợi ý (sửa 2026-10-15): R1–R3 ✅ → R4 → R5 → A1 (song song R6) → R6–R7 → R9–R13 → R15–R18 → R19–R20 → A2–A5 cộng sinh lại các chương có art mới → R21–R22. **Tổng: 20 vòng dev** (22 − R8 − R14), trong đó còn 17.
 
 ---
 
@@ -346,9 +379,9 @@ Vòng lặp dừng khi **mọi ô dưới đây đều đạt**. Các mục Coul
 
 | Nhóm | Tiêu chí |
 |---|---|
-| Level | 200 level chiến dịch và 60 Daily. Bản build phát hành có 0 level APK (grep "APK 0.9.5" ra 0). L1 có bố cục riêng |
+| Level | 200 level chiến dịch và 60 Daily. ~~Bản build phát hành có 0 level APK. L1 có bố cục riêng~~ (bỏ 2026-10-15: được dùng level ABI). Mọi level L21+ có `source` (`gen:` hoặc `abi:`) và đã qua validator |
 | Validator | 100% pass trên seed `check` (≥ 300 ván): level thường `o35` ≥ mục tiêu của chương và `o35` +5 ≥ 0.93. Level khó: `c10` 0.15–0.35, kẹt ≤ 0.10. Level nghỉ: `o35` ≥ 0.85 |
-| Đường cong | Level thường ≤ 6 chủ đề, ≤ 46 lá, trung vị `o35` ≤ 6 phút. Level khó ≤ 52 lá, ≤ 8 phút. 0 cặp `CONFUSE`. Mỗi chương 20 level có 4 level nghỉ. Không có 3 đỉnh liên tiếp |
+| Đường cong | Level thường **luật A ≤ 8 chủ đề** (bump ≤ 9), ≤ 46 lá, trung vị `o35` ≤ 6 phút (bump ≤ 6,5). Level khó ≤ 54 lá, ≤ 8 phút. 0 cặp `CONFUSE`. Mỗi chương 20 level có 4 level nghỉ. Không có 3 đỉnh liên tiếp |
 | Chủ đề mới | ≥ 18 chủ đề mới có art (≥ 2 mỗi chương, mục tiêu 27), qua confusion check |
 | Tính năng Must | M1–M9 xong. 8 câu PO đã chốt (theo mặc định mục 5 hoặc theo PO) |
 | Economy | Sim R19 đạt (a)–(d) |
@@ -365,11 +398,11 @@ Vòng lặp dừng khi **mọi ô dưới đây đều đạt**. Các mục Coul
 | 1 | **Người chơi mô phỏng không phải người lớn tuổi thật.** `o35` là giả định, có thể quá hào phóng hoặc quá khắt khe | Playtest có điều phối (8–10 người) ngay sau R14. Thêm hệ số moves toàn cục chỉnh được qua Remote Config (+0–15%) |
 | 2 | **Art phụ thuộc người dùng** (khoảng 50 ảnh, giới hạn upload) | Dùng topic dự phòng để không chặn dev. DoD chỉ cần 18 chủ đề mới. Decor dự phòng: đổi màu decor chương 1–2 |
 | 3 | **200 level không có luật mới** dễ gây đơn điệu với người chơi chăm (ABI bị chê đúng điểm này `[STORE]`) | 3 chủ đề mới mỗi chương, biến thể cấu trúc (3.4), Could "Cột ngửa" và "Tem hiếm". Đo `level_quit` theo chương |
-| 4 | Soft-fail làm mất chỗ chi xu chính, doanh thu yếu | R19 đo lại. Chỗ chi chuyển sang Gợi ý, Nam châm và +5 tùy chọn. PO quyết giá và IAP |
+| 4 | ~~Soft-fail làm mất chỗ chi xu chính~~ Không còn (level thường vẫn thua, 2026-10-15). Rủi ro ngược lại: người lớn tuổi thua nhiều thì bỏ game | Moves chỉnh theo mục tiêu `o35` trên seed riêng. Thêm hệ số moves toàn cục qua Remote Config (rủi ro #1). Đo `level_fail` theo level |
 | 5 | Chủ đề mới dễ nhầm (Candle–Lantern, Bread–Cake, Weather–Planet…) | Thêm cặp vào `CONFUSE` trước khi sinh. Confusion test ở cỡ lá thật |
 | 6 | Đổi mặc định sang B làm tester TestFlight mất tiến trình (khác save key) | Chép save A sang B lần đầu (R5) |
 | 7 | Validator bị khớp quá sát nếu dùng seed `check` để chỉnh | Quy tắc E4: seed `check` chỉ để kiểm tra. Đổi seed `check` mỗi lần QA lớn (R21) |
-| 8 | **L1 dựng tay theo video level 1 của ABI**; L2–L9 bản A dùng số moves và số chủ đề từ video | R4 dựng lại L1. Bản phát hành dùng B. PO và pháp lý xác nhận L2–L9 (layout tự sinh, chỉ tham số giống) |
+| 8 | ~~L1 dựng tay theo video level 1 của ABI~~ | **Đóng 2026-10-15:** người dùng đã xin phép dùng nội dung ABI |
 | 9 | Ca tối ở level khó vẫn có thể bị cảm nhận như "thua" (review GD v2) | Bỏ `boom` và rung, cho 2 Tem Điểm, copy ấm. Hỏi trong playtest: "Bạn có nghĩ mình đã thua không?" |
 
 ## 9. Câu hỏi còn mở
