@@ -250,5 +250,113 @@
  "Nautical": {
   "dir": "cards/nautical",
   "arts": 7
+ },
+ "Lantern": {
+  "dir": "cards/lantern",
+  "arts": 8
+ },
+ "Knitting": {
+  "dir": "cards/knitting",
+  "arts": 8
+ },
+ "Acorn": {
+  "dir": "cards/acorn",
+  "arts": 8
+ },
+ "Winter": {
+  "dir": "cards/winter",
+  "arts": 8
+ },
+ "Candle": {
+  "dir": "cards/candle",
+  "arts": 8
+ },
+ "Gift": {
+  "dir": "cards/gift",
+  "arts": 8
+ },
+ "Luggage": {
+  "dir": "cards/luggage",
+  "arts": 8
+ },
+ "Umbrella": {
+  "dir": "cards/umbrella",
+  "arts": 8
+ },
+ "Camera": {
+  "dir": "cards/camera",
+  "arts": 8
+ },
+ "Lighthouse": {
+  "dir": "cards/lighthouse",
+  "arts": 8
+ },
+ "Treasure": {
+  "dir": "cards/treasure",
+  "arts": 8
+ },
+ "Cactus": {
+  "dir": "cards/cactus",
+  "arts": 8
+ },
+ "Bread": {
+  "dir": "cards/bread",
+  "arts": 8
+ },
+ "Cheese": {
+  "dir": "cards/cheese",
+  "arts": 8
+ },
+ "Pottery": {
+  "dir": "cards/pottery",
+  "arts": 8
+ },
+ "Fishing": {
+  "dir": "cards/fishing",
+  "arts": 8
+ },
+ "Picnic": {
+  "dir": "cards/picnic",
+  "arts": 8
+ },
+ "Painting": {
+  "dir": "cards/painting",
+  "arts": 8
+ },
+ "Stationery": {
+  "dir": "cards/stationery",
+  "arts": 8
+ },
+ "Wooden Toys": {
+  "dir": "cards/wooden_toys",
+  "arts": 8
+ },
+ "Honey": {
+  "dir": "cards/honey",
+  "arts": 8
+ },
+ "Fireworks": {
+  "dir": "cards/fireworks",
+  "arts": 8
+ },
+ "Mask": {
+  "dir": "cards/mask",
+  "arts": 8
+ },
+ "Bell": {
+  "dir": "cards/bell",
+  "arts": 8
+ },
+ "Weather": {
+  "dir": "cards/weather",
+  "arts": 8
+ },
+ "Origami": {
+  "dir": "cards/origami",
+  "arts": 8
+ },
+ "Keys": {
+  "dir": "cards/keys",
+  "arts": 8
  }
 }

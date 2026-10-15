@@ -62,7 +62,11 @@ Bộ tem Cocktail (martini có ô liu, margarita) làm App Store xếp app 13+ �
 - Thư mục `assets/cards/cocktail` thành `assets/cards/juice`. Đổi tên trong `manifest.json`, `levels*.js`, `gen_proto_levels.mjs`, `copy.js`. Save cũ: album `Cocktail` tự chuyển sang `Juice` khi tải (`main.js`).
 - Các chủ đề đồ uống khác (Soda, Soft drink, Coffee, Tea) đã soát, không có hình rượu bia.
 
-## 7. Còn lại
+## 7. Đợt art 1 (chuẩn bị 2026-10-15)
+
+27 chủ đề tem mới chương 3–11 (icon ở ô 9 của lưới), 54 decor, 9 bưu thiếp teaser và 6 ảnh polish (nền cao 1080×2400, sprite hạt, túi thư, icon màn chính, hệ nút): 51 ảnh, 4 đợt. Prompt, tên file và lệnh cắt từng ảnh nằm ở `art-batch-1.md`. `art_slice.py` có thêm `--grid CxR`, hậu tố kích thước `@N`/`@WxH`, chế độ `postcard` và `bg`.
+
+## 8. Còn lại
 
 - ~~Âm thanh APK~~: đã thay bằng SFX tự tổng hợp (`tools/synth_sfx.py`, `prototype/stamp/sfx/`). `prototype/stamp/assets/` được commit, chỉ còn ignore `assets/audio/`.
 - ~~Level 7 có Zoo cạnh Sea life và Float~~: đã đổi Zoo → Cake (P0).

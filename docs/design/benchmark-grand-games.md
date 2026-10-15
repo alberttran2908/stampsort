@@ -349,7 +349,28 @@ Mỗi vòng khoảng 1–2 giờ dev. Ký hiệu: **[ART]** cần vẽ mới qua
 - Công tắc "Nhạc nền: Bật/Tắt" (EN "Music: On/Off") trong bảng Tạm dừng, riêng với Âm thanh, lưu `localStorage['ss_music']`, mặc định bật. Màn chính chưa có nút Cài đặt (P9).
 - `tools/deploy_web.sh` copy thêm `music/` và đổi tên theo mã băm như `sfx/`.
 - Nghe thử: `sfx-preview.html` có mục "Nhạc nền và không khí (P10)", phát đúng độ to trong game, có thể bấm SFX chồng lên.
-- **Chưa xong tiêu chí:** người dùng chưa nghe duyệt trên loa điện thoại. Phổ nhạc màn chơi dồn nhiều ở 120–300 Hz (khoảng 70% năng lượng), trên loa điện thoại có thể nghe mỏng: nếu cần, nâng quãng tay trái lên 1 quãng 8 trong `song_play()`.
+- **Chưa xong tiêu chí:** người dùng chưa nghe duyệt trên loa điện thoại. ~~Phổ nhạc màn chơi dồn nhiều ở 120–300 Hz (khoảng 70% năng lượng), trên loa điện thoại có thể nghe mỏng~~: đã sửa ở P10 v2 bên dưới.
+
+**P10 v2. Nhạc màn chơi cho loa điện thoại** (2026-10-15) `[CODE tools/synth_music.py]`
+- `song_play()`: tay trái và nền ấm lên 1 quãng 8 (E4–C5 thay cho E3–C4). Nốt gốc giữ ở quãng 3 nhưng nhỏ lại (vel 0.28 → 0.22), thêm bè quãng 8 rất nhẹ (0.12) để loa nhỏ vẫn nghe ra gốc hợp âm. Giai điệu piano C5–G5 → E5–C6, hộp nhạc C5–A5 → E5–D6. Piano nỉ sáng hơn một chút (`felt_piano(..., bright=0.25)`). Âm sắc cuối: presence +2 dB ở 2,4 kHz, lowpass 4 → 4,5 kHz (`TONE['play']`). Vẫn ngũ cung C, 66 BPM, cùng seed, cùng bố cục.
+- `home.mp3` và `ambience.mp3` không đổi (sinh lại ra file trùng byte).
+- Sửa cách đo điểm nối (`seam_db`): bản cũ so `|y[0] − y[−1]|` với bước trung vị nên báo nhầm "−43,7 dB" khi điểm nối rơi đúng sườn dốc của sóng (bước 0,0051, nằm giữa 2 bước kề 0,0049 và 0,0053, tức liền mạch). Bản mới đo độ gãy (sai số dự đoán tuyến tính) so với trung vị 400 mẫu quanh đó.
+- Đo trên file mp3 đã giải mã (22,05 kHz). "Loa điện thoại" là mô hình xấp xỉ: highpass Butterworth 4 bậc 600 Hz (−13 dB ở 420 Hz, −24 dB ở 300 Hz). "Mất" là chênh loudness K-weighted không gate trước/sau mô hình loa. Script đo nằm ở scratchpad, không commit.
+
+| play.mp3 | v1 | v2 |
+|---|---|---|
+| Năng lượng < 120 / 120–300 / 300–1k / 1–2,5k Hz | 0 / **69,7** / 29,8 / 0,5 % | 0 / **13,4** / 78,7 / 7,9 % |
+| Trọng tâm phổ (centroid) | 326 Hz | 519 Hz |
+| LUFS-I file (meta / đo trên mp3) | −24,0 / −24,3 | −24,0 / −24,3 |
+| Độ to trong game (gain trong `meta.json`) | −31,5 LUFS (0,4217) | −31,5 LUFS (0,4217), không đổi |
+| Mất trên loa điện thoại | **8,3 dB** | **5,2 dB** |
+| Cách âm thao tác trên loa điện thoại (thao tác −28,5, mất trung bình 2,4 dB ở place/pick/draw/flip/click) | khoảng 8,9 dB | khoảng 5,8 dB |
+| True peak | −6,0 dB | −5,5 dB |
+| Điểm nối (độ gãy, cách đo mới) | −174 dB | −77,6 dB (ngưỡng < −50) |
+
+- Nhạc vẫn thấp hơn SFX khoảng 3 dB trên loa đầy dải. Trên loa điện thoại, khoảng cách còn khoảng 6 dB (trước khoảng 9 dB), tức nhạc rõ hơn khoảng 3 dB mà không đổi mức trong game. Đã thử sáng hơn nữa (bright 0.45, presence +3 dB): chỉ được thêm 0,3 dB, vì phần còn lại nằm ở nốt gốc 300–600 Hz. Muốn hơn nữa thì phải đẩy giai điệu lên quãng 6, dễ chói với người lớn tuổi, nên dừng ở đây.
+- `home.mp3` cũng dồn 57,5% ở 120–300 Hz, mất 6,9 dB trên loa điện thoại. Chưa sửa vì màn chính có hộp nhạc và contrabass làm rõ nhịp. Nếu người dùng nghe thấy mỏng thì áp cùng cách (nâng tay trái trong `song_home()`, `TONE['home']`).
+- **Còn chờ:** người dùng nghe trên loa iPhone (bản play mới và home cũ), duyệt hoặc báo lại.
 
 ---
 

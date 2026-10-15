@@ -5,13 +5,14 @@ Tự tổng hợp bằng toán, không dùng sample hay nhạc có bản quyền
 Dùng chung bộ tổng hợp và bộ đo của tools/synth_sfx.py (mộc cầm, hộp nhạc, reverb phòng gỗ, K-weighting).
 
   home.mp3      màn chính: piano nỉ (felt piano) + hộp nhạc + contrabass gảy nhẹ, 76 BPM, 24 ô nhịp (~76 s)
-  play.mp3      màn chơi: piano nỉ thưa + hộp nhạc rất thưa + nền ấm nhỏ, 66 BPM, 20 ô nhịp (~73 s)
+  play.mp3      màn chơi: piano nỉ thưa + hộp nhạc rất thưa + nền ấm nhỏ, 66 BPM, 20 ô nhịp (~73 s).
+                v2: tay trái và nền lên 1 quãng 8, giai điệu E5-C6, sáng hơn chút, để loa điện thoại không làm mỏng
   ambience.mp3  bưu điện: room tone gỗ, giấy sột soạt thưa, đồng hồ quả lắc rất nhỏ, chim xa ngoài cửa sổ (40 s)
 
 Nguyên tắc:
   - Thang C trưởng ngũ cung (C D E G A), trùng bộ SFX v3, nên SFX chồng lên nhạc không lệch tông.
     Hợp âm cũng chỉ dùng nốt ngũ cung (C6/9, Am7, Dm9sus, G9sus), không có nốt F, B.
-  - Không trống, không nốt cao chói: giai điệu tối đa A5, lowpass 4 kHz, highpass 120 Hz.
+  - Không trống, không nốt cao chói: giai điệu tối đa A5 (màn chơi D6), lowpass 4 kHz (màn chơi 4.5 kHz), highpass 120 Hz.
   - Vòng lặp liền mạch: render dài hơn rồi gập phần đuôi (nốt ngân, reverb) về đầu, nên tín hiệu tuần hoàn đúng chu kỳ.
     File = 1 chu kỳ + XF giây đầu lặp lại ở cuối. audio.js phát bằng crossfade XF giây giữa 2 bản (không phụ thuộc
     độ trễ encoder mp3), nên điểm nối không có click.
@@ -37,16 +38,22 @@ IN_GAME = {'home': -31.0, 'play': -31.5, 'ambience': -38.0}   # LUFS mong muốn
 FILE_LUFS = {'home': -24.0, 'play': -24.0, 'ambience': -26.0}
 AMB_PLAY_LUFS = -42.0
 PENTA = ['C', 'D', 'E', 'G', 'A']
+BRIGHT_PLAY = 0.25        # độ sáng thêm cho piano nỉ ở màn chơi (felt_piano bright)
+TONE = {                  # chỉnh âm sắc cuối cùng theo bản (finish_loop): presence (Hz, dB), lowpass Hz
+    'home': dict(presence=None, lowpass=4000),
+    'play': dict(presence=(2400, 2.0), lowpass=4500),
+}
 
 
 # ============================================================ nhạc cụ
-def felt_piano(f, d=3.0, vel=0.6):
+def felt_piano(f, d=3.0, vel=0.6, bright=0.0):
     """Piano nỉ: búa bọc nỉ dày nên ít hài cao, attack tròn ~7 ms, 2 dây lệch nhau 0.8 cent (ấm, có 'thở').
-    Hài cao tắt nhanh hơn hài thấp; nốt càng cao ngân càng ngắn. Thêm 'thịch' nỉ rất nhỏ lúc búa chạm."""
+    Hài cao tắt nhanh hơn hài thấp; nốt càng cao ngân càng ngắn. Thêm 'thịch' nỉ rất nhỏ lúc búa chạm.
+    bright > 0: nỉ mỏng hơn, hài 2-6 rõ hơn (dùng ở màn chơi để loa điện thoại vẫn nghe ra nốt)."""
     t = T(d)
     B = 0.00035                                                   # độ không điều hoà của dây
     t60 = float(np.clip(4.2 - 1.0 * np.log2(f / 130.8), 1.4, 4.2))
-    roll = 0.75 - 0.35 * vel                                      # đánh nhẹ -> càng ít hài cao
+    roll = max(0.2, 0.75 - 0.35 * vel - bright)                   # đánh nhẹ -> càng ít hài cao
     out = np.zeros_like(t)
     for k in range(1, 9):
         fk = f * k * np.sqrt(1 + B * k * k)
@@ -207,6 +214,10 @@ def song_home():
 
 
 def song_play():
+    """v2 (2026-10-15): bản v1 dồn ~70% năng lượng ở 120-300 Hz, loa điện thoại (gần như câm dưới 400 Hz) làm mất
+    ~8 dB nên nghe mỏng. Tay trái và nền ấm nâng 1 quãng 8 (E4-C5 thay cho E3-C4), giai điệu lên E5-C6,
+    nốt trầm giữ ở quãng 3 nhưng nhỏ lại và có bè quãng 8 rất nhẹ (loa nhỏ vẫn 'nghe' ra gốc hợp âm qua hài),
+    piano nỉ sáng hơn một chút (BRIGHT_PLAY) và finish_loop có presence nhẹ ở 2.4 kHz."""
     rng = np.random.default_rng(1966)
     S.rng = np.random.default_rng(66)
     bpm, bars = 66, 20
@@ -215,21 +226,26 @@ def song_play():
     buf = np.zeros(L + int(EXTRA * SR))
     prog = [CHORDS_PLAY[(b // 2) % 4] for b in range(bars)]
     hum = lambda: rng.normal(0, 0.008)
+    up = lambda nm: nm[:-1] + str(int(nm[-1]) + 1)                       # lên 1 quãng 8
+    br = BRIGHT_PLAY
     for b, (bass, lh, _) in enumerate(prog):
         t0 = b * 4 * beat
+        lh8 = [up(nm) for nm in lh]
+        root = bass if N(bass) >= N('C3') else bass[0] + '3'
         if b % 2 == 0:   # hợp âm đổi: nền ấm rất nhỏ ngân 2 ô nhịp + nốt trầm + hợp âm rải chậm
-            place(buf, t0, soft_pad([lh[0], lh[1], lh[2]], 8 * beat + 1.5, 0.13))
-            place(buf, t0 + hum(), felt_piano(N(bass if N(bass) >= N('C3') else bass[0] + '3'), 5.0, 0.28))
-            for k, nm in enumerate(lh):
-                place(buf, t0 + (1 + k * 0.5) * beat + hum(), felt_piano(N(nm), 4.0, 0.24))
+            place(buf, t0, soft_pad(lh8, 8 * beat + 1.5, 0.11))
+            place(buf, t0 + hum(), felt_piano(N(root), 5.0, 0.22, br))
+            place(buf, t0 + hum(), felt_piano(N(up(root)), 4.0, 0.12, br))
+            for k, nm in enumerate(lh8):
+                place(buf, t0 + (1 + k * 0.5) * beat + hum(), felt_piano(N(nm), 3.6, 0.22, br))
         else:            # ô thứ hai: 1 nốt nhắc lại rất nhẹ
-            place(buf, t0 + 2 * beat + hum(), felt_piano(N(lh[1]), 3.0, 0.2))
+            place(buf, t0 + 2 * beat + hum(), felt_piano(N(lh8[1]), 3.0, 0.18, br))
     tones = [c[2] for c in prog]
     # giai điệu thưa: piano nỉ ở nửa đầu, hộp nhạc ở nửa sau, nhiều câu nghỉ
-    for (bt, nm, dur, vel) in melody(rng, tones[0:10], 10, lo='C5', hi='G5', density=0.6, start='E5'):
-        place(buf, bt * beat + hum(), felt_piano(N(nm), max(2.0, dur * beat + 1.5), vel * 0.9))
-    for (bt, nm, dur, vel) in melody(rng, tones[10:20], 10, lo='C5', hi='A5', density=0.6, start='A5'):
-        place(buf, (40 + bt) * beat + hum(), music_box(N(nm), 1.8, vel * 0.75))
+    for (bt, nm, dur, vel) in melody(rng, tones[0:10], 10, lo='E5', hi='C6', density=0.6, start='G5'):
+        place(buf, bt * beat + hum(), felt_piano(N(nm), max(2.0, dur * beat + 1.5), vel * 0.85, br))
+    for (bt, nm, dur, vel) in melody(rng, tones[10:20], 10, lo='E5', hi='D6', density=0.6, start='A5'):
+        place(buf, (40 + bt) * beat + hum(), music_box(N(nm), 1.8, vel * 0.7))
     return buf, L, dict(bpm=bpm, bars=bars)
 
 
@@ -300,11 +316,13 @@ def soft_compress(y, above_db=4.0, ratio=2.0, win=0.3):
     return y * g
 
 
-def finish_loop(x, L, periodic=False):
+def finish_loop(x, L, periodic=False, presence=None, lowpass=4000):
     """Lọc (trước khi gập, để cả phần vang của bộ lọc cũng tuần hoàn), gập về chu kỳ L."""
     x = hp(x, 120)                                                # như SFX v3: không dồn năng lượng dưới loa điện thoại
     x = S.peq(x, 190, -5, 0.7)                                    # bớt ù dải 150-250 Hz (nốt trầm piano ngân dài)
-    x = lp(x, 4000, 4)
+    if presence:
+        x = S.peq(x, presence[0], presence[1], 0.8)               # chút sáng ở dải loa điện thoại phát tốt
+    x = lp(x, lowpass, 4)
     return x[:L] if periodic else circular(x, L)
 
 
@@ -320,9 +338,13 @@ def write_mp3(path, x, kbps):
 
 
 def seam_db(y):
-    """Sai biệt tại điểm nối so với đỉnh: |y[0] - y[-1]| trừ đi bước trung bình quanh đó (dB so với đỉnh)."""
-    jump = abs(y[0] - y[-1])
-    local = np.median(np.abs(np.diff(np.concatenate([y[-200:], y[:200]]))))
+    """Độ gãy tại điểm nối, dB so với đỉnh: sai số dự đoán tuyến tính y[0] ≈ 2·y[-1] - y[-2] (click = gãy đột ngột),
+    trừ đi sai số trung vị của 400 mẫu quanh đó. Bản cũ so |y[0] - y[-1]| với bước trung vị nên báo nhầm
+    khi điểm nối rơi đúng sườn dốc của sóng (bước lớn nhưng liền mạch)."""
+    z = np.concatenate([y[-202:], y[:200]])
+    err = np.abs(z[2:] - 2 * z[1:-1] + z[:-2])                    # err[199] là sai số tại y[0]
+    jump = err[199]
+    local = np.median(err)
     return 20 * np.log10(max(jump - local, 1e-9) / (np.abs(y).max() + 1e-12))
 
 
@@ -334,7 +356,7 @@ def build(name):
     if name == 'ambience':
         y = raw                                                   # đã tuần hoàn và đã lọc
     else:
-        y = soft_compress(finish_loop(reverb(raw, 0.38, 2.4, 2400), L))
+        y = soft_compress(finish_loop(reverb(raw, 0.38, 2.4, 2400), L, **TONE[name]))
     y = y * 10 ** ((FILE_LUFS[name] - lufs_i(y)) / 20)
     peak = np.abs(y).max()
     if peak > 0.84:                                               # chừa headroom ~ -1.5 dB (không cần limiter)
