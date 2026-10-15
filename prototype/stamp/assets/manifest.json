@@ -358,5 +358,29 @@
  "Keys": {
   "dir": "cards/keys",
   "arts": 8
+ },
+ "Books": {
+  "dir": "cards/books",
+  "arts": 8
+ },
+ "Fireplace": {
+  "dir": "cards/fireplace",
+  "arts": 8
+ },
+ "Snow Sports": {
+  "dir": "cards/snow_sports",
+  "arts": 8
+ },
+ "Bicycle": {
+  "dir": "cards/bicycle",
+  "arts": 8
+ },
+ "Sewing": {
+  "dir": "cards/sewing",
+  "arts": 8
+ },
+ "Playground": {
+  "dir": "cards/playground",
+  "arts": 8
  }
 }

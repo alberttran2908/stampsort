@@ -950,3 +950,91 @@ Các lưới decor đợt 4 đều trả nền trong suốt và lệch lưới, 
 - 27 chủ đề đủ 8 tem + `icon.png` + `icon_line.png`, đã nén. Không file nào đang được game dùng bị ghi đè (`git status` chỉ có file mới).
 - **Level Dev:** sinh lại chương 3–11 (`tools/gen_levels.mjs`); xem cặp dễ nhầm đã thấy trên ảnh thật: `fishing↔picnic` (giỏ mây có quai, xô/hộp inox có quai, cùng chương 8), Winter/0–3 (bốn người tuyết), Cactus/1 và /6 (hai cây tròn có hoa), cùng các cặp giả thuyết ở 1.7.
 - **Feature Dev:** gắn `CHAPTERS[2..10].decor` theo gợi ý từng lưới (`station_clock` nay rộng 1200 như món TRÊN); CSS nền `bg_*_tall.jpg`; hệ nút mới (đo lại 9-slice, thêm dịch xuống khi nhấn vì ảnh `_down` khác ít); icon màn chính, `level_pin`, túi thư `mailbag_open/full`, `pip_wait`; sprite hạt `fx/`; màn "Chương N sắp mở" đọc `assets/chN/postcard.jpg` (đã có ch3–ch11); icon booster `ui/ic_wild.png`, `ui/ic_magnet.png`; decor hiếm `decor/rare_postbox.png`.
+
+---
+
+## 8. Đợt 5 (11 ảnh): chương 12–13 và khách thăm văn phòng
+
+**Nguồn nhu cầu:** người điều phối 2026-10-15 (game có 13 chương, 240 level). Chủ đề do Art agent chọn: không trùng 90 chủ đề trong `manifest.json`, né các cặp `CONFUSE` trong `tools/level_rules.mjs`, không rượu, vũ khí, cờ bạc. Đã thêm 6 khoá vào `manifest.json` (`{"dir": "cards/<slug>", "arts": 8}`) và `research/art-redo/grid_map.json` (`[0..7, "icon"]`). **Level Dev** cần thêm chương 12–13 vào `CHAPTER_TOPICS` của `tools/level_spec.mjs` (tôi không sửa file này).
+
+| Ch | Khu | Chủ đề (EN / VI) | slug | Lý do chọn, cặp dễ nhầm cần xem |
+|---|---|---|---|---|
+| 12 | Rừng Thông / Pine Forest (Đông) | Books / Sách | `books` | Đọc sách bên lò sưởi. Có thể gần Stationery (sổ): prompt cấm sổ gáy xoắn và bút |
+| 12 | | Fireplace / Lò sưởi | `fireplace` | Có lửa nhỏ: gần Candle, Lantern (giả thuyết) |
+| 12 | | Snow Sports / Thể thao tuyết | `snow_sports` | Cấm xe trượt, giày trượt, ủng, kính để né Winter, Footwear, Glasses |
+| 13 | Thung Lũng Hoa / Flower Valley (Xuân) | Bicycle / Xe đạp | `bicycle` | Cấm chuông (Bell). Có thể gần Car/Truck vì cùng là xe (giả thuyết) |
+| 13 | | Sewing / May vá | `sewing` | Cấm len và kim đan. Nên thêm `Sewing↔Knitting` vào `CONFUSE` |
+| 13 | | Playground / Sân chơi | `playground` | Không có chủ đề nào gần |
+
+Ảnh mẫu như đợt 1–4 (`REF-CAT`, `REF-TOPIC`, `REF-DECOR`, `REF-PIP`, `REF-CARD`). Lệnh cắt chủ đề: `tools/art_take.sh <slug>` (chủ đề mới: cắt cả icon, chạy `icon_line.py`, làm `preview_<slug>.jpg`), thêm `--fixed` khi script báo `THIẾU`. Nén `pngquant --force --ext .png --quality 70-90`.
+
+### Chat 5A: 6 chủ đề (đính kèm `REF-CAT`, `REF-TOPIC` ở lệnh đầu)
+
+Mọi prompt dùng chung 2 đoạn đầu (style, layout) như T02. Ở lệnh đầu chat dùng "attached reference images".
+
+| Mã | Tải về | Lệnh cắt |
+|---|---|---|
+| T28 Books | `lpo_topic_books.png` | `tools/art_take.sh books` |
+| T29 Fireplace | `lpo_topic_fireplace.png` | `tools/art_take.sh fireplace` |
+| T30 Snow Sports | `lpo_topic_snow_sports.png` | `tools/art_take.sh snow_sports` |
+| T31 Bicycle | `lpo_topic_bicycle.png` | `tools/art_take.sh bicycle` |
+| T32 Sewing | `lpo_topic_sewing.png` | `tools/art_take.sh sewing` |
+| T33 Playground | `lpo_topic_playground.png` | `tools/art_take.sh playground` |
+
+Phần danh sách món (thay cho Row 1–3 và Do not draw của T02):
+
+- **T28 Books:** Row 1: (1) stack of three hardcover books in red, green and blue; (2) open book with blank cream pages (no writing); (3) old brown leather-bound book with a brass clasp. Row 2: (4) upright book with a red ribbon bookmark; (5) small wooden book stand holding an open book; (6) short row of books between two wooden bookends. Row 3: (7) pile of paperback books tied with string; (8) picture book with a little castle on the cover (no title); (9) THEME ICON: a simple closed book. Do not draw: notebooks or spiral binding, pencils, pens, glasses, letters or any writing, people.
+- **T29 Fireplace:** Row 1: (1) stone fireplace with a small warm fire and a wooden mantel; (2) black cast-iron wood stove with a chimney pipe; (3) neat stack of split firewood logs. Row 2: (4) wicker basket full of firewood; (5) wooden bellows with a leather middle; (6) brass fire screen with a curly pattern. Row 3: (7) brass fireplace shovel and brush on a small stand; (8) cozy rocking chair with a plaid blanket; (9) THEME ICON: a simple fireplace with a small flame. Do not draw: candles, lanterns, lamps, matches, pokers or tongs, smoke clouds, people, animals.
+- **T30 Snow Sports:** Row 1: (1) pair of red skis with two ski poles; (2) blue snowboard with simple stripes; (3) curling stone with a red handle. Row 2: (4) ski lift chair hanging from a cable; (5) ice hockey stick with a black puck; (6) red cable car gondola. Row 3: (7) pair of wooden snowshoes; (8) small gold medal on a striped ribbon (no numbers); (9) THEME ICON: two crossed skis. Do not draw: snowmen, snowflakes, sleds, ice skates, boots, goggles, people.
+- **T31 Bicycle:** Row 1: (1) classic city bicycle with a front basket of flowers; (2) penny-farthing bicycle with a huge front wheel; (3) red child's tricycle. Row 2: (4) tandem bicycle for two; (5) small wooden balance bike; (6) delivery cargo bicycle with a wooden box at the front. Row 3: (7) unicycle; (8) mint vintage kick scooter; (9) THEME ICON: a simple bicycle. Do not draw: bells, cars, motorbikes, helmets, riders or people, text.
+- **T32 Sewing:** Row 1: (1) vintage sewing machine; (2) three spools of coloured thread; (3) red tomato pincushion with a few pins. Row 2: (4) silver thimble; (5) coiled yellow tape measure with plain tick marks (no numbers); (6) handful of colourful round buttons. Row 3: (7) dress form with pinned fabric (no head); (8) wooden embroidery hoop with a simple stitched flower; (9) THEME ICON: a simple spool of thread with a needle. Do not draw: yarn balls, knitting needles, scissors, knives, hands or people, text.
+- **T33 Playground:** Row 1: (1) wooden swing hanging from an A-frame; (2) small slide with a ladder; (3) seesaw. Row 2: (4) sandbox with a little bucket and spade; (5) colourful merry-go-round; (6) climbing frame with monkey bars. Row 3: (7) spring rider shaped like a round flower; (8) tyre swing hanging from a branch; (9) THEME ICON: a simple swing. Do not draw: children or people, animals, balls, kites, numbers, text.
+
+### Chat 5B: decor và bưu thiếp chương 12–13 (đính kèm `REF-DECOR`, `REF-PIP` ở D12; `REF-CARD` ở C12)
+
+**D12 Rừng Thông (đông).** Tải về `lpo_decor_ch12.png`. Mở đầu và layout như D4 ("cosy pine forest winter tones"). Row 1: a garland of pine branches and pine cones with small red ribbons, hanging in a gentle curve. Row 2: (4) a pair of crossed wooden snowshoes on a wall hook; (5) a wooden cuckoo clock shaped like a little log cabin with pine-cone weights (no numbers); (6) a small carved wooden owl on a wall shelf. Row 3: (7) a tall glass jar of pine cones tied with a red ribbon; (8) Pip sleeping in a little log-cabin cat bed with a plaid cushion; (9) a small cast-iron wood stove with a kettle, as an alternative.
+
+```
+mv ~/Downloads/lpo_decor_ch12.png research/art-redo/gen/
+python3 research/art-redo/decor_autosplit.py research/art-redo/gen/lpo_decor_ch12.png decor/pine_garland@1200 decor/snowshoes decor/cuckoo_clock decor/owl_shelf decor/pinecone_jar decor/cabin_bed decor/wood_stove
+```
+
+Gợi ý `CHAPTERS[11].decor`: `pine_garland 2, snowshoes 3, owl_shelf 4, pinecone_jar 4, cuckoo_clock 5, cabin_bed 6`.
+
+**D13 Thung Lũng Hoa (xuân).** Tải về `lpo_decor_ch13.png`. Row 1: a garland of paper tulips and small pastel pennants on a twine string. Row 2: (4) a wooden frame of pressed flowers; (5) a framed painting of a valley with striped flower fields; (6) a little wooden birdhouse with climbing flowers. Row 3: (7) a tall pink watering can holding tulips; (8) Pip sleeping in a woven basket full of flower petals; (9) Pip awake in the same basket, as an alternative.
+
+```
+mv ~/Downloads/lpo_decor_ch13.png research/art-redo/gen/
+python3 research/art-redo/decor_autosplit.py research/art-redo/gen/lpo_decor_ch13.png decor/tulip_garland@1200 decor/pressed_flowers decor/valley_painting decor/birdhouse decor/watering_can decor/petal_bed decor/petal_bed_b
+```
+
+Gợi ý `CHAPTERS[12].decor`: `tulip_garland 2, pressed_flowers 3, birdhouse 4, watering_can 4, valley_painting 5, petal_bed 6`.
+
+**C12 Rừng Thông.** Scene "Pine Forest" in winter: a quiet snowy forest of tall evergreen pines, a small log cabin with warm lit windows and a smoking chimney, a frozen stream with a little wooden footbridge, a stack of firewood by the door, soft blue morning light with gentle falling snow. → `python3 tools/art_slice.py postcard research/art-redo/gen/lpo_postcard_ch12.png ch12 --apply`
+
+**C13 Thung Lũng Hoa.** Scene "Flower Valley" in spring: a wide valley with striped fields of tulips, poppies and lavender, a winding river, a small village of cottages, a bicycle with a flower basket leaning on a wooden fence, a swing hanging from a blossoming tree, rolling green hills and a bright spring sky. → `python3 tools/art_slice.py postcard research/art-redo/gen/lpo_postcard_ch13.png ch13 --apply`
+
+(Khung prompt bưu thiếp như mục 5: "Paint another picture-postcard landscape … No people, no animals in the foreground, no text …".)
+
+### Khách thăm văn phòng ảo
+
+Đính kèm `research/art-redo/gen/lpo_staff_work.png`. Prompt: 9 cư dân thị trấn (bác đưa sữa, cô giáo về hưu, cậu bé dắt xe đạp, bà cụ mang giỏ rau, ông câu cá, cô thợ làm bánh, chú làm vườn, bạn sinh viên, người dắt chó nhỏ), cùng style, toàn thân đứng, vẫy tay, nghiêng 3/4, nền kem `#f0e8d6`, không chữ. Kết quả: `research/art-redo/gen/lpo_visitors.png` (xong, người điều phối tự cắt).
+
+### Nhật ký đợt 5
+
+| Mã | Kết quả | Ghi chú duyệt |
+|---|---|---|
+| Khách thăm | Xong: `gen/lpo_visitors.png` | Đủ 9 người, đúng thứ tự, vẽ 1 lần |
+| T28 Books | Xong | Icon có hình lá nhỏ trên bìa, chỉ là icon nên không ảnh hưởng tem |
+| T29 Fireplace | Xong | Không nến, đèn, que cời |
+| T30 Snow Sports | Xong | Không người tuyết, xe trượt, giày trượt. Dải ruy băng huy chương đỏ trắng xanh |
+| T31 Bicycle | Xong | Cắt `--fixed`. Không chuông. Xe chở hàng và xe giỏ có hoa nhỏ |
+| T32 Sewing | Xong | **Cặp dễ nhầm mới:** Sewing/2 (gối cắm kim hình quả cà chua có quả dâu) gần Vegetable (cà chua) và Fruit (dâu). Level Dev nên thêm `Sewing↔Vegetable` (và có thể `Sewing↔Fruit`) cùng `Sewing↔Knitting` vào `CONFUSE`, hoặc bỏ tem 2 |
+| T33 Playground | Xong | Cắt `--fixed` |
+| D12 decor ch12 | Xong: `decor/pine_garland, snowshoes, cuckoo_clock, owl_shelf, pinecone_jar, cabin_bed, wood_stove` | Đồng hồ cúc cu chỉ có kim, không số. Tách bằng `decor_autosplit.py` |
+| D13 decor ch13 | Xong: `decor/tulip_garland, pressed_flowers, valley_painting, birdhouse, watering_can, petal_bed, petal_bed_b` | |
+| C12, C13 bưu thiếp | Xong: `assets/ch12/postcard.jpg`, `assets/ch13/postcard.jpg` | Vẽ trong cùng chat với D12–D13, đính kèm `REF-CARD` ở C12 |
+
+**Tổng kết đợt 5:** 11/11 ảnh xong (6 chủ đề, 2 decor, 2 bưu thiếp, 1 khách thăm), không phải vẽ lại. Việc tiếp theo:
+- **Level Dev:** thêm chương 12–13 vào `CHAPTER_TOPICS` (tên EN/VI ở bảng đầu mục 8); xem xét thêm `Sewing↔Knitting`, `Sewing↔Vegetable` vào `CONFUSE`. Các cặp giả thuyết khác: `Fireplace↔Candle`, `Snow Sports↔Winter`, `Books↔Stationery`, `Bicycle↔Car`.
+- **Feature Dev:** `CHAPTERS[11..12].decor` theo gợi ý D12, D13; màn "Chương sắp mở" đọc `ch12`, `ch13`; tên VI chủ đề vào `copy.js`.
