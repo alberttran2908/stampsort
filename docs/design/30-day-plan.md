@@ -222,6 +222,8 @@ Giữ `tools/gen_proto_levels.mjs` cho L1–L20 (`DESIGN` viết tay). Thêm gen
 
 **Trạng thái E1–E10 (2026-10-15):** đã làm cả 10 trong `tools/level_rules.mjs`, `tools/level_spec.mjs`, `tools/gen_levels.mjs`, `tools/validate_levels.mjs`. Riêng `--daily` (E7) để tới R15. `gen_proto_levels.mjs` chưa chuyển sang `level_rules.mjs`, để R4 làm. Seed: gen = `chương × 100000 + p × 1000 + k`, tune = `70000 + id`, check = `50000 + id`. Xếp hạng ứng viên chỉ dùng seed tune. Seed check dùng để kiểm tra và cho phép nới +2 moves (tối đa 3 lần) theo E5. Ở level khó thì bước nới là ±1 theo `c10`/`sk`.
 
+**Trạng thái R4, R6, R7 (2026-10-15, chi tiết `level-r4-r6.md`):** R4 xong (A L2–L20 19/19 pass seed check và seed 90000; L2–L4 ≤ 3 phút theo `economy-30-days.md`; `gen_proto_levels.mjs --r4`, dùng `level_rules.mjs`). R6 + nửa R7: L41–L140 sinh xong, validator L21–L140 120/120. Còn L141–L240 (spec đã có ch12–13, 240 level) và pool Thư hôm nay 90 level.
+
 ---
 
 ## 4. Tính năng retention D1–D30

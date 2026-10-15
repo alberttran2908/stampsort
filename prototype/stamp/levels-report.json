@@ -16,46 +16,163 @@
   "L": 2,
   "role": "teach",
   "F": 3,
-  "cols": "3-4-5",
-  "topics": 6,
-  "cards": 30,
-  "deck": 18,
-  "solver": 48,
-  "moves": 66,
-  "video": 66,
-  "movesPerCard": 2.2,
-  "slack": 1.38,
-  "winSim": 1
+  "cols": "1-2-3",
+  "topics": 4,
+  "cards": 17,
+  "deck": 11,
+  "solver": 28,
+  "moves": 38,
+  "video": "-",
+  "movesPerCard": 2.24,
+  "slack": 1.36,
+  "winSim": 1,
+  "stuckSim": 0,
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 36,
+   "oldCards": 17,
+   "check": {
+    "c10": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 1.6
+    },
+    "c25": {
+     "win": 0.99,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 2
+    },
+    "o35": {
+     "win": 0.95,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 2.5
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "holdout": {
+    "moves": 38,
+    "pass": true,
+    "fails": [],
+    "o35": 0.94,
+    "o35p5": 0.997,
+    "c25": 0.997
+   },
+   "candidates": 12,
+   "valid": 12,
+   "checked": 3
+  }
  },
  {
   "L": 3,
   "role": "teach",
   "F": 4,
   "cols": "2-3-4-5",
-  "topics": 6,
-  "cards": 35,
-  "deck": 21,
-  "solver": 56,
-  "moves": 75,
-  "video": 75,
-  "movesPerCard": 2.14,
-  "slack": 1.34,
-  "winSim": 0.95
+  "topics": 5,
+  "cards": 20,
+  "deck": 6,
+  "solver": 26,
+  "moves": 35,
+  "video": "-",
+  "movesPerCard": 1.75,
+  "slack": 1.35,
+  "winSim": 1,
+  "stuckSim": 0,
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 43,
+   "oldCards": 20,
+   "check": {
+    "c10": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 1.5
+    },
+    "c25": {
+     "win": 0.985,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 1.8
+    },
+    "o35": {
+     "win": 0.9,
+     "winP5": 0.995,
+     "stuck": 0,
+     "minutes": 2.3
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "holdout": {
+    "moves": 35,
+    "pass": true,
+    "fails": [],
+    "o35": 0.9,
+    "o35p5": 0.987,
+    "c25": 0.987
+   },
+   "candidates": 12,
+   "valid": 12,
+   "checked": 3
+  }
  },
  {
   "L": 4,
   "role": "normal",
   "F": 4,
-  "cols": "3-4-5-6",
-  "topics": 8,
-  "cards": 43,
-  "deck": 24,
-  "solver": 66,
-  "moves": 82,
-  "video": 82,
-  "movesPerCard": 1.91,
-  "slack": 1.24,
-  "winSim": 0.95
+  "cols": "2-3-4-5",
+  "topics": 5,
+  "cards": 21,
+  "deck": 6,
+  "solver": 26,
+  "moves": 36,
+  "video": "-",
+  "movesPerCard": 1.71,
+  "slack": 1.38,
+  "winSim": 1,
+  "stuckSim": 0,
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 32,
+   "oldCards": 21,
+   "check": {
+    "c10": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 1.5
+    },
+    "c25": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 1.9
+    },
+    "o35": {
+     "win": 0.98,
+     "winP5": 0.995,
+     "stuck": 0,
+     "minutes": 2.3
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "holdout": {
+    "moves": 36,
+    "pass": true,
+    "fails": [],
+    "o35": 0.977,
+    "o35p5": 1,
+    "c25": 0.997
+   },
+   "candidates": 12,
+   "valid": 12,
+   "checked": 3
+  }
  },
  {
   "L": 5,
@@ -100,12 +217,42 @@
   "cards": 43,
   "deck": 24,
   "solver": 66,
-  "moves": 79,
-  "video": 79,
-  "movesPerCard": 1.79,
-  "slack": 1.17,
-  "winSim": 0.98,
-  "stuckSim": 0
+  "moves": 83,
+  "video": "79 (cũ)",
+  "movesPerCard": 1.93,
+  "slack": 1.26,
+  "winSim": 1,
+  "stuckSim": 0,
+  "r4": {
+   "mode": "moves",
+   "oldMoves": 79,
+   "oldCards": 43,
+   "check": {
+    "c10": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.9
+    },
+    "c25": {
+     "win": 0.975,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 4.8
+    },
+    "o35": {
+     "win": 0.845,
+     "winP5": 0.975,
+     "stuck": 0,
+     "minutes": 5.9
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "candidates": 1,
+   "valid": 1,
+   "checked": 1
+  }
  },
  {
   "L": 8,
@@ -116,44 +263,142 @@
   "cards": 41,
   "deck": 22,
   "solver": 63,
-  "moves": 75,
-  "video": 75,
-  "movesPerCard": 1.83,
-  "slack": 1.19,
+  "moves": 79,
+  "video": "77 (cũ)",
+  "movesPerCard": 1.93,
+  "slack": 1.25,
   "winSim": 1,
   "stuckSim": 0,
-  "newbieWin": 0.97
+  "r4": {
+   "mode": "moves",
+   "oldMoves": 77,
+   "oldCards": 41,
+   "check": {
+    "c10": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.6
+    },
+    "c25": {
+     "win": 0.975,
+     "winP5": 0.985,
+     "stuck": 0,
+     "minutes": 4.4
+    },
+    "o35": {
+     "win": 0.9,
+     "winP5": 0.965,
+     "stuck": 0,
+     "minutes": 5.5
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "holdout": {
+    "moves": 79,
+    "pass": true,
+    "fails": [],
+    "o35": 0.833,
+    "o35p5": 0.937,
+    "c25": 0.973
+   },
+   "candidates": 1,
+   "valid": 1,
+   "checked": 1
+  }
  },
  {
   "L": 9,
   "role": "breather",
   "F": 4,
-  "cols": "3-4-5-6",
-  "topics": 8,
-  "cards": 48,
-  "deck": 30,
-  "solver": 78,
-  "moves": 110,
-  "video": 110,
-  "movesPerCard": 2.29,
-  "slack": 1.41,
+  "cols": "3-4-5-7",
+  "topics": 7,
+  "cards": 42,
+  "deck": 23,
+  "solver": 65,
+  "moves": 89,
+  "video": "-",
+  "movesPerCard": 2.12,
+  "slack": 1.37,
   "winSim": 1,
-  "stuckSim": 0
+  "stuckSim": 0,
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 110,
+   "oldCards": 48,
+   "check": {
+    "c10": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.7
+    },
+    "c25": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 4.6
+    },
+    "o35": {
+     "win": 0.96,
+     "winP5": 0.99,
+     "stuck": 0,
+     "minutes": 5.7
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "candidates": 10,
+   "valid": 10,
+   "checked": 3
+  }
  },
  {
   "L": 10,
   "role": "superhard",
   "F": 5,
-  "cols": "3-4-5-6-7",
+  "cols": "2-4-5-6-7",
   "topics": 9,
-  "cards": 60,
-  "deck": 35,
-  "solver": 97,
-  "moves": 100,
+  "cards": 54,
+  "deck": 30,
+  "solver": 85,
+  "moves": 88,
   "video": "-",
-  "movesPerCard": 1.67,
-  "slack": 1.03,
-  "winSim": 0.3
+  "movesPerCard": 1.63,
+  "slack": 1.04,
+  "winSim": 0.125,
+  "stuckSim": 0,
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 100,
+   "oldCards": 60,
+   "check": {
+    "c10": {
+     "win": 0.125,
+     "winP5": 0.6,
+     "stuck": 0,
+     "minutes": 5
+    },
+    "o35": {
+     "win": 0.015,
+     "winP5": 0.13,
+     "stuck": 0,
+     "minutes": 7.6
+    },
+    "sk": {
+     "win": 0.47,
+     "winP5": 0.995,
+     "stuck": 0,
+     "minutes": 3.3
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "candidates": 40,
+   "valid": 18,
+   "checked": 3
+  }
  },
  {
   "L": 11,
@@ -198,30 +443,96 @@
   "cards": 41,
   "deck": 23,
   "solver": 64,
-  "moves": 76,
-  "video": "-",
-  "movesPerCard": 1.85,
-  "slack": 1.19,
+  "moves": 78,
+  "video": "76 (cũ)",
+  "movesPerCard": 1.9,
+  "slack": 1.22,
   "winSim": 1,
   "stuckSim": 0,
-  "newbieWin": 0.85
+  "r4": {
+   "mode": "moves",
+   "oldMoves": 76,
+   "oldCards": 41,
+   "check": {
+    "c10": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.7
+    },
+    "c25": {
+     "win": 0.94,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 4.6
+    },
+    "o35": {
+     "win": 0.855,
+     "winP5": 0.98,
+     "stuck": 0,
+     "minutes": 5.6
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "holdout": {
+    "moves": 78,
+    "pass": true,
+    "fails": [],
+    "o35": 0.79,
+    "o35p5": 0.963,
+    "c25": 0.94
+   },
+   "candidates": 1,
+   "valid": 1,
+   "checked": 1
+  }
  },
  {
   "L": 14,
   "role": "bump",
   "F": 4,
-  "cols": "3-4-5-6",
+  "cols": "3-4-5-7",
   "topics": 8,
-  "cards": 48,
-  "deck": 30,
-  "solver": 79,
+  "cards": 44,
+  "deck": 25,
+  "solver": 69,
   "moves": 87,
   "video": "-",
-  "movesPerCard": 1.81,
-  "slack": 1.1,
+  "movesPerCard": 1.98,
+  "slack": 1.26,
   "winSim": 1,
   "stuckSim": 0,
-  "newbieWin": 1
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 87,
+   "oldCards": 48,
+   "check": {
+    "c10": {
+     "win": 1,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.8
+    },
+    "c25": {
+     "win": 0.94,
+     "winP5": 0.975,
+     "stuck": 0.005,
+     "minutes": 4.8
+    },
+    "o35": {
+     "win": 0.76,
+     "winP5": 0.91,
+     "stuck": 0.03,
+     "minutes": 6
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "candidates": 16,
+   "valid": 12,
+   "checked": 3
+  }
  },
  {
   "L": 15,
@@ -231,13 +542,43 @@
   "topics": 8,
   "cards": 52,
   "deck": 34,
-  "solver": 87,
-  "moves": 89,
+  "solver": 86,
+  "moves": 88,
   "video": "-",
-  "movesPerCard": 1.71,
+  "movesPerCard": 1.69,
   "slack": 1.02,
-  "winSim": 0.2,
-  "stuckSim": 0
+  "winSim": 0.265,
+  "stuckSim": 0,
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 89,
+   "oldCards": 52,
+   "check": {
+    "c10": {
+     "win": 0.265,
+     "winP5": 0.925,
+     "stuck": 0,
+     "minutes": 4.8
+    },
+    "o35": {
+     "win": 0.04,
+     "winP5": 0.32,
+     "stuck": 0,
+     "minutes": 7.3
+    },
+    "sk": {
+     "win": 0.635,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.2
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "candidates": 40,
+   "valid": 24,
+   "checked": 3
+  }
  },
  {
   "L": 16,
@@ -262,33 +603,99 @@
   "F": 4,
   "cols": "3-4-5-7",
   "topics": 7,
-  "cards": 44,
-  "deck": 25,
-  "solver": 70,
+  "cards": 41,
+  "deck": 22,
+  "solver": 64,
   "moves": 82,
   "video": "-",
-  "movesPerCard": 1.86,
-  "slack": 1.17,
-  "winSim": 1,
+  "movesPerCard": 2,
+  "slack": 1.28,
+  "winSim": 0.98,
   "stuckSim": 0,
-  "newbieWin": 0.82
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 82,
+   "oldCards": 44,
+   "check": {
+    "c10": {
+     "win": 0.98,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.6
+    },
+    "c25": {
+     "win": 0.95,
+     "winP5": 0.99,
+     "stuck": 0,
+     "minutes": 4.4
+    },
+    "o35": {
+     "win": 0.85,
+     "winP5": 0.965,
+     "stuck": 0,
+     "minutes": 5.5
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "candidates": 12,
+   "valid": 11,
+   "checked": 3
+  }
  },
  {
   "L": 18,
   "role": "normal",
   "F": 4,
-  "cols": "3-4-5-6",
+  "cols": "3-4-5-7",
   "topics": 7,
-  "cards": 46,
-  "deck": 28,
-  "solver": 75,
-  "moves": 90,
+  "cards": 42,
+  "deck": 23,
+  "solver": 66,
+  "moves": 83,
   "video": "-",
-  "movesPerCard": 1.96,
-  "slack": 1.2,
-  "winSim": 1,
+  "movesPerCard": 1.98,
+  "slack": 1.26,
+  "winSim": 0.995,
   "stuckSim": 0,
-  "newbieWin": 0.85
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 81,
+   "oldCards": 42,
+   "check": {
+    "c10": {
+     "win": 0.995,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.7
+    },
+    "c25": {
+     "win": 0.99,
+     "winP5": 0.995,
+     "stuck": 0,
+     "minutes": 4.6
+    },
+    "o35": {
+     "win": 0.88,
+     "winP5": 0.96,
+     "stuck": 0,
+     "minutes": 5.5
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "holdout": {
+    "moves": 83,
+    "pass": true,
+    "fails": [],
+    "o35": 0.853,
+    "o35p5": 0.953,
+    "c25": 0.987
+   },
+   "candidates": 12,
+   "valid": 5,
+   "checked": 3
+  }
  },
  {
   "L": 19,
@@ -296,31 +703,90 @@
   "F": 4,
   "cols": "3-4-5-7",
   "topics": 8,
-  "cards": 50,
-  "deck": 31,
-  "solver": 83,
-  "moves": 96,
+  "cards": 44,
+  "deck": 25,
+  "solver": 71,
+  "moves": 84,
   "video": "-",
-  "movesPerCard": 1.92,
-  "slack": 1.16,
-  "winSim": 0.97,
+  "movesPerCard": 1.91,
+  "slack": 1.18,
+  "winSim": 0.99,
   "stuckSim": 0,
-  "newbieWin": 0.8
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 96,
+   "oldCards": 50,
+   "check": {
+    "c10": {
+     "win": 0.99,
+     "winP5": 1,
+     "stuck": 0,
+     "minutes": 3.9
+    },
+    "c25": {
+     "win": 0.9,
+     "winP5": 0.985,
+     "stuck": 0,
+     "minutes": 4.9
+    },
+    "o35": {
+     "win": 0.765,
+     "winP5": 0.935,
+     "stuck": 0,
+     "minutes": 6.1
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "candidates": 16,
+   "valid": 13,
+   "checked": 3
+  }
  },
  {
   "L": 20,
   "role": "superhard",
   "F": 5,
-  "cols": "3-4-5-6-7",
+  "cols": "2-4-5-6-7",
   "topics": 9,
-  "cards": 58,
-  "deck": 33,
-  "solver": 92,
-  "moves": 100,
+  "cards": 54,
+  "deck": 30,
+  "solver": 86,
+  "moves": 89,
   "video": "-",
-  "movesPerCard": 1.72,
-  "slack": 1.09,
-  "winSim": 0.33,
-  "stuckSim": 0
+  "movesPerCard": 1.65,
+  "slack": 1.03,
+  "winSim": 0.1,
+  "stuckSim": 0,
+  "r4": {
+   "mode": "regen",
+   "oldMoves": 100,
+   "oldCards": 58,
+   "check": {
+    "c10": {
+     "win": 0.1,
+     "winP5": 0.79,
+     "stuck": 0,
+     "minutes": 4.9
+    },
+    "o35": {
+     "win": 0.01,
+     "winP5": 0.175,
+     "stuck": 0,
+     "minutes": 7.5
+    },
+    "sk": {
+     "win": 0.595,
+     "winP5": 0.995,
+     "stuck": 0,
+     "minutes": 3.3
+    }
+   },
+   "pass": true,
+   "fails": [],
+   "candidates": 40,
+   "valid": 23,
+   "checked": 3
+  }
  }
 ]

@@ -19,7 +19,7 @@ import { pathToFileURL } from 'node:url';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { createState } from '../prototype/stamp/src/engine.js';
 import { solve, sampleHidden } from '../prototype/stamp/src/solver.js';
-import { ROOT, PROFILES, SEC_PER_MOVE, confusePairs, availableArts, allCards } from './level_rules.mjs';
+import { ROOT, PROFILES, SEC_PER_MOVE, confusePairs, availableArts, allCards, twinHits } from './level_rules.mjs';
 import { legacyTargets, CAP, capMinFor } from './level_spec.mjs';
 
 export const CHECK_SEED_BASE = 50000;
@@ -62,6 +62,7 @@ function validateLevel(lv, { runs, file, seedBase = null }) {
     if (new Set(st.map(c => c.art)).size !== st.length) warns.push(`${tc.t}: lặp art`);
   }
   if (cards.length > capCards) fails.push(`${cards.length} lá > ${capCards}`);
+  for (const w of twinHits(cards)) warns.push(`art gần trùng ${w}`);   // cảnh báo, không trượt (L41 Winter n = 8 bắt buộc dùng cả 4 người tuyết)
   const st0 = createState(lv);
   const sol = solve(st0, { width: 400 });            // không giới hạn thời gian: kết quả không phụ thuộc tải máy
   if (!sol) fails.push('solver không giải được');

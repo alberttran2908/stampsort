@@ -23,14 +23,17 @@ import { pathToFileURL } from 'node:url';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { createState } from '../prototype/stamp/src/engine.js';
 import { solve, sampleHidden } from '../prototype/stamp/src/solver.js';
-import { ROOT, PROFILES, SEC_PER_MOVE, availableArts, artCount, confuses, fair, rng, shuffle, hashStr, allCards } from './level_rules.mjs';
-import { specFor, buildChapter, CAP } from './level_spec.mjs';
+import { ROOT, PROFILES, SEC_PER_MOVE, availableArts, artCount, confuses, fair, rng, shuffle, hashStr, allCards, pickArts, ART_TWINS } from './level_rules.mjs';
+import { specFor, buildChapter, CAP, colsFor, SPECIAL_DECK_BONUS } from './level_spec.mjs';
 import { validateLevel } from './validate_levels.mjs';
 
 const TUNE_SEED_BASE = 70000, TUNE_RUNS = 60, TUNE_MARGIN = 0.03;
 // Level khó: đường c10 theo moves rất dốc nên c10 cần nhiều ván; sk chậm (nhìn trước 22 bước) nên 100 ván; o35 chỉ để ước phút.
 const TUNE_RUNS_SPECIAL = { c10: 200, sk: 100, o35: 60 };
-const SPECIAL_GEN = 40, MAX_SPECIAL_CHECKS = 9;                        // E6: level khó thử 40 layout (c10 và sk cùng phải vào khoảng)
+const SPECIAL_GEN = 40, MAX_SPECIAL_CHECKS = 15;                       // E6: level khó thử 40 layout (c10 và sk cùng phải vào khoảng). R6: 9 -> 15 (L60 trượt sk sau 9)
+// R6: vị trí không có ứng viên nào pass (thường do trần phút o35) thì thu nhỏ spec: bớt 2 tem mỗi bước, tối đa 3 bước (-6 lá).
+// Ch5 L72 (intro, 5 cột): 13 ứng viên đều 6,5-6,8 phút > 6. Seed của bước thu nhỏ s: k = 600 + 130 (s - 1) ... (không trùng vòng 1-2).
+const MAX_SHRINK = 3;
 const IDEAL_MIN = { 'intro-br': 4.5, br: 4.5, intro: 5, nor: 5, bump: 5.5, HARD: 7, SUPER: 7.5 };
 
 // ---------------------------------------------------------------- dựng ứng viên
@@ -40,7 +43,7 @@ export function buildGen(spec, seed) {
   const cards = [], pre = [];
   let id = 0;
   for (const [t, n] of Object.entries(spec.topics)) {
-    const arts = shuffle(availableArts(t).slice(), r).slice(0, n);
+    const arts = pickArts(t, n, r);   // tránh 2 art gần trùng (ART_TWINS); chủ đề khác giống hệt shuffle cũ
     const topic = { id: id++, t, k: 'topic', n };
     if (spec.preplace === t) pre.push([topic]); else cards.push(topic);
     for (const a of arts) cards.push({ id: id++, t, k: 'stamp', art: a });
@@ -122,7 +125,7 @@ export function rethemeAbi(spec, a) {
   const conv = c => {
     const t = map[c.t];
     if (c.k === 'topic') return { id: id++, t, k: 'topic', n: c.n };
-    if (!arts[t]) arts[t] = shuffle(availableArts(t).slice(), r);
+    if (!arts[t]) { const o = pickArts(t, artCount(t), r); arts[t] = ART_TWINS[t] ? o.reverse() : o; }   // pop() lấy từ cuối
     return { id: id++, t, k: 'stamp', art: arts[t].pop() };
   };
   const lv = { foundations: L.foundations, moves: null, columns: L.columns.map(col => col.map(conv)), deck: L.deck.map(conv),
@@ -187,7 +190,7 @@ export function evaluate(spec, lv) {
 
 /** Kiểm tra cuối bằng validator (seed check). Level thường trượt thì +2 moves, tối đa 3 lần (E5).
  *  Level khó: c10 hoặc sk dưới khoảng thì +1, trên khoảng thì -1 (không dưới sàn slack), tối đa 3 lần; mâu thuẫn hoặc lý do khác thì dừng. */
-function check(level, runs) {
+export function check(level, runs) {
   let moves = level.moves, last = null;
   const floor = Math.ceil(level.solverMoves * level.slackFloor);
   for (let i = 0; i <= 3; i++) {
@@ -215,7 +218,7 @@ if (!isMainThread && workerData?.role === 'gen') {
 }
 
 // ---------------------------------------------------------------- main
-function makePool(n) {
+export function makePool(n) {
   const workers = Array.from({ length: n }, () => new Worker(new URL(import.meta.url), { workerData: { role: 'gen' } }));
   const idle = [...workers], queue = [], waiting = new Map();
   let seq = 0;
@@ -228,6 +231,43 @@ function makePool(n) {
     run: (job, prio = false) => new Promise(res => { const key = seq++; waiting.set(key, res); queue[prio ? 'unshift' : 'push']({ ...job, key }); pump(); }),
     close: () => workers.forEach(w => w.terminate()),
   };
+}
+
+/** Spec bớt 2 x step tem (chủ đề nền có n lớn nhất trước; giữ chủ đề giới thiệu và bao thư lớn), cột tính lại theo deck của spec. */
+export function shrinkSpec(spec, step) {
+  if (!step) return spec;
+  const topics = { ...spec.topics };
+  const keep = new Set([...(spec.introduce || []), ...(spec.bigEnvelope ? [spec.bigEnvelope.topic] : [])]);
+  for (let rem = 2 * step; rem > 0; rem--) {
+    const t = Object.keys(topics).filter(x => !keep.has(x) && topics[x] > spec.nRange[0])
+      .sort((a, b) => topics[b] - topics[a] || (spec.required.includes(a) - spec.required.includes(b)) || a.localeCompare(b))[0];
+    if (!t) break;
+    topics[t]--;
+  }
+  const cards = Object.values(topics).reduce((a, n) => a + n + 1, 0);
+  const onTable = d => Math.round((cards - (spec.preplace ? 1 : 0)) * (1 - d));
+  const cols = colsFor(spec.cols.length, onTable(spec.deckTarget));
+  const colsAlt = spec.colsAlt ? colsFor(spec.colsAlt.length, onTable(spec.deckTarget + SPECIAL_DECK_BONUS)) : null;
+  return { ...spec, topics, cards, cols, colsAlt, deckPct: +(1 - cols.reduce((a, b) => a + b, 0) / cards).toFixed(2), shrink: step };
+}
+
+/** Xếp hạng ứng viên đã đánh giá, kiểm tra theo lô 3 trên seed check. { pick, failed, valid, checked }; pick = valid[0] nếu không ai pass. */
+async function choose(spec, cands, pool, runs) {
+  // level khó: ứng viên mà seed tune dự báo c10 và sk cùng trong khoảng (chừa biên 0.02) được kiểm tra trước
+  const inRange = c => !spec.special || (c.ev.tuneC10 >= spec.targets.c10[0] + 0.02 && c.ev.tuneC10 <= spec.targets.c10[1] - 0.02
+    && c.ev.tuneSk >= spec.targets.sk[0] + 0.02 && c.ev.tuneSk <= spec.targets.sk[1] - 0.02);
+  const valid = cands.filter(c => c.ev.ok).sort((a, b) => inRange(b) - inRange(a) || a.ev.score - b.ev.score || a.order - b.order);
+  // kiểm tra theo lô 3 ứng viên tốt nhất (song song), lấy ứng viên đầu tiên theo thứ hạng tune mà pass seed check.
+  // Level khó kiểm tra tối đa MAX_SPECIAL_CHECKS ứng viên (mỗi lần check có profile sk, chậm).
+  let pick = null, checked = 0;
+  for (let i = 0; i < valid.length && !pick && (!spec.special || i < MAX_SPECIAL_CHECKS); i += 3) {
+    const batch = valid.slice(i, i + 3);
+    const res = await Promise.all(batch.map(c => pool.run({ kind: 'check', runs, level: levelOf(spec, c.lv, c.source, c.ev, { seed: c.seed }) }, true)));
+    checked += batch.length;
+    batch.forEach((c, j) => { c.check = res[j]; });
+    pick = batch.find(c => c.check.pass) || null;
+  }
+  return { pick: pick || valid[0] || null, failed: !pick, valid, checked };
 }
 
 const levelOf = (spec, lv, source, ev, extra = {}) => ({
@@ -256,6 +296,20 @@ async function main() {
   const usedAbi = new Set(kept.filter(l => l.source && l.source.startsWith('abi:')).map(l => l.abiSig));
   const pool = makePool(jobs);
   const made = [], rows = [];
+  const flush = done => {
+    const all = [...kept, ...made].sort((a, b) => a.id - b.id);
+    const header = '// SINH TỰ ĐỘNG bởi tools/gen_levels.mjs (luật A, spec tools/level_spec.mjs). Đừng sửa tay; chạy lại generator.\n';
+    const body = header + 'export const LEVELS_GEN = ' + JSON.stringify(all) + ';\n';
+    mkdirSync(dirname(out), { recursive: true });
+    mkdirSync(dirname(reportPath), { recursive: true });
+    writeFileSync(out, body);
+    const hash = createHash('sha256').update(body).digest('hex').slice(0, 16);
+    // level chưa sinh trong khoảng (lần chạy dở) giữ dòng report cũ
+    const allRows = [...oldReport.filter(r => r.L < from || r.L > to), ...rows].sort((a, b) => a.L - b.L);
+    const sec = +((Date.now() - t0) / 1000).toFixed(0);
+    writeFileSync(reportPath, JSON.stringify({ generated: { from, to, seconds: sec, hash, nGen, nAbi, runs, ...(done ? {} : { partial: rows.length }) }, rows: allRows }, null, 1));
+    return { hash, sec };
+  };
   // ứng viên gen không phụ thuộc lựa chọn ở vị trí trước: dựng và xếp hàng đánh giá cho mọi vị trí ngay từ đầu (dùng hết luồng).
   // Ứng viên ABI phụ thuộc layout ABI đã dùng nên vẫn xét tuần tự theo vị trí.
   const pre = new Map();
@@ -296,54 +350,52 @@ async function main() {
       more.forEach((c, i) => { c.ev = ev2[i]; c.order = cands.length + i; });
       cands.push(...more);
     }
-    // level khó: ứng viên mà seed tune dự báo c10 và sk cùng trong khoảng (chừa biên 0.02) được kiểm tra trước
-    const inRange = c => !spec.special || (c.ev.tuneC10 >= spec.targets.c10[0] + 0.02 && c.ev.tuneC10 <= spec.targets.c10[1] - 0.02
-      && c.ev.tuneSk >= spec.targets.sk[0] + 0.02 && c.ev.tuneSk <= spec.targets.sk[1] - 0.02);
-    const valid = cands.filter(c => c.ev.ok).sort((a, b) => inRange(b) - inRange(a) || a.ev.score - b.ev.score || a.order - b.order);
-    // kiểm tra theo lô 3 ứng viên tốt nhất (song song), lấy ứng viên đầu tiên theo thứ hạng tune mà pass seed check.
-    // Level khó kiểm tra tối đa MAX_SPECIAL_CHECKS ứng viên (mỗi lần check có profile sk, chậm).
-    let pick = null, checked = 0;
-    for (let i = 0; i < valid.length && !pick && (!spec.special || i < MAX_SPECIAL_CHECKS); i += 3) {
-      const batch = valid.slice(i, i + 3);
-      const res = await Promise.all(batch.map(c => pool.run({ kind: 'check', runs, level: levelOf(spec, c.lv, c.source, c.ev, { seed: c.seed }) }, true)));
-      checked += batch.length;
-      batch.forEach((c, j) => { c.check = res[j]; });
-      pick = batch.find(c => c.check.pass) || null;
+    let best = { ...(await choose(spec, cands, pool, runs)), spec, shrink: 0 };
+    let allCands = cands;
+    for (let step = 1, prevCards = spec.cards; best.failed && step <= MAX_SHRINK; step++) {
+      const s2 = shrinkSpec(spec, step);
+      if (s2.cards >= prevCards) break;   // không bớt được nữa (mọi chủ đề đã ở n tối thiểu)
+      prevCards = s2.cards;
+      const more = [];
+      for (let k = 600 + 130 * (step - 1); more.length < (s2.special ? SPECIAL_GEN : 2 * nGen) && k < 600 + 130 * step; k++) {
+        const seed = spec.chapter * 100000 + spec.p * 1000 + k;
+        const lv = buildGen(s2, seed);
+        if (fair(s2.role, lv, s2.introduce)) more.push({ kind: 'gen', lv, seed, source: `gen:${seed}` });
+      }
+      const ev3 = await Promise.all(more.map(c => pool.run({ kind: 'eval', spec: s2, lv: c.lv }, true)));
+      more.forEach((c, i) => { c.ev = ev3[i]; c.order = i; });
+      allCands = [...allCands, ...more];
+      const sel = await choose(s2, more, pool, runs);
+      process.stderr.write(`L${L}: thu nhỏ ${step} (${s2.cards} lá): ${sel.failed ? 'chưa pass' : 'pass'} (ứng viên ${more.length}, hợp lệ ${sel.valid.length})\n`);
+      if (!sel.failed || (!best.pick && sel.pick)) best = { ...sel, spec: s2, shrink: step };
     }
-    const failed = !pick;
-    if (!pick) pick = valid[0] || null;
-    if (!pick) { pool.close(); throw new Error(`L${L}: không có ứng viên hợp lệ (${cands.map(c => c.source + ': ' + c.ev.why).join('; ')})`); }
+    const { failed, valid, checked } = best;
+    let { pick } = best;
+    const S = best.spec;
+    if (!pick) { pool.close(); throw new Error(`L${L}: không có ứng viên hợp lệ (${allCands.map(c => c.source + ': ' + c.ev.why).join('; ')})`); }
     const ev = { ...pick.ev, budget: pick.check ? pick.check.moves : pick.ev.budget };
     const note = pick.kind === 'abi'
       ? `ABI 0.9.5 L${pick.source.slice(5)}: giữ khay/cột/thứ tự lá/n; chủ đề ${Object.entries(pick.map).map(([x, y]) => x + '→' + y).join(', ')}; moves ABI ${pick.abiMoves} -> ${ev.budget} (chỉnh theo mục tiêu)`
-      : `Tự sinh theo level_spec (seed ${pick.seed})`;
-    const level = { ...levelOf(spec, pick.lv, pick.source, ev, { seed: pick.seed, note }), ...(pick.abiSig ? { abiSig: pick.abiSig } : {}) };
+      : `Tự sinh theo level_spec (seed ${pick.seed})` + (best.shrink ? `; spec thu nhỏ ${best.shrink} bước (${spec.cards} -> ${S.cards} lá) vì không ứng viên nào đạt` : '');
+    const level = { ...levelOf(S, pick.lv, pick.source, ev, { seed: pick.seed, note }), ...(pick.abiSig ? { abiSig: pick.abiSig } : {}) };
     if (pick.abiSig) usedAbi.add(pick.abiSig);
     made.push(level);
     const cr = pick.check?.result;
     const row = {
-      L, chapter: spec.chapter, p: spec.p, role: spec.role, source: pick.source, cards: allCards(level).length, topics: Object.keys(spec.topics).length,
+      L, chapter: spec.chapter, p: spec.p, role: spec.role, source: pick.source, cards: allCards(level).length, topics: Object.keys(S.topics).length, specCards: spec.cards, shrink: best.shrink,
       topicsUsed: allCards(level).filter(c => c.k === 'topic').length, F: level.foundations, cols: level.columns.map(c => c.length).join('-'),
       solver: ev.solver, moves: level.moves, slack: +(level.moves / ev.solver).toFixed(2), bumped: pick.check?.result?.bumped ?? null,
       tune: { score: pick.ev.score, minutes: pick.ev.minutes, stuck: pick.ev.stuck, c25: pick.ev.tuneC25, o35: pick.ev.tuneO35, c10: pick.ev.tuneC10, sk: pick.ev.tuneSk },
       check: cr ? { c10: cr.sim.c10?.win, c10stuck: cr.sim.c10?.stuck, c25: cr.sim.c25?.win, o35: cr.sim.o35?.win, o35p5: cr.sim.o35?.winP5, sk: cr.sim.sk?.win, minutes: cr.sim.o35?.minutes } : null,
-      pass: !failed, fails: cr?.fails || [], candidates: { gen: cands.filter(c => c.kind === 'gen').length, abi: cands.filter(c => c.kind === 'abi').length, valid: valid.length, checked },
-      rejected: cands.filter(c => !c.ev.ok).map(c => `${c.source}: ${c.ev.why}`),
+      pass: !failed, fails: cr?.fails || [], candidates: { gen: allCands.filter(c => c.kind === 'gen').length, abi: allCands.filter(c => c.kind === 'abi').length, valid: valid.length, checked },
+      rejected: allCands.filter(c => !c.ev.ok).map(c => `${c.source}: ${c.ev.why}`),
     };
     rows.push(row);
-    process.stderr.write(`L${L} ${spec.role}: ${pick.source} ${failed ? 'TRƯỢT ' + row.fails.join('; ') : 'pass'} (ứng viên ${cands.length}, hợp lệ ${valid.length}, check ${checked}) ${((Date.now() - t0) / 1000).toFixed(0)}s\n`);
+    process.stderr.write(`L${L} ${spec.role}: ${pick.source} ${failed ? 'TRƯỢT ' + row.fails.join('; ') : 'pass'}${best.shrink ? ` (thu nhỏ ${spec.cards} -> ${S.cards} lá)` : ''} (ứng viên ${allCands.length}, hợp lệ ${valid.length}, check ${checked}) ${((Date.now() - t0) / 1000).toFixed(0)}s\n`);
+    flush(false);   // ghi dần sau mỗi level: tiến trình chết giữa chừng không mất level đã sinh
   }
   pool.close();
-  const all = [...kept, ...made].sort((a, b) => a.id - b.id);
-  const header = '// SINH TỰ ĐỘNG bởi tools/gen_levels.mjs (luật A, spec tools/level_spec.mjs). Đừng sửa tay; chạy lại generator.\n';
-  const body = header + 'export const LEVELS_GEN = ' + JSON.stringify(all) + ';\n';
-  mkdirSync(dirname(out), { recursive: true });
-  mkdirSync(dirname(reportPath), { recursive: true });
-  writeFileSync(out, body);
-  const hash = createHash('sha256').update(body).digest('hex').slice(0, 16);
-  const allRows = [...oldReport.filter(r => r.L < from || r.L > to), ...rows].sort((a, b) => a.L - b.L);
-  const sec = +((Date.now() - t0) / 1000).toFixed(0);
-  writeFileSync(reportPath, JSON.stringify({ generated: { from, to, seconds: sec, hash, nGen, nAbi, runs }, rows: allRows }, null, 1));
+  const { hash, sec } = flush(true);
   if (process.argv.includes('--md')) {
     const pct = x => (x == null ? '-' : Math.round(x * 100) + '%');
     console.log('| L | Vai trò | Nguồn | Lá | Chủ đề | Khay | Cột | Solver | Moves | Slack | c25 | o35 | o35 +5 | c10 | c10 kẹt | sk | Phút o35 | Kết quả |');

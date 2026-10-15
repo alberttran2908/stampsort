@@ -3,7 +3,7 @@
 // Không sinh layout: chỉ quyết định vai trò, số lá, số khay, cột, chủ đề và n, mục tiêu độ khó. Layout do gen_levels.mjs sinh.
 //
 // Dùng:
-//   node tools/level_spec.mjs --print=21-200          bảng markdown 1 dòng / level
+//   node tools/level_spec.mjs --print=21-240          bảng markdown 1 dòng / level
 //   node tools/level_spec.mjs --print=21-40 --json    JSON
 //   node tools/level_spec.mjs --chapters              bảng chương (tên khu, chủ đề mới, fallback đang dùng)
 //   import { specFor, chapterOf, TIERS, ROLE_ADJ, PATTERN, CHAPTER_TOPICS, legacyTargets } from './level_spec.mjs';
@@ -14,7 +14,7 @@ import { pathToFileURL } from 'node:url';
 import { BASE_TOPICS, EXCLUDED, artCount, hasArt, confuses, confusePairs, hashStr, rng } from './level_rules.mjs';
 
 export const RULES = 'A';
-export const FIRST_GEN = 21, LAST_GEN = 200, CHAPTER_LEN = 20;
+export const FIRST_GEN = 21, LAST_GEN = 240, CHAPTER_LEN = 20;   // 13 chương (R7, 2026-10-15: thêm ch12-13)
 
 // ---------------------------------------------------------------- nhịp 20 level (plan 3.2)
 export const PATTERN = ['intro-br', 'nor', 'nor', 'intro', 'nor', 'bump', 'br', 'nor', 'bump', 'HARD',
@@ -49,7 +49,7 @@ export const TIERS = [
   { ch: [7, 8], cards: { nor: [42, 46], br: [37, 42], bump: [44, 46], HARD: [48, 52], SUPER: [50, 54] },
     topics: { nor: 8, br: 6, bump: 9, HARD: 9, SUPER: 10 }, F: { nor: 4, br: 4, bump: 4, HARD: 4, SUPER: 5 },
     cols: 5, n: [3, 8], deck: 0.62, slack: 1.20, tgt: { c25: 0.85, o35: 0.70, o35p5: 0.93 }, stuck: 0.05 },
-  { ch: [9, 11], cards: { nor: [42, 46], br: [37, 42], bump: [44, 46], HARD: [48, 52], SUPER: [50, 54] },
+  { ch: [9, 13], cards: { nor: [42, 46], br: [37, 42], bump: [44, 46], HARD: [48, 52], SUPER: [50, 54] },
     topics: { nor: 8, br: 6, bump: 9, HARD: 10, SUPER: 10 }, F: { nor: 4, br: 4, bump: 4, HARD: 4, SUPER: 5 },
     cols: 5, n: [3, 8], deck: 0.62, slack: 1.18, tgt: { c25: 0.85, o35: 0.70, o35p5: 0.93 }, stuck: 0.05 },
 ];
@@ -115,6 +115,13 @@ export const CHAPTER_TOPICS = {
   11: { vi: 'Đồi Mây', en: 'Cloud Hill', season: 'Thu', resident: 'Bo', topics: [
     { name: 'Weather', vi: 'Thời tiết', fallback: 'Planet' }, { name: 'Origami', vi: 'Giấy gấp', fallback: 'Cat' },
     { name: 'Keys', vi: 'Chìa khóa', fallback: 'Time' }] },
+  // Thêm 2026-10-15 (R7): art chương 12-13 đã có (agent Art, commit a2defb2). Fallback chỉ để đủ luật (khác nhau, >= 5 art), hiện không dùng.
+  12: { vi: 'Rừng Thông', en: 'Pine Forest', season: 'Đông', resident: 'Lina', topics: [
+    { name: 'Books', vi: 'Sách', fallback: 'Notes' }, { name: 'Fireplace', vi: 'Lò sưởi', fallback: 'Coffee' },
+    { name: 'Snow Sports', vi: 'Thể thao tuyết', fallback: 'Glasses' }] },
+  13: { vi: 'Thung Lũng Hoa', en: 'Flower Valley', season: 'Xuân', resident: 'Finch', topics: [
+    { name: 'Bicycle', vi: 'Xe đạp', fallback: 'Dog' }, { name: 'Sewing', vi: 'Đồ may', fallback: 'Desserts' },
+    { name: 'Playground', vi: 'Sân chơi', fallback: 'Gardening' }] },
 };
 // Chủ đề mới của chương 2 (Bến Cảng), dùng cho hạn mức 20% ở chương 3 [CODE levels.js L11-L14 introduce].
 export const CH2_TOPICS = ['Sailboats', 'Shells', 'Seafood', 'Nautical'];
@@ -145,7 +152,7 @@ function backgroundPool(ch) {
 }
 
 // ---------------------------------------------------------------- dựng 1 chương
-function colsFor(nCols, table) {
+export function colsFor(nCols, table) {
   // hình bậc thang a, a+1, ..., phần dư cộng vào các cột cao nhất; a >= 1
   const tri = (nCols * (nCols - 1)) / 2;
   const a = Math.max(1, Math.floor((table - tri) / nCols));
@@ -293,7 +300,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (process.argv.includes('--chapters')) {
     console.log('| Ch | Level | Khu | Chủ đề mới | Đang dùng | Pool nền |');
     console.log('|---|---|---|---|---|---|');
-    for (let ch = 3; ch <= 11; ch++) {
+    for (let ch = 3; ch <= 13; ch++) {
       const c = CHAPTER_TOPICS[ch], b = buildChapter(ch);
       console.log(`| ${ch} | ${firstOf(ch)}-${firstOf(ch) + 19} | ${c.vi} / ${c.en} | ${c.topics.map(t => t.name).join(', ')} | ${resolvedTopics(ch).map(t => t.use + (t.fallback ? '*' : '')).join(', ')} | ${b.pool.length} |`);
     }

@@ -1,7 +1,7 @@
 # Pipeline level L21+: kết quả R1–R3 (luật A)
 
 **Ngày:** 2026-10-15 · **Người làm:** level dev agent · **Kế hoạch gốc:** `30-day-plan.md` mục 3.5 và mục 6 (R1–R3).
-**Trạng thái:** R1, R2, R3 đạt AC. Level ch3 chưa nối vào game (thuộc R5). Chưa commit.
+**Trạng thái:** R1, R2, R3 đạt AC. Tiếp theo (R4, R6, R7): `level-r4-r6.md`. Level ch3 chưa nối vào game (thuộc R5). Chưa commit.
 
 ## 1. Lệnh
 

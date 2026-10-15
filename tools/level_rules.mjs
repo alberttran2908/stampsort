@@ -56,7 +56,54 @@ export const CONFUSE = [
   ['Honey', 'Insect'], ['Wooden Toys', 'Chess'], ['Wooden Toys', 'Kite'], ['Bell', 'Music Inst'], ['Bell', 'Notes'],
   ['Weather', 'Planet'], ['Origami', 'Bird'], ['Origami', 'Sailboats'],
   ['Knitting', 'Outerwear'],
+  // Duyệt trên ảnh thật 2026-10-15 (level dev, art-batch-1.md mục 1.7 + ghi chú agent Art). Cùng chương 8: Fishing <-> Picnic
+  // (giỏ mây quai da Picnic/0 vs Fishing/5; xô inox có quai Picnic/7 vs Fishing/6) -> hai chủ đề này không bao giờ chung level.
+  ['Fishing', 'Picnic'],
+  ['Lantern', 'Balloon'],      // lồng đèn tròn đỏ / đèn ngôi sao (Lantern/0, /3) vs bóng bay tròn, bóng ngôi sao (Balloon/3)
+  ['Lantern', 'Flower'],       // đèn hoa sen hồng Lantern/2 gần như trùng hoa sen Flower/1 (thấy khi duyệt, không có trong 1.7)
+  ['Luggage', 'Treasure'],     // rương/vali da chồng Luggage/7, /0 vs rương gỗ Treasure/1
+  ['Umbrella', 'Weather'],     // ô cầu vồng Umbrella/2 vs cầu vồng Weather/2
+  ['Umbrella', 'Mushroom'],    // ô đỏ mở Umbrella/0 vs nấm đỏ chấm trắng Mushroom/0
+  ['Cheese', 'Pizza'], ['Cheese', 'Cake'],   // miếng tam giác vàng; Cake/3 là cheesecake
+  ['Pottery', 'Honey'],        // hũ gốm có nắp Pottery/4 vs hũ mật Honey/0
+  ['Pottery', 'Cactus'],       // xương rồng trong chậu đất Cactus/3, /4 vs bình đất nung Pottery/0
+  ['Mask', 'Glasses'],         // mặt nạ che mắt Mask/0, /1, /6 vs kính
+  ['Winter', 'Weather'],       // đống tuyết Winter/7 vs mây Weather/3
+  ['Stationery', 'Painting'],  // bút chì, hộp bút Stationery/0, /7 vs cọ, hộp màu Painting/1, /4
+  // Chương 12-13 (agent Art + duyệt ảnh thật 2026-10-15): Sewing/2 là gối cắm kim hình cà chua có quả dâu.
+  ['Sewing', 'Knitting'], ['Sewing', 'Vegetable'], ['Sewing', 'Fruit'],
+  ['Snow Sports', 'Winter'],   // xe trượt tuyết Winter/5 là đồ thể thao tuyết
+  ['Books', 'Stationery'],     // sách mở Books/1 vs sổ lò xo Stationery/6
+  // Không thêm ở ch12-13: Fireplace-Candle (lửa lò khác nến), Bicycle-Car.
+  // Không thêm (ảnh thật không giống): Picnic-Bread, Picnic-Juice, Fireworks-Flower (pháo hoa trên nền trời tối), Origami-Aircraft
+  // (không có máy bay giấy), Keys-Treasure (không có chìa), Fishing-Float (chỉ phao câu nhỏ).
 ];
+
+// Art gần trùng TRONG một chủ đề (agent Art 2026-10-15): khi chọn n art cho level, tránh lấy 2 art cùng nhóm nếu còn art khác.
+// Winter/0-3 đều là người tuyết; Cactus/1 và /6 là hai cây tròn có hoa (chỉ khác màu hoa).
+export const ART_TWINS = { Winter: [[0, 1, 2, 3]], Cactus: [[1, 6]] };
+/** Xáo art của chủ đề rồi lấy n art; art thứ 2+ của một nhóm ART_TWINS bị đẩy xuống cuối (chỉ dùng khi không còn art khác).
+ *  Chủ đề không có nhóm: kết quả và số lần gọi r() giống hệt shuffle(availableArts(t)) -> level cũ không đổi. */
+export function pickArts(t, n, r, exclude = []) {
+  const order = shuffle(availableArts(t).filter(a => !exclude.includes(a)), r);
+  const groups = ART_TWINS[t];
+  if (!groups) return order.slice(0, n);
+  const seen = new Set(), first = [], rest = [];
+  for (const a of order) {
+    const g = groups.findIndex(G => G.includes(a));
+    if (g >= 0 && seen.has(g)) rest.push(a); else { if (g >= 0) seen.add(g); first.push(a); }
+  }
+  return [...first, ...rest].slice(0, n);
+}
+/** Các cặp art gần trùng cùng có trong level (cảnh báo của validator). */
+export function twinHits(cards) {
+  const out = [];
+  for (const [t, groups] of Object.entries(ART_TWINS)) for (const G of groups) {
+    const got = cards.filter(c => c.k === 'stamp' && c.t === t && G.includes(c.art)).map(c => c.art);
+    if (got.length > 1) out.push(`${t} ${got.sort((a, b) => a - b).join('/')}`);
+  }
+  return out;
+}
 const confuseSet = new Set(CONFUSE.flatMap(([a, b]) => [a + '|' + b, b + '|' + a]));
 export const confuses = (a, b) => confuseSet.has(a + '|' + b);
 /** Các cặp CONFUSE trong một danh sách chủ đề. */

@@ -3,13 +3,21 @@
 // Mỗi level: thử nhiều seed -> solver (beam) đo số move tối thiểu -> chọn ngân sách moves nhỏ nhất
 // để người chơi mô phỏng đạt tỉ lệ thắng mục tiêu, nhưng không thấp hơn solver x minSlack.
 // Chạy: node tools/gen_proto_levels.mjs   (ghi prototype/stamp/src/levels.js)
-import { writeFileSync, readFileSync, readdirSync, existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { createState } from '../prototype/stamp/src/engine.js';
+//
+// R4 (2026-10-15, docs/design/level-r4-r6.md): sửa các level trượt validator mà KHÔNG sinh lại level đang pass.
+//   node tools/gen_proto_levels.mjs --r4          chỉ xử lý các level có trường r4 trong DESIGN, giữ nguyên level khác từ levels.js
+//     r4: 'moves'  giữ nguyên layout, chỉ nới moves (chỉnh trên seed tune 70000 + id, kiểm tra bằng validator seed 50000 + id)
+//     r4: 'regen'  dựng lại layout theo DESIGN (chủ đề, n, cột) bằng evaluate/check của tools/gen_levels.mjs
+//   Tuỳ chọn: --jobs=N (luồng)  --only=9,10 (chỉ các level này trong số level r4)
+// Chạy cả file không có --r4 (thuật toán cũ) sẽ sinh lại mọi level theo kiểu trước R4: đừng dùng cho bản phát hành.
+import { writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { cpus } from 'node:os';
+import { createState, placeJoker } from '../prototype/stamp/src/engine.js';
 import { solve, sampleHidden } from '../prototype/stamp/src/solver.js';
-
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const manifest = JSON.parse(readFileSync(ROOT + 'prototype/stamp/assets/manifest.json', 'utf8'));
+import { ROOT, rng, shuffle, availableArts as liveArts, confusePairs, allCards, pickArts } from './level_rules.mjs';
+import { legacyTargets, CAP, capMinFor, ROLE_ADJ } from './level_spec.mjs';
+import { evaluate, check, makePool } from './gen_levels.mjs';
+import { validateLevel } from './validate_levels.mjs';
 
 // Level 1-9 dựng từ video YouTube fXxL3sDSrFA (bản mới hơn APK 0.9.5): số ô, cột, deck, moves, topic và n
 // đọc bằng OCR (tools/ocr_frames.swift) + xem frame. Topic video -> topic có art trong APK (Cow->Hoofed, Clock->Time,
@@ -18,12 +26,15 @@ const manifest = JSON.parse(readFileSync(ROOT + 'prototype/stamp/assets/manifest
 // target = tỉ lệ thắng mong muốn của người chơi mô phỏng ở đúng số moves của video.
 const DESIGN = [
   { role: 'tutorial', fixed: 'L1', unlock: null, note: 'Dựng tay theo video level 1: Cat/Fruit/Pizza, 3 cột, deck 7, kịch bản ép 7 bước.' },
-  { role: 'teach', F: 3, cols: [3, 4, 5], moves: 66, target: 0.95, unlock: 'hint',
-    topics: { Ball: 6, Dog: 4, Noodle: 4, Phone: 4, Bird: 3, Car: 3 }, note: 'Video L2 = APK L2 (Zoo->Dog, Coffee->Phone). Mở Hint.' },
-  { role: 'teach', F: 4, cols: [2, 3, 4, 5], moves: 75, target: 0.9, unlock: null,
-    topics: { Hoofed: 4, Ship: 6, Candy: 5, Balloon: 5, Time: 5, Hat: 4 }, note: 'Video L3: 4 ô.' },
-  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 82, target: 0.85, unlock: 'pack', preplace: 'Dinosaur',
-    topics: { Dinosaur: 4, Glasses: 5, Pets: 5, 'Fast food': 5, Chess: 4, Car: 4, Flower: 5, Leaf: 3 },
+  // R4 (GD economy-30-days.md, 2026-10-15): L2-L4 phải <= 3 phút o35 (đang 4,2 / 5,0 / 5,9) -> 4 chủ đề, 17 lá; capMin 3 ghi vào level để validator chặn.
+  { role: 'teach', F: 3, cols: [2, 3, 4], colsAlt: [1, 2, 3], moves: null, target: 0.95, unlock: 'hint', r4: 'regen', capMin: 3,
+    topics: { Ball: 4, Dog: 3, Noodle: 3, Phone: 3 }, note: 'Video L2 = APK L2 (Zoo->Dog, Coffee->Phone). Mở Hint.' },
+  // R4: <= 3 phút o35 -> 5 chủ đề x 3 tem = 20 lá (bỏ Hoofed), vẫn 4 ô.
+  { role: 'teach', F: 4, cols: [1, 2, 3, 4], colsAlt: [2, 3, 4, 5], moves: null, target: 0.9, unlock: null, r4: 'regen', capMin: 3,
+    topics: { Ship: 3, Candy: 3, Balloon: 3, Time: 3, Hat: 3 }, note: 'Video L3: 4 ô.' },
+  // R4: lần 1 nới moves 82 -> 88 (o35 0.645). Lần 2 (GD economy-30-days.md): <= 3 phút o35 (đang 5,9) -> 5 chủ đề, 21 lá, dựng lại; giữ ô Dinosaur mở sẵn và kịch bản Pack.
+  { role: 'normal', F: 4, cols: [2, 3, 4, 5], colsAlt: [1, 2, 3, 4], moves: null, target: 0.85, unlock: 'pack', preplace: 'Dinosaur', r4: 'regen', capMin: 3,
+    topics: { Dinosaur: 4, Glasses: 3, Pets: 3, 'Fast food': 3, Flower: 3 },
     script: [{ text: 'Tap <em>Pack</em>: 2 hidden stamps jump in.', booster: 'pack', slot: 0 }],
     note: 'Video L4: ô Dinosaur mở sẵn để dạy Pack.' },
   // Mốc UA 1: level khó "không thể thua" (Overtime). Video: người chơi giỏi chỉ còn 6 moves khi thắng L5 -> nhiều khả năng
@@ -41,21 +52,25 @@ const DESIGN = [
     topics: { 'Soft drink': 6, Planet: 5, Beast: 4, Notes: 5, Bird: 3, Vegetable: 6, Insect: 4 }, note: 'Video L6 (Sauce -> Bird).' },
   // Review 2026-10-10: Zoo (hải cẩu, chim cánh cụt...) nhầm với Sea life / Float, kính lặn + kính trượt tuyết nhầm với Float.
   // Thay Zoo bằng Cake, Glasses 8 -> 6 (bỏ kính trượt tuyết, kính lặn; 2 art này sau đó được vẽ lại thành kính cận). Moves 79: người mới ~75-80%.
-  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 79, target: 0.9, unlock: 'stamper', preplace: 'Sea life',
+  // R4: c25 0.845, o35 0.52 ở moves 79 -> nới moves, giữ layout.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: 79, target: 0.9, unlock: 'stamper', preplace: 'Sea life', r4: 'moves',
     topics: { 'Sea life': 6, Glasses: 6, Float: 6, Tea: 5, Notes: 3, Car: 5, Cake: 5 },
     script: [{ text: 'Tap <em>Stamper</em>, then tap the pile.', booster: 'stamper', slot: 0 }],
     note: 'Video L7: ô Marine Animal mở sẵn để dạy Stamper.' },
   // Review 2026-10-10: Raw meat nhầm với Grilled (bít tết sống/nướng) và lệch tone -> đổi sang Ship. Dango (Desserts) đã vẽ lại thành macaron.
-  { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: 75, target: 0.97, newbieTarget: 0.85, unlock: null,
+  // R4: o35 0.695 < 0.70 -> nới moves, giữ layout. Seed 90000: o35+5 0.907 -> thêm moves.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: 75, target: 0.97, newbieTarget: 0.85, unlock: null, r4: 'moves',
     topics: { Footwear: 4, Ship: 5, Outerwear: 5, Juice: 5, Desserts: 5, Grilled: 5, Bouquet: 5 }, note: 'Video L8 (Raw meat -> Ship).' },
   // Review 2026-10-10: số liệu cho thấy L9 là level nghỉ (biên 25%) -> nhãn breather. Balloon (bóng sư tử nhầm với Zoo) -> Candy (kẹo bông đã vẽ lại).
-  { role: 'breather', F: 4, cols: [3, 4, 5, 6], moves: 110, target: 0.97, unlock: 'joker',
-    topics: { Zoo: 5, Sculpture: 5, Pizza: 5, Sashimi: 5, Candy: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 },
+  // R4: 48 lá > 46 và o35 6,7 phút > 6 -> bỏ Sculpture (tương phản thấp, review B mục 23), 7 chủ đề x 5 = 42 lá. Giữ Joker và kịch bản.
+  { role: 'breather', F: 4, cols: [3, 4, 5, 6], colsAlt: [3, 4, 5, 7], moves: null, target: 0.97, unlock: 'joker', r4: 'regen',
+    topics: { Zoo: 5, Pizza: 5, Sashimi: 5, Candy: 5, 'Pet Care': 5, 'Water Plants': 5, Gardening: 5 },
     script: [{ text: 'Tap <em>Joker</em>, then tap a column.', booster: 'joker', col: 1 }],
     note: 'Video L9: mở Joker, dùng ngay đầu level.' },
   // Mốc UA 2: level siêu khó cuối chương, cũng không thể thua.
-  { role: 'superhard', special: 'superhard', F: 5, cols: [3, 4, 5, 6, 7], moves: null, target: 0.25, unlock: null,
-    topics: { Cat: 6, Coffee: 6, 'Music Inst': 6, Cake: 6, Aircraft: 6, Mushroom: 6, Gems: 5, Sushi: 5, Tool: 5 },
+  // R4: 60 lá > 54, c10 0.09 < 0.10, o35 8,6 phút > 8 -> giữ 9 chủ đề, mỗi chủ đề 5 tem = 54 lá; cột như SUPER ch3 (deck 56% / 63%).
+  { role: 'superhard', special: 'superhard', F: 5, cols: [2, 4, 5, 6, 7], colsAlt: [2, 3, 4, 5, 6], moves: null, target: 0.25, unlock: null, r4: 'regen',
+    topics: { Cat: 5, Coffee: 5, 'Music Inst': 5, Cake: 5, Aircraft: 5, Mushroom: 5, Gems: 5, Sushi: 5, Tool: 5 },
     note: 'Finale riêng (video dừng ở L9). MỐC UA 2: siêu khó, hết moves vào Overtime, không thể thua.' },
   // ---------------- CHƯƠNG 2: BẾN CẢNG (L11-L20, concept-little-post-office.md mục 3.1) ----------------
   // Không có video gốc: moves chọn theo target (người chơi phổ thông, không nhìn trộm), sàn = solver x slack,
@@ -67,30 +82,36 @@ const DESIGN = [
     topics: { Sailboats: 5, 'Ice cream': 5, Fruit: 5, Kite: 4, Glasses: 5, Hat: 4 }, note: 'Chương 2 mở màn (nghỉ): giới thiệu Sailboats.' },
   { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.92, slack: 1.18, newbieMin: 0.85, unlock: null, chapter: 2, introduce: ['Shells'],
     topics: { Shells: 5, Sailboats: 5, Float: 5, Soda: 5, Footwear: 4, Tree: 4, Bird: 3 }, note: 'Giới thiệu Shells.' },
-  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.9, slack: 1.14, newbieMin: 0.8, unlock: null, chapter: 2, introduce: ['Seafood'],
+  // R4: pass seed check nhưng seed 90000 trượt (o35 0.64, o35+5 0.913) -> nới moves, giữ layout.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.9, slack: 1.14, newbieMin: 0.8, unlock: null, chapter: 2, introduce: ['Seafood'], r4: 'moves',
     topics: { Seafood: 5, Sailboats: 6, Juice: 5, Flower: 5, Hat: 4, Cake: 5, Insect: 4 }, note: 'Giới thiệu Seafood.' },
-  { role: 'bump', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.85, slack: 1.1, newbieMin: 0.8, unlock: null, chapter: 2, introduce: ['Nautical'],
-    topics: { Nautical: 6, Shells: 6, 'Ice cream': 6, Kite: 5, Bird: 3, Coffee: 5, Bouquet: 5, Footwear: 4 }, note: 'Giới thiệu Nautical, 8 chủ đề, bump trước mốc khó.' },
-  { role: 'hard', special: 'hard', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.2, skilledTarget: 0.45, maxStuck: 0.25, unlock: null, chapter: 2,
+  // R4: CONFUSE Coffee + Ice cream (review GD v2 #13), 48 lá > 46 -> Coffee thành Juice, bớt 4 tem = 44 lá (46 lá: o35 6,5-6,8 phút > 6,5).
+  { role: 'bump', F: 4, cols: [3, 4, 5, 6], colsAlt: [3, 4, 5, 7], moves: null, target: 0.85, slack: 1.1, newbieMin: 0.8, unlock: null, chapter: 2, introduce: ['Nautical'], r4: 'regen',
+    topics: { Nautical: 5, Shells: 5, 'Ice cream': 5, Kite: 4, Bird: 3, Juice: 5, Bouquet: 5, Footwear: 4 }, note: 'Giới thiệu Nautical, 8 chủ đề, bump trước mốc khó.' },
+  // R4: sk 0.71 > 0.70 ở 89 moves, 88 moves thì c10 0.12 < 0.15 (đường c10 quá dốc, không có moves nào đạt) -> dựng lại layout, giữ chủ đề.
+  { role: 'hard', special: 'hard', F: 4, cols: [3, 4, 5, 6], colsAlt: [4, 5, 6, 7], moves: null, target: 0.2, skilledTarget: 0.45, maxStuck: 0.25, unlock: null, chapter: 2, r4: 'regen',
     topics: { Sailboats: 6, Seafood: 6, Nautical: 6, 'Soft drink': 6, Fruit: 6, Hat: 4, Glasses: 5, Cake: 5 },
     note: 'MỐC KHÓ chương 2 (khuôn L5): thiếu moves chứ không kẹt; hết moves vào Overtime, không thể thua.' },
   { role: 'breather', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.97, slack: 1.3, newbieMin: 0.9, unlock: null, chapter: 2,
     topics: { Float: 5, Tree: 5, Flower: 5, Cake: 5, Sailboats: 5, Time: 5, Bird: 3 }, note: 'Level nghỉ sau mốc khó.' },
-  { role: 'normal', F: 4, cols: [3, 4, 5, 7], moves: null, target: 0.88, slack: 1.12, newbieMin: 0.8, unlock: null, chapter: 2,
-    topics: { Nautical: 6, Seafood: 6, Kite: 5, Tea: 5, Glasses: 6, Juice: 5, Insect: 4 }, note: '' },
-  { role: 'normal', F: 4, cols: [3, 4, 5, 6], moves: null, target: 0.85, slack: 1.1, newbieMin: 0.8, unlock: null, chapter: 2,
-    topics: { Shells: 6, Sailboats: 6, Soda: 6, 'Ice cream': 6, Footwear: 4, Bouquet: 5, Dog: 6 }, note: '' },
-  { role: 'bump', F: 4, cols: [3, 4, 5, 7], moves: null, target: 0.8, slack: 1.08, newbieMin: 0.75, unlock: null, chapter: 2,
-    topics: { Seafood: 6, Nautical: 6, Float: 6, Fruit: 6, Coffee: 6, Flower: 5, Hat: 4, Bird: 3 }, note: '8 chủ đề trước finale.' },
-  { role: 'superhard', special: 'superhard', F: 5, cols: [3, 4, 5, 6, 7], moves: null, target: 0.25, unlock: null, chapter: 2,
-    topics: { Sailboats: 6, Shells: 6, Nautical: 6, 'Ice cream': 6, Juice: 5, Kite: 5, Glasses: 5, Tree: 5, Coffee: 5 },
+  // R4: o35 0.495, o35 6,2 phút > 6 -> 44 còn 41 lá, dựng lại layout.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 7], colsAlt: [3, 4, 5, 6], moves: null, target: 0.88, slack: 1.12, newbieMin: 0.8, unlock: null, chapter: 2, r4: 'regen',
+    topics: { Nautical: 5, Seafood: 5, Kite: 5, Tea: 5, Glasses: 5, Juice: 5, Insect: 4 }, note: '' },
+  // R4: o35 0.61, o35 6,6 phút > 6 -> 46 còn 42 lá, dựng lại layout.
+  { role: 'normal', F: 4, cols: [3, 4, 5, 6], colsAlt: [3, 4, 5, 7], moves: null, target: 0.85, slack: 1.1, newbieMin: 0.8, unlock: null, chapter: 2, r4: 'regen',
+    topics: { Shells: 5, Sailboats: 5, Soda: 5, 'Ice cream': 5, Footwear: 4, Bouquet: 5, Dog: 6 }, note: '' },
+  // R4: 50 lá > 46, o35 0.255, 7,6 phút > 6,5 -> 44 lá, dựng lại layout.
+  { role: 'bump', F: 4, cols: [3, 4, 5, 7], colsAlt: [3, 4, 5, 6], moves: null, target: 0.8, slack: 1.08, newbieMin: 0.75, unlock: null, chapter: 2, r4: 'regen',
+    topics: { Seafood: 5, Nautical: 5, Float: 5, Fruit: 5, Coffee: 5, Flower: 4, Hat: 4, Bird: 3 }, note: '8 chủ đề trước finale.' },
+  // R4: CONFUSE Coffee + Ice cream, 58 lá > 54, sk 1.00, 8,6 phút -> Coffee thành Flower, 9 chủ đề x 5 = 54 lá, dựng lại layout.
+  { role: 'superhard', special: 'superhard', F: 5, cols: [2, 4, 5, 6, 7], colsAlt: [2, 3, 4, 5, 6], moves: null, target: 0.25, unlock: null, chapter: 2, r4: 'regen',
+    topics: { Sailboats: 5, Shells: 5, Nautical: 5, 'Ice cream': 5, Juice: 5, Kite: 5, Glasses: 5, Tree: 5, Flower: 5 },
     note: 'Finale chương 2. MỐC siêu khó, hết moves vào Overtime, không thể thua.' },
 ];
 
-// Cặp chủ đề dễ nhầm (art giống nhau): không bao giờ đặt chung một level (so sánh art 2026-10-10).
-// Seafood có hàu, vẹm; Shells có nghêu, ốc móng tay (người Việt coi là hải sản). Ship có thuyền buồm; Sea life có vỏ sò ngọc trai và bạch tuộc; Grilled có cá nướng; Sushi/Sashimi có tôm; Ball có bóng bãi biển.
-const CONFUSE = [['Seafood', 'Shells'], ['Sailboats', 'Ship'], ['Shells', 'Sea life'], ['Seafood', 'Sea life'], ['Seafood', 'Grilled'], ['Seafood', 'Sushi'],
-  ['Seafood', 'Sashimi'], ['Nautical', 'Ship'], ['Ball', 'Float'], ['Soda', 'Soft drink'], ['Coffee', 'Tea'], ['Nautical', 'Time']];   // la bàn giống đồng hồ quả quýt   // Truck-Train ở A L5 đã xử lý bằng avoid (bỏ tem xe buýt)
+// Cặp chủ đề dễ nhầm: dùng chung danh sách CONFUSE của tools/level_rules.mjs (R4). Cặp có một chủ đề nằm trong avoid
+// (đã bỏ đúng art gây nhầm, vd A L5 bỏ tem xe buýt 2 tầng của Truck) thì được phép, giống CONFUSE_ART của validate_levels.mjs.
+const confuseHits = d => confusePairs(Object.keys(d.topics)).filter(([x, y]) => !(d.avoid && (d.avoid[x] || d.avoid[y])));
 
 // VARIANT B (review game design 2026-10-10, mục 23): luật riêng để A/B với Baseline A (clone ABI ở trên).
 // Mỗi level tối đa 6 chủ đề, không có cặp dễ nhầm trước tier 3 (bỏ Truck cạnh Train, Float cạnh Sea life,
@@ -107,7 +128,7 @@ const VARIANT_B = {
   11: { topics: { Sailboats: 5, 'Ice cream': 5, Fruit: 5, Kite: 4, Glasses: 5, Hat: 4 } },
   12: { topics: { Shells: 5, Sailboats: 5, Float: 5, Soda: 5, Footwear: 4, Tree: 4 } },
   13: { topics: { Seafood: 5, Sailboats: 6, Juice: 5, Flower: 5, Hat: 4, Cake: 5 } },
-  14: { topics: { Nautical: 6, Shells: 6, 'Ice cream': 6, Kite: 5, Coffee: 5, Bouquet: 5 } },
+  14: { topics: { Nautical: 6, Shells: 6, 'Ice cream': 6, Kite: 5, Juice: 5, Bouquet: 5 } },   // R4: Coffee -> Juice (CONFUSE Coffee + Ice cream); levels_b.js L14 chưa sinh lại
   15: { topics: { Sailboats: 6, Seafood: 6, Nautical: 6, 'Soft drink': 6, Fruit: 6, Glasses: 5 } },
   16: { topics: { Float: 5, Tree: 5, Flower: 5, Cake: 5, Sailboats: 5, Time: 5 } },
   17: { topics: { Nautical: 6, Seafood: 6, Kite: 5, Tea: 5, Glasses: 6, Juice: 5 } },
@@ -127,7 +148,7 @@ if (VARIANT === 'b') {
   }
 }
 for (const [i, d] of DESIGN.entries()) {
-  for (const [x, y] of CONFUSE) if (d.topics && d.topics[x] && d.topics[y]) throw new Error(`L${i + 1}: ${x} và ${y} dễ nhầm, không được chung level`);
+  if (d.topics) for (const [x, y] of confuseHits(d)) throw new Error(`L${i + 1}: ${x} và ${y} dễ nhầm, không được chung level`);
 }
 const SUFFIX = VARIANT === 'b' ? '_b' : '';
 
@@ -158,35 +179,25 @@ function buildL1() {
   };
 }
 
-function rng(seed) {
-  let x = seed >>> 0 || 1;
-  return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
-}
-// Art thật đang có trong assets (đã bỏ các file tem APK không dùng): chỉ chọn trong số này.
-const slug = t => t.toLowerCase().replace(/ /g, '_').replace(/&/g, 'and');
-function availableArts(t) {
-  const dir = ROOT + 'prototype/stamp/assets/cards/' + slug(t);
-  if (!existsSync(dir)) return [...Array(manifest[t].arts).keys()];
-  return readdirSync(dir).map(f => f.match(/^(\d+)\.png$/)).filter(Boolean).map(m => +m[1]).sort((a, b) => a - b);
-}
-function shuffle(a, r) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+// Art thật đang có trong assets (level_rules.mjs): chỉ chọn trong số này.
+const availableArts = t => liveArts(t).slice();
 
-function build(d, seed) {
+function build(d, seed, shape = d.cols) {
   const r = rng(seed * 7919 + 13);
   const cards = [];
   const pre = [];
   let id = 0;
   for (const [t, n] of Object.entries(d.topics)) {
-    const arts = shuffle(availableArts(t).filter(a => !(d.avoid && d.avoid[t] || []).includes(a)), r).slice(0, n);
+    const arts = pickArts(t, n, r, d.avoid && d.avoid[t] || []);
     if (arts.length < n) throw new Error(`${t}: chỉ có ${arts.length} art dùng được, cần ${n}`);
     const topic = { id: id++, t, k: 'topic', n };
     if (d.preplace === t) pre.push([topic]); else cards.push(topic);
     for (const a of arts) cards.push({ id: id++, t, k: 'stamp', art: a });
   }
   shuffle(cards, r);
-  const columns = d.cols.map(() => []);
+  const columns = shape.map(() => []);
   let p = 0;
-  d.cols.forEach((n, i) => { columns[i] = cards.slice(p, p + n); p += n; });
+  shape.forEach((n, i) => { columns[i] = cards.slice(p, p + n); p += n; });
   const deck = cards.slice(p);
   return { foundations: d.F, moves: d.moves ?? null, columns, deck, preplaced: pre };
 }
@@ -222,6 +233,142 @@ const sim = (lv, prof, runs, seed) => { const r = sampleHidden(createState(lv), 
 
 // --only=5,10 : chỉ sinh lại các level này, giữ nguyên level khác từ levels.js / levels-report.json hiện có
 const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean).map(Number);
+
+// ---------------------------------------------------------------- R4: sửa level trượt validator, giữ level đang pass
+const R4_ROLE = { teach: 'nor', normal: 'nor', breather: 'br', bump: 'bump', hard: 'HARD', superhard: 'SUPER' };
+// sàn slack khi dựng lại layout (như ROLE_ADJ của level_spec.mjs; level thường chương 1-2 thấp hơn sàn 1.28 của ch3 vì moves do mục tiêu quyết)
+const R4_FLOOR = { nor: 1.2, br: 1.35, bump: 1.15, HARD: 1.02, SUPER: 1.03 };
+const R4_GEN = { nor: 12, br: 10, bump: 16, HARD: 40, SUPER: 40 };
+const R4_MAX_CHECKS = { nor: 12, br: 12, bump: 12, HARD: 9, SUPER: 9 };
+// Sau khi pass seed check, level thường còn phải pass seed 90000 (300 ván); trượt thì +2 moves, tối đa 3 lần.
+// Lý do: lần đầu kiểm tra seed 90000 sau R4 có 4/19 trượt sát biên (o35+5 0.90-0.91 < 0.93; L13 o35 0.64). QA sau này dùng seed khác (110000).
+const R4_HOLDOUT = { seedBase: 90000, runs: 300 };
+
+/** Spec tối thiểu cho evaluate/check của gen_levels.mjs, mục tiêu = mục tiêu legacy của validator (legacyTargets). */
+function r4Spec(L, d, old) {
+  const role = R4_ROLE[d.role];
+  const lt = legacyTargets(d.role, d.special);
+  const special = role === 'HARD' || role === 'SUPER';
+  // 'moves': level thường không bao giờ bớt moves (sàn = moves cũ); level khó cho phép -1 tới sát solver
+  const slackFloor = d.r4 === 'moves' ? (special ? 1.0 : (old.moves - 0.5) / old.solverMoves) : R4_FLOOR[role];
+  // level dạy ngắn (capMin, L2-L4): moves hào phóng như level nghỉ (c25 0.97, o35 0.85), vì đây là level học booster của người lớn tuổi
+  const targets = d.capMin && !special ? ROLE_ADJ.br.targets : lt.targets;
+  return { id: L, role, special: lt.special || null, targets, maxStuck: lt.stuck, slackFloor,
+    capCards: special ? CAP.special.cards : CAP.normal.cards, capMin: d.capMin ?? capMinFor(d.role, d.special) };
+}
+/** Kịch bản Joker (L9): sau khi đặt Joker vào cột của kịch bản, level vẫn phải giải được (fuzz.test.mjs). */
+function jokerOk(d, lv) {
+  const st = (d.script || []).find(x => x.booster === 'joker');
+  if (!st) return true;
+  const s = createState(lv);
+  if (!placeJoker(s, st.col, 'J1').ok) return false;
+  return solve(s, { width: 300 }) !== null;
+}
+
+async function runR4() {
+  const OLDL = (await import(ROOT + `prototype/stamp/src/levels${SUFFIX}.js?` + Date.now())).LEVELS;
+  const OLDR = JSON.parse(readFileSync(ROOT + `prototype/stamp/levels-report${SUFFIX}.json`, 'utf8'));
+  const jobs = Math.max(1, Number((process.argv.find(a => a.startsWith('--jobs=')) || '').slice(7)) || Math.max(1, cpus().length - 1));
+  const runs = 200;
+  const pool = makePool(jobs);
+  const out = OLDL.slice(), report = OLDR.slice(), rows = [];
+  const todo = DESIGN.map((d, i) => [i + 1, d]).filter(([L, d]) => d.r4 && (!ONLY.length || ONLY.includes(L)));
+  const t0 = Date.now();
+  // xếp hàng đánh giá mọi ứng viên của mọi level trước (dùng hết luồng), rồi kiểm tra tuần tự theo level
+  const jobsOf = todo.map(([L, d]) => {
+    const old = OLDL[L - 1];
+    const spec = r4Spec(L, d, old);
+    let cands;
+    if (d.r4 === 'moves') {
+      const lv = { foundations: old.foundations, moves: null, columns: old.columns, deck: old.deck, preplaced: old.preplaced || [] };
+      cands = [{ lv, seed: old.seed }];
+    } else {
+      cands = [];
+      for (let k = 1; cands.length < R4_GEN[spec.role] && k < 600; k++) {
+        const seed = (L - 1) * 1000 + k;
+        const lv = build(d, seed, d.colsAlt && k % 2 === 0 ? d.colsAlt : d.cols);
+        if (fair(d, lv) && jokerOk(d, lv)) cands.push({ lv, seed });
+      }
+    }
+    const evs = Promise.all(cands.map(c => pool.run({ kind: 'eval', spec, lv: c.lv })));
+    return { L, d, old, spec, cands, evs };
+  });
+  for (const { L, d, old, spec, cands, evs } of jobsOf) {
+    const ev = await evs;
+    cands.forEach((c, i) => { c.ev = ev[i]; c.order = i; });
+    const special = !!spec.special;
+    const inRange = c => !special || (c.ev.tuneC10 >= spec.targets.c10[0] + 0.02 && c.ev.tuneC10 <= spec.targets.c10[1] - 0.02
+      && c.ev.tuneSk >= spec.targets.sk[0] + 0.02 && c.ev.tuneSk <= spec.targets.sk[1] - 0.02);
+    let valid;
+    if (d.r4 === 'moves') {
+      // giữ layout: moves khởi điểm = max(moves cũ, moves tune) ở level thường; level khó bắt đầu từ moves cũ, check chỉnh ±1
+      const c = cands[0];
+      const solver = Math.min(old.solverMoves, c.ev.solver ?? Infinity);
+      const budget = special ? old.moves : Math.max(old.moves, c.ev.ok ? c.ev.budget : old.moves);
+      c.ev = { ...c.ev, ok: true, solver, budget };
+      valid = [c];
+    } else valid = cands.filter(c => c.ev.ok).sort((a, b) => inRange(b) - inRange(a) || a.ev.score - b.ev.score || a.order - b.order);
+    let pick = null, checked = 0;
+    for (let i = 0; i < valid.length && !pick && i < R4_MAX_CHECKS[spec.role]; i += 3) {
+      const batch = valid.slice(i, i + 3);
+      const res = await Promise.all(batch.map(c => pool.run({ kind: 'check', runs, level: { id: L, role: d.role, ...spec, role: spec.role, solverMoves: c.ev.solver, ...c.lv, moves: c.ev.budget } }, true)));
+      checked += batch.length;
+      batch.forEach((c, j) => { c.check = res[j]; });
+      pick = batch.find(c => c.check.pass) || null;
+    }
+    const failed = !pick;
+    if (!pick) pick = valid.find(c => c.check) || valid[0];
+    if (!pick) {   // không có ứng viên hợp lệ: giữ level cũ, báo trượt
+      process.stderr.write(`R4 L${L}: TRƯỢT không có ứng viên hợp lệ, giữ level cũ (${cands.map(c => c.seed + ': ' + c.ev.why).join('; ')})\n`);
+      rows.push({ L, d, old, level: old, cr: null, failed: true, cands: cands.length, valid: 0, checked: 0 });
+      continue;
+    }
+    let moves = pick.check ? pick.check.moves : pick.ev.budget;
+    let cr = pick.check?.result;
+    let holdout = null;
+    if (!failed && !special) {
+      for (let i = 0; i <= 3; i++) {
+        const base = { id: L, role: d.role, ...spec, role: spec.role, solverMoves: pick.ev.solver, ...pick.lv };
+        const h = validateLevel({ ...base, moves }, { runs: R4_HOLDOUT.runs, file: 'levels_gen.js', seedBase: R4_HOLDOUT.seedBase });
+        holdout = { moves, pass: h.pass, fails: h.fails, o35: h.sim.o35.win, o35p5: h.sim.o35.winP5, c25: h.sim.c25?.win };
+        if (h.pass || i === 3) break;
+        moves += 2;
+        const c2 = validateLevel({ ...base, moves }, { runs, file: 'levels_gen.js' });
+        cr = { ...c2, bumped: moves - pick.ev.budget };
+      }
+    }
+    const lv = { ...pick.lv, moves };
+    const level = { id: L, role: d.role, unlock: d.unlock, note: d.note + (d.r4 === 'moves' ? ` R4: moves ${old.moves} -> ${moves}.` : ` R4: dựng lại layout (seed ${pick.seed}).`),
+      seed: pick.seed, solverMoves: pick.ev.solver, winRateSim: cr ? cr.sim.c10.win : null,
+      ...(d.special ? { special: d.special, safety: 'overtime' } : {}), ...(d.chapter ? { chapter: d.chapter } : {}), ...(d.introduce ? { introduce: d.introduce } : {}),
+      ...(d.script ? { script: d.script } : {}), ...(d.capMin ? { capMin: d.capMin } : {}), ...lv };
+    if (!level.preplaced) level.preplaced = [];
+    out[L - 1] = level;
+    const cardsN = allCards(level).length;
+    report[L - 1] = { L, role: d.role, F: level.foundations, cols: level.columns.map(c => c.length).join('-'), topics: Object.keys(d.topics).length, cards: cardsN,
+      deck: level.deck.length, solver: level.solverMoves, moves, video: d.r4 === 'moves' && old.moves ? `${old.moves} (cũ)` : '-', movesPerCard: +(moves / cardsN).toFixed(2),
+      slack: +(moves / level.solverMoves).toFixed(2), winSim: level.winRateSim, stuckSim: cr ? cr.sim.c10.stuck : null,
+      r4: { mode: d.r4, oldMoves: old.moves, oldCards: allCards(old).length, check: cr ? Object.fromEntries(Object.entries(cr.sim).map(([k, v]) => [k, { win: v.win, winP5: v.winP5, stuck: v.stuck, minutes: v.minutes }])) : null,
+        pass: !failed, fails: cr?.fails || [], holdout, candidates: cands.length, valid: valid.length, checked } };
+    rows.push({ L, d, old, level, cr, failed, cands: cands.length, valid: valid.length, checked });
+    process.stderr.write(`R4 L${L} ${d.r4}: ${failed ? 'TRƯỢT ' + (cr?.fails || []).join('; ') : 'pass'}${holdout ? ` (seed 90000: ${holdout.pass ? 'pass' : 'TRƯỢT ' + holdout.fails.join('; ')})` : ''} moves ${old.moves} -> ${moves}, ${cardsN} lá (ứng viên ${cands.length}, hợp lệ ${valid.length}, check ${checked}) ${((Date.now() - t0) / 1000).toFixed(0)}s\n`);
+  }
+  pool.close();
+  const header = '// SINH TỰ ĐỘNG bởi tools/gen_proto_levels.mjs. Đừng sửa tay; sửa DESIGN rồi chạy lại.\n';
+  writeFileSync(ROOT + `prototype/stamp/src/levels${SUFFIX}.js`, header + 'export const LEVELS = ' + JSON.stringify(out) + ';\n');
+  writeFileSync(ROOT + `prototype/stamp/levels-report${SUFFIX}.json`, JSON.stringify(report, null, 1));
+  const pct = x => (x == null ? '-' : Math.round(x * 100) + '%');
+  console.log('| L | Vai trò | R4 | Lá (cũ → mới) | Cột | Moves (cũ → mới) | Slack | c10 | c10 kẹt | c25 | o35 | o35 +5 | sk | Phút o35 | Kết quả |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const r of rows) {
+    const s = r.cr?.sim || {};
+    console.log(`| ${r.L} | ${r.d.special || r.d.role} | ${r.d.r4} | ${allCards(r.old).length} → ${allCards(r.level).length} | ${r.level.columns.map(c => c.length).join('-')} | ${r.old.moves} → ${r.level.moves} | ${(r.level.moves / r.level.solverMoves).toFixed(2)} | ${pct(s.c10?.win)} | ${pct(s.c10?.stuck)} | ${pct(s.c25?.win)} | ${pct(s.o35?.win)} | ${pct(s.o35?.winP5)} | ${pct(s.sk?.win)} | ${s.o35?.minutes ?? '-'} | ${r.failed ? '**TRƯỢT** ' + (r.cr?.fails || []).join('; ') : 'pass'} |`);
+  }
+  const nf = rows.filter(r => r.failed).length;
+  console.log(`\nR4: ${rows.length - nf}/${rows.length} level sửa pass seed check. ${((Date.now() - t0) / 1000).toFixed(0)}s. -> prototype/stamp/src/levels${SUFFIX}.js`);
+  return nf;
+}
+if (process.argv.includes('--r4')) process.exit((await runR4()) ? 1 : 0);
 let OLD = null, OLD_REPORT = null;
 if (ONLY.length) {
   OLD = (await import(ROOT + `prototype/stamp/src/levels${SUFFIX}.js?` + Date.now())).LEVELS;

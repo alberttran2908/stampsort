@@ -3,7 +3,9 @@
 import { LEVELS as LEVELS_B } from '../../prototype/stamp/src/levels_b.js';
 import { allCards, artCount, availableArts, confusePairs, fair } from '../level_rules.mjs';
 import { specFor } from '../level_spec.mjs';
-import { buildGen, abiPool, abiCandidates, rethemeAbi, evaluate } from '../gen_levels.mjs';
+import { buildGen, abiPool, abiCandidates, rethemeAbi, evaluate, shrinkSpec } from '../gen_levels.mjs';
+import { LEVELS as LEVELS_A } from '../../prototype/stamp/src/levels.js';
+import { CAP } from '../level_spec.mjs';
 import { validateLevel } from '../validate_levels.mjs';
 
 const results = [];
@@ -58,6 +60,33 @@ test('evaluate tất định và chọn moves >= sàn slack', () => {
   const a = evaluate(s, lv), b = evaluate(s, lv);
   ok(JSON.stringify(a) === JSON.stringify(b), 'khác nhau giữa 2 lần');
   ok(a.ok && a.budget >= Math.ceil(a.solver * s.slackFloor), JSON.stringify(a));
+});
+
+test('shrinkSpec (R6): bớt 2 tem mỗi bước, giữ chủ đề giới thiệu và bao thư lớn, n >= tối thiểu, cột khớp số lá', () => {
+  for (const L of [41, 60, 72, 87]) {
+    const s = specFor(L);
+    for (const step of [1, 2, 3]) {
+      const t = shrinkSpec(s, step);
+      const sum = Object.values(t.topics).reduce((a, n) => a + n + 1, 0);
+      ok(sum === t.cards && t.cards <= s.cards - 2 && t.cards >= s.cards - 2 * step, `L${L} bước ${step}: ${t.cards} lá`);
+      ok(Object.keys(t.topics).join() === Object.keys(s.topics).join(), `L${L}: đổi chủ đề`);
+      ok(Object.values(t.topics).every(n => n >= s.nRange[0]), `L${L}: n < tối thiểu`);
+      for (const k of [...(s.introduce || []), ...(s.bigEnvelope ? [s.bigEnvelope.topic] : [])]) ok(t.topics[k] === s.topics[k], `L${L}: bớt ${k}`);
+      ok(t.cols.reduce((a, b) => a + b, 0) < t.cards - (s.preplace ? 1 : 0) && t.cols.length === s.cols.length, `L${L}: cột`);
+      const lv = buildGen(t, 1);
+      ok(allCards(lv).length === t.cards, `L${L}: buildGen ${allCards(lv).length} lá`);
+    }
+  }
+});
+
+test('levels.js (A, sau R4): 0 cặp CONFUSE (trừ Truck bỏ art #3 ở L5), số lá <= trần 46 / 54, id 1-20', () => {
+  ok(LEVELS_A.length === 20 && LEVELS_A.every((l, i) => l.id === i + 1), 'id');
+  for (const l of LEVELS_A) {
+    const tp = Object.keys(Object.fromEntries(allCards(l).filter(c => c.k === 'topic').map(c => [c.t, 1])));
+    const bad = confusePairs(tp).filter(([x, y]) => !(l.id === 5 && [x, y].includes('Truck') && !allCards(l).some(c => c.t === 'Truck' && c.art === 3)));
+    ok(!bad.length, `L${l.id}: CONFUSE ${JSON.stringify(bad)}`);
+    if (l.id > 1) ok(allCards(l).length <= (l.special ? CAP.special.cards : CAP.normal.cards), `L${l.id}: ${allCards(l).length} lá`);
+  }
 });
 
 test('validator bắt CONFUSE, n sai và L14 B (o35 < 0.60)', () => {
