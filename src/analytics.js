@@ -3,7 +3,7 @@
 // Danh sách sự kiện và ý nghĩa UA: docs/design/difficulty-and-ua-milestones.md
 
 const KEY = 'stampsort_events_v1';
-const MAX = 800;
+const MAX = 5000;          // ~1 MB localStorage (R12/M8: đủ cho nhiều phiên playtest)
 const DEBUG = /debug/.test(location.search);
 let buffer = [];
 try { buffer = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { buffer = []; }
