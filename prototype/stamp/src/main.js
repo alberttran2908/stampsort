@@ -3,8 +3,9 @@ import { LEVELS as LEVELS_B } from './levels_b.js';
 import { LEVELS_APK } from './levels_apk.js';   // L21-L60: level APK 0.9.5 (tools/import_apk_levels.mjs)
 import * as E from './engine.js';
 import { hint as solverHint, solve } from './solver.js';
-import { initAudio, unlockAudio, sfx, comboSfx, setMuted, isMuted, setMusicOn, isMusicOn, setMusicScene } from './audio.js';
-import { haptic } from './haptics.js';   // 4 bậc, Capacitor Haptics trên iOS (benchmark-grand-games.md P1)
+import { initAudio, unlockAudio, sfx, comboSfx, setMusicOn, isMusicOn, setMusicScene, setSfxVolume, sfxVolume } from './audio.js';
+import { haptic, hapticsEnabled, setHapticsEnabled } from './haptics.js';   // 4 bậc, Capacitor Haptics trên iOS (benchmark-grand-games.md P1)
+import { getSetting, setSetting, onSetting, textScale } from './settings.js';   // cài đặt của máy (R13)
 import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles } from './fx.js';
 import { candidateActions, isDeadlocked } from './solver.js';
 import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js';
@@ -99,6 +100,21 @@ const LITE = (() => {
 })();
 document.body.classList.toggle('lite', LITE);
 
+// ============================================================ cài đặt máy (R13): cỡ chữ, âm lượng, giảm chuyển động
+const MQ_REDUCE = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+/** Giảm chuyển động: cài đặt trong bảng Cài đặt HOẶC cài đặt hệ thống. Không đổi tốc độ lá bay / kéo thả (benchmark mục 8). */
+function reduceMotion() { return getSetting('motion') === 'reduce' || !!(MQ_REDUCE && MQ_REDUCE.matches); }
+/** Cỡ chữ cho style inline: nhân biến --fs (áp ngay khi đổi mức, không cần dựng lại). */
+const fs = n => `calc(${n}px * var(--fs, 1))`;
+function applySettings() {
+  document.body.style.setProperty('--fs', String(textScale()));
+  document.body.classList.toggle('reduce-motion', reduceMotion());
+  setLite(LITE || reduceMotion());                  // fx.js: ít hạt hơn khi giảm chuyển động
+  setSfxVolume(getSetting('sfx'));
+}
+document.body.style.setProperty('--fs', String(textScale()));
+if (MQ_REDUCE && MQ_REDUCE.addEventListener) MQ_REDUCE.addEventListener('change', () => applySettings());
+
 // ============================================================ save
 const SAVE_KEY = 'stampsort_proto_v1' + (VARIANT === 'b' ? '_b' : '');   // tiến trình riêng cho từng bộ level
 const defaultSave = () => ({ unlocked: 1, coins: 500, stars: {}, hint: 0, pack: 0, stamper: 0, joker: 0, slot: 0, seen: {}, attempts: {} });
@@ -119,15 +135,36 @@ if (save.album && save.album.Cocktail) {
 
 // ============================================================ stage scaling
 let scale = 1, stageLeft = 0, stageTop = 0;
+// Vùng an toàn (tai thỏ / Dynamic Island / thanh home). P0 TestFlight 4: HUD bị thanh trạng thái đè vì WKWebView (Capacitor,
+// contentInset: never) trả env(safe-area-inset-*) = 0 lúc main.js chạy, inset chỉ có sau khi webview gắn vào cửa sổ và không
+// có sự kiện resize nào báo -> đo lại nhiều lần (watchInsets). Thêm 2 lưới an toàn:
+//   - ?sat=59&sab=34 (pt): ép inset để test trên Chrome (Chrome desktop luôn trả 0);
+//   - app iOS native mà env() vẫn 0 sau 1,5 giây: đoán theo kích thước màn hình (máy có tai thỏ/đảo: 47-59pt trên, 34pt dưới).
+const INSET_Q = (() => {
+  const a = location.search.match(/[?&]sat=(\d+)/), b = location.search.match(/[?&]sab=(\d+)/);
+  return a || b ? { top: a ? +a[1] : 0, bottom: b ? +b[1] : 0 } : null;
+})();
+const BOOT_T = performance.now();
+function guessIosInsets() {
+  const C = window.Capacitor;
+  if (!C || !C.isNativePlatform || !C.isNativePlatform() || (C.getPlatform && C.getPlatform() !== 'ios')) return null;
+  if (performance.now() - BOOT_T < 1500) return null;          // chờ env() thật trước
+  const w = Math.min(screen.width, screen.height), h = Math.max(screen.width, screen.height);
+  if (h / w < 2) return { top: 20, bottom: 0 };                // iPhone SE / 8: thanh trạng thái 20pt, không có thanh home
+  return { top: h >= 852 && w >= 393 ? 59 : 47, bottom: 34 };   // Dynamic Island 59pt; tai thỏ 44-48pt
+}
 function safeInsets() {
+  if (INSET_Q) return INSET_Q;
   const d = document.createElement('div');
   d.style.cssText = 'position:fixed;left:0;top:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';
   document.body.append(d);
   const cs = getComputedStyle(d);
   const r = { top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
   d.remove();
+  if (!r.top && !r.bottom) return guessIosInsets() || r;
   return r;
 }
+let insetKey = '';
 // Bố cục dọc: khay đích ngay dưới HUD, cột bài ở giữa, hàng rút bài (ô phụ, lá đã rút, bộ bài) neo theo đáy
 // ngay trên nhãn gợi ý: bộ bài là chỗ chạm nhiều nhất nên nằm trong vùng ngón cái. Gọi lại khi đổi cỡ lá (CH).
 function layoutRows() {
@@ -143,6 +180,7 @@ function fit() {
   stageLeft = (innerWidth - 1080 * scale) / 2;
   stageTop = (innerHeight - STAGE_H * scale) / 2;
   const ins = safeInsets();
+  insetKey = ins.top + ',' + ins.bottom;
   const sat = ins.top / scale, sab = ins.bottom / scale;
   const extra = STAGE_H - 1920;
   const free = Math.max(0, extra - sat - sab);
@@ -151,7 +189,7 @@ function fit() {
   DY_BOT = extra - sab;                            // thanh booster neo theo đáy, tránh thanh home
   layoutRows();
   stage.style.height = STAGE_H + 'px';
-  for (const [k, v] of [['--hud', DY_HUD], ['--bd', DY_BOARD], ['--bot', DY_BOT], ['--mid', extra / 2], ['--extra', extra]]) stage.style.setProperty(k, v + 'px');
+  for (const [k, v] of [['--hud', DY_HUD], ['--bd', DY_BOARD], ['--bot', DY_BOT], ['--mid', extra / 2], ['--extra', extra], ['--sab', sab]]) stage.style.setProperty(k, v + 'px');
   const fxc = document.getElementById('fx');
   if (fxc) { fxc.height = STAGE_H; fxc.style.height = STAGE_H + 'px'; }
   stage.style.transform = `scale(${scale})`;
@@ -160,6 +198,16 @@ function fit() {
 }
 addEventListener('resize', () => { fit(); placeChrome(); });
 fit();
+// Inset đổi mà kích thước không đổi (webview iOS nhận safe area muộn, xoay máy, ra/vào nền): dựng lại bố cục
+function checkInsets() {
+  const ins = safeInsets();
+  if (ins.top + ',' + ins.bottom !== insetKey) { fit(); placeChrome(); }
+}
+[0, 60, 200, 500, 1000, 1600, 2500, 4000].forEach(ms => setTimeout(checkInsets, ms));
+setInterval(checkInsets, 2000);
+for (const ev of ['orientationchange', 'pageshow', 'focus']) addEventListener(ev, () => setTimeout(checkInsets, 120));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkInsets, 120); });
+document.addEventListener('resume', () => setTimeout(checkInsets, 120));     // Capacitor: app quay lại từ nền
 // Đặt lại vị trí phần khung bàn chơi theo toạ độ mới (đổi cỡ / xoay màn hình) mà không dựng lại lá bài
 function placeChrome() {
   if (!S || !slotEls.length) return;
@@ -480,12 +528,13 @@ function fitSize(text, base, fitChars) {
   const n = String(text).length;
   return n <= fitChars ? base : Math.max(24, Math.floor(base * fitChars / n));
 }
-// Nhãn tên trên lá vương miện: tên ngắn 1 dòng 34px; tên dài có dấu cách thì xuống 2 dòng 30px (không co còn 24px)
+// Nhãn tên trên lá vương miện (review GD v2 #3): luôn 34px, không co; tên dài xuống 2 dòng. Từ đơn dài (> 8 ký tự) khít chữ lại
+// một chút thay vì cắt "...". Lá có kích thước cố định nên KHÔNG nhân --fs.
 function tagStyle(name) {
-  const n = String(name).length;
-  if (n <= 8) return 'font-size:34px';
-  if (/\s/.test(name) && Math.max(...String(name).split(/\s+/).map(w => w.length)) <= 9) return 'font-size:29px;white-space:normal;line-height:.95;bottom:22px';
-  return `font-size:${fitSize(name, 34, 8)}px`;
+  const str = String(name);
+  if (str.length <= 8) return 'font-size:34px';
+  const longest = Math.max(...str.split(/\s+/).map(w => w.length));
+  return `font-size:34px;white-space:normal;line-height:.92;bottom:12px;overflow:visible${longest > 8 ? `;letter-spacing:${longest > 10 ? -2.5 : -1.5}px` : ''}`;
 }
 function updateSlotLabels() {
   S.found.forEach((f, k) => {
@@ -515,7 +564,7 @@ function updateHUD(bump = false) {
     tween(movesAnim, { s: 1 }, { dur: 260, easing: ease.outBack, key: 'mv', onUpdate: o => { movesVal.style.transform = `scale(${o.s})`; } });
   }
   lastMovesShown = m;
-  $('coins').querySelector('span').textContent = save.coins;
+  bumpCoins({ instant: true, pop: false });                // vào level: đặt thẳng số xu, không đếm
   $('title').textContent = `Level ${levelIdx + 1}`;
   const fill = $('combo').querySelector('.fill');
   { const tp0 = topicProgress(); fill.style.transform = `scaleX(${tp0.total ? tp0.done / tp0.total : 0})`; $('combo').style.setProperty('--segs', Math.max(1, tp0.total)); }
@@ -533,27 +582,41 @@ function topicProgress() {
   for (const c of S.deck.concat(S.waste)) if (c.k === 'topic') left++;
   return { done: total - left, total };
 }
-function bumpCoins() {
-  const el = $('coins');
+// Số xu trên HUD đếm dần tới save.coins trong 600 ms (R12, benchmark 4.3); lần gọi mới huỷ lần cũ (key riêng).
+// Cập nhật cả bản sao ô xu nằm trên lớp mờ ở màn thắng.
+const coinShown = { v: 0 };
+const coinSpans = () => document.querySelectorAll('.hud-coins span');
+function setCoinText(v) { const n = Math.round(v); coinSpans().forEach(sp => { sp.textContent = n; }); }
+function bumpCoins({ instant = false, pop = true } = {}) {
+  const to = save.coins;
+  if (instant || reduceMotion()) { killKey('coincount'); coinShown.v = to; setCoinText(to); }
+  else tween(coinShown, { v: to }, { dur: 600, easing: ease.outCubic, key: 'coincount', onUpdate: o => setCoinText(o.v) }).then(() => { if (coinShown.v === to) setCoinText(to); });
+  if (!pop) return;
   const o = { s: 1.2 };
-  $('coins').querySelector('span').textContent = save.coins;
-  tween(o, { s: 1 }, { dur: 220, easing: ease.outBack, key: 'coinbump', onUpdate: () => { el.style.transform = `scale(${o.s})`; } });
+  const els = document.querySelectorAll('.hud-coins');
+  tween(o, { s: 1 }, { dur: 220, easing: ease.outBack, key: 'coinbump', onUpdate: () => { els.forEach(el => { el.style.transform = `scale(${o.s})`; }); } });
 }
+/** Xu bay từ (fromX, fromY) về ô xu, cộng dần vào save. Trả về { finish() } để cộng ngay phần còn lại (chạm để tua). */
 function coinsTo(n, fromX, fromY) {
-  const hudX = 1080 - 150 - 120, hudY = 72;
-  const per = Math.max(1, Math.round(n / Math.min(n, 12)));
-  let left = n;
-  const count = Math.min(n, 12);
+  const hudX = 1080 - 150 - 120, hudY = 72 + DY_HUD;            // ô xu dời xuống theo vùng an toàn
+  let left = Math.max(0, n);
+  const ctrl = { get left() { return left; }, finish() { if (left > 0) { save.coins += left; left = 0; persist(); bumpCoins(); } } };
+  if (!left) return ctrl;
+  const count = Math.min(left, 12);
+  const per = Math.max(1, Math.floor(left / count));
+  let landed = 0;
   coinFly(fromX, fromY, hudX, hudY, count, () => {
-    const add = Math.min(per, left);
+    landed++;
+    if (left <= 0) return;
+    const add = landed >= count ? left : Math.min(per, left);     // đồng cuối mang phần lẻ
     left -= add;
     save.coins += add;
     sfx('coin', { vol: 0.5, rate: [1, 1.1225, 1.2599][Math.floor(Math.random() * 3)] });
     bumpCoins();
-    if (left > 0 && count === 1) { save.coins += left; left = 0; }
     persist();
   });
-  setTimeout(() => { if (left > 0) { save.coins += left; left = 0; bumpCoins(); persist(); } }, 1800);
+  setTimeout(() => ctrl.finish(), 1800);                          // xu bị xoá giữa đường (đổi level): vẫn cộng đủ
+  return ctrl;
 }
 
 // ============================================================ boosters
@@ -657,7 +720,7 @@ function doUndo() {
   combo = snap.combo;
   clearHint();
   sfx('back');
-  haptic(8);
+  haptic('tap');
   // view của các lá đã trả về
   relayout({ dur: 260 });
   updateSlotLabels();
@@ -757,7 +820,7 @@ function placeJokerAt(j) {
     ring(T.x + CW / 2, T.y + CH / 2, { color: '#ffd84a' });
     sparkle(T.x + CW / 2, T.y + CH / 2, 16, { colors: ['#ffd84a', '#fff4a0', '#ffffff'] });
     sfx('open');
-    haptic(20);
+    haptic('progress');
   });
   relayout({ except: new Set([id]) });
   updateHUD();
@@ -859,7 +922,7 @@ function applyReveal(i) {
   const col = S.cols[i];
   const ys = colOffsets(col);
   stampSlam(colX(i) + CW / 2, ys[0] + CH / 2);
-  haptic([10, 30, 10]);
+  haptic('milestone');
   track('stamper_reveal', { level: levelIdx + 1, col: i, cards: res.events.length });
   playEvents(res.events, false);
   relayout({ dur: 260 });
@@ -881,7 +944,7 @@ function applyPull(k, kind) {
   const p = slotPos(k);
   if (kind === 'stamper') stampSlam(p.x + CW / 2, p.y + CH / 2);
   else { sfx('magnet'); ring(p.x + CW / 2, p.y + CH / 2, { color: '#5fd3ff', r1: 260, width: 12 }); }
-  haptic([10, 30, 10]);
+  haptic('milestone');
   playEvents(res.events, false);
 }
 function stampSlam(x, y) {
@@ -906,11 +969,12 @@ function onExtraSlot(e) {
   unlockAudio();
   if (scriptStep()) { toast(t('follow'), 1000); return; }
   if (levelIdx + 1 < UNLOCK_AT.slot) { toast(t('unlocks', { n: UNLOCK_AT.slot })); sfx('deny'); return; }
+  track('ad_offer', { level: levelIdx + 1, placement: 'extra_slot' });
   panel({
     title: t('extra_title'),
     body: `<div class="feature-icon" style="background-image:url(assets/ui/slot_tray.png);width:230px;height:224px"></div><p>${t('extra_body')}</p>`,
     buttons: [
-      { label: t('free_ad'), cls: 'orange', act: () => fakeAd(unlockExtra) },
+      { label: t('free_ad'), cls: 'orange', act: () => fakeAd(unlockExtra, 'extra_slot') },
       { label: t('coins', { n: COSTS.slot }), act: () => {
         if (save.coins < COSTS.slot) { toast(t('coins_short')); setTimeout(() => onExtraSlot(), 300); return; }
         save.coins -= COSTS.slot; persist(); bumpCoins(); unlockExtra();
@@ -924,7 +988,7 @@ function unlockExtra() {
   extraKept = levelIdx;
   undoStack = [];
   sfx('slot');
-  haptic([10, 30, 10]);
+  haptic('milestone');
   ring(EXTRA_X + CW / 2, ROW_A + CH / 2, { color: '#8cff7a', r1: 200 });
   sparkle(EXTRA_X + CW / 2, ROW_A + CH / 2, 22, { colors: ['#8cff7a', '#fff', '#ffe36b'] });
   updateDeckUI();
@@ -976,11 +1040,13 @@ let toastTimer = null;
 function toast(msg, ms = 1500) {
   ms = Math.max(2200, ms * 1.5);      // người lớn tuổi đọc chậm hơn: chữ hiện lâu hơn
   const t = $('toast');
-  const deepest = S && S.cols ? Math.max(0, ...S.cols.map(col => (col.length ? colOffsets(col)[col.length - 1] : TAB_Y) + CH)) : 0;
-  t.classList.toggle('high', !!S && $('home').classList.contains('off') && deepest > ROW_A - 170);
   const host = panelOpen ? overlay : $('ui');      // có panel: đưa toast lên trên lớp mờ (review FTUE #23)
   if (t.parentElement !== host) host.append(t);
   t.innerHTML = msg;
+  // toast neo đáy ngay trên hàng rút bài và mọc lên theo chiều cao chữ (cỡ chữ R13): cột dài chạm tới đáy toast thì lên trên khay
+  const deepest = S && S.cols ? Math.max(0, ...S.cols.map(col => (col.length ? colOffsets(col)[col.length - 1] : TAB_Y) + CH)) : 0;
+  t.classList.remove('high');
+  t.classList.toggle('high', !!S && !panelOpen && $('home').classList.contains('off') && deepest > ROW_A - 16 - t.offsetHeight - 10);
   t.classList.add('on');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('on'), ms);
@@ -1250,20 +1316,25 @@ function resetIdleHint(n = 0) {
 
 // ============================================================ panels
 let panelOpen = null;
-function panel({ title, body = '', buttons = [], radial = false, onOpen }) {
+// kind: class thêm cho .panel ('win' trượt lên, 'tall' đặt cao hơn). instant: hiện ngay, không hiệu ứng/không tiếng
+// (dựng lại bảng Cài đặt, chạm để tua màn thắng). Nút có class 'wait' chưa bấm được; nút đã bị "tước" (_armed = false,
+// vd. ngón tay vừa chạm để tua) chỉ nhận pointerup sau một pointerdown mới -> một chạm tua không thành bấm nút.
+function panel({ title, body = '', buttons = [], radial = false, onOpen, kind = '', instant = false }) {
   closePanel(true);
   const scrim = document.createElement('div');
-  scrim.className = 'scrim';
+  scrim.className = 'scrim' + (instant ? ' instant' : '');
   const p = document.createElement('div');
-  p.className = 'panel';
-  p.innerHTML = `<div class="head">${title}</div>${body}<div class="btns"></div>`;
+  p.className = 'panel' + (kind ? ' ' + kind : '') + (instant ? ' instant' : '');
+  p.innerHTML = `<div class="head">${title}</div><div class="pin">${body}<div class="btns"></div></div>`;
   const btns = p.querySelector('.btns');
   for (const b of buttons) {
     const el = document.createElement('div');
     el.className = 'btn ' + (b.cls || '');
     el.innerHTML = b.label;
+    el.addEventListener('pointerdown', () => { if (!el.classList.contains('wait')) el._armed = true; });
     el.addEventListener('pointerup', ev => {
       ev.stopPropagation();
+      if (el.classList.contains('wait') || el._armed === false) return;
       unlockAudio();
       sfx('click', { vol: 0.7 });
       closePanel();
@@ -1276,11 +1347,21 @@ function panel({ title, body = '', buttons = [], radial = false, onOpen }) {
   handEl.style.visibility = 'hidden';
   if (radial) { const r = document.createElement('div'); r.className = 'radial'; scrim.append(r); }
   overlay.append(scrim, p);
-  requestAnimationFrame(() => { scrim.classList.add('on'); p.classList.add('on'); });
+  if (instant) { scrim.classList.add('on'); p.classList.add('on'); }
+  else requestAnimationFrame(() => { scrim.classList.add('on'); p.classList.add('on'); });
   panelOpen = { scrim, p };
-  if (!radial) sfx('popup', { vol: 0.8 });
+  fitPanel(p);
+  requestAnimationFrame(() => fitPanel(p));
+  if (!radial && !instant) sfx('popup', { vol: 0.8 });
   onOpen && onOpen(p);
   return p;
+}
+/** Chữ to làm thân panel dài quá màn hình: bật cuộn trong thân (lưới an toàn, R13). */
+function fitPanel(p) {
+  const pin = p && p.querySelector('.pin');
+  if (!pin || !p.isConnected) return;
+  pin.classList.remove('scroll');
+  pin.classList.toggle('scroll', pin.scrollHeight > pin.clientHeight + 1);
 }
 function closePanel(instant = false) {
   if (!panelOpen) return;
@@ -1396,7 +1477,7 @@ function onMove(e) {
   if (!drag.moved && Math.hypot(dx, dy) * scale > DRAG_START_PT) {
     drag.moved = true;
     sfx('pick', { vol: 0.8 });
-    haptic(6);
+    haptic('tap');
     drag.vs.forEach((v, k) => {
       killTweens(v);
       killKey('pos-' + v.id);
@@ -1551,7 +1632,7 @@ function rejectTap(src, vs) {
   const run = E.sourceCards(S, src);
   nudge(vs);
   sfx('deny');
-  haptic(4);
+  haptic('deny');           // thả/chạm sai: không rung (game không phạt người chơi)
   if (!run) return;
   let msg;
   if (run[0].k === 'topic') msg = S.found.every(Boolean) ? t('err_slots_busy') : t('err_no_place');
@@ -1711,7 +1792,7 @@ function playEvents(events, fromDrag) {
       });
       if (!toFound) {
         sfx('place', { vol: 0.55, rate: 0.95 + Math.random() * 0.1 });
-        haptic(5);
+        haptic('tap');
         combo = 0;
       }
       // dọn sạch một cột (cột trống là tài nguyên): phản hồi riêng, 3 lần đầu kèm chữ
@@ -1742,7 +1823,7 @@ function playEvents(events, fromDrag) {
       const el = slotEl(ev.slot);
       setTimeout(() => {
         comboSfx(step);
-        haptic(10);
+        haptic('progress');
         const c = el.querySelector('.count');
         c.textContent = `${ev.count}/${ev.n}`;
         const o = { s: 1.5 };
@@ -1769,14 +1850,14 @@ function playEvents(events, fromDrag) {
         ring(tt.x + CW / 2, tt.y + CH / 2, { color: '#ffd84a', r1: 170, width: 10 });
         sparkle(tt.x + CW / 2, tt.y + 30, 14, { colors: ['#ffd84a', '#fff4a0', '#ffffff'] });
         sfx('open', { vol: 0.6, rate: 1.2599 });
-        haptic([8, 30, 8]);
+        haptic('progress');
       }, 260);
     } else if (ev.type === 'draw') {
       const v = views.get(ev.id);
       special.add(ev.id);
       setZ(v, 3000);
       sfx('draw', { vol: 0.7 });
-      haptic(4);
+      haptic('tap');
       combo = 0;
       moveView(v, T.get(ev.id), { dur: 260, easing: ease.outCubic, arc: 30 }).then(() => setZ(v, T.get(ev.id).z));
       setUp(v, true, { delay: 30 });
@@ -1808,7 +1889,7 @@ function landSquash(v) {
 function floatText(txt, x, y, color = '#ffe36b') {
   const el = document.createElement('div');
   el.textContent = txt;
-  el.style.cssText = `position:absolute;left:0;top:0;font-size:56px;color:${color};text-shadow:0 4px 0 rgba(0,0,0,.3);z-index:4000;pointer-events:none;white-space:nowrap`;
+  el.style.cssText = `position:absolute;left:0;top:0;font-size:${fs(56)};color:${color};text-shadow:0 4px 0 rgba(0,0,0,.3);z-index:4000;pointer-events:none;white-space:nowrap`;
   board.append(el);
   const o = { y, a: 1, s: 0.4 };
   const draw = () => { el.style.transform = `translate(${x - el.offsetWidth / 2}px,${o.y}px) scale(${o.s})`; el.style.opacity = o.a; };
@@ -1873,7 +1954,7 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   await tween(w, { s: 1, a: 1 }, { dur: 190, easing: ease.inCubic, onUpdate: drawWax });
   sfx('complete');
   sfx('boom', { vol: 0.35 });
-  haptic([16, 40, 16]);
+  haptic('milestone');
   shake(9);
   ring(cx, cy, { color: '#ffffff', r1: 230, width: 14 });
   sparkle(cx, cy, 26, { spread: 1.3, colors: ['#ffd84a', '#ff7a59', '#ffffff', '#fff4a0'], size: 12 });
@@ -1910,9 +1991,8 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   sparkle(tx + 115, ty + 96, 10, { colors: ['#ffd84a', '#ffffff', '#8cc8ff'] });
   bar.classList.remove('bump'); void bar.offsetWidth; bar.classList.add('bump');
 }
-const reduceMotion = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 function shake(px) {
-  if (reduceMotion) return;
+  if (reduceMotion()) return;
   px *= 0.5;                          // người lớn tuổi: rung nhẹ, không giật
   const o = { k: 0 };
   tween(o, { k: 1 }, { dur: 260, key: 'shake', onUpdate: () => {
@@ -1957,7 +2037,7 @@ function startOvertime() {
   movesEl.classList.add('overtime');
   updateHUD();
   sfx('overtime');
-  haptic([20, 40, 20]);
+  haptic('milestone');
   floatText(t('overtime_big'), 540, 420, '#ffd36b');
   toast(t('overtime'), 2800);
   saveRun();
@@ -2040,6 +2120,90 @@ function stars() {
   const slack = Math.max(1, L.moves - (L.solverMoves || Math.round(L.moves * 0.8)));
   return S.moves >= 0.5 * slack ? 3 : S.moves >= 0.2 * slack ? 2 : 1;
 }
+// ============================================================ màn thắng dàn dựng (R12 + P6, benchmark-grand-games.md mục 4.3)
+// Dòng thời gian (giây, tính từ lúc vào màn thắng):
+//   0,2-0,9 khay thành phong bì bay vào thanh tiến độ (túi thư [ART] chưa có: tạm bay vào #combo như completeAnimInner)
+//   0,9 tiếng win + confetti giấy | 1,1 bảng trượt lên | 1,4/1,7/2,0 Tem Điểm đóng cộp | 2,2 xu bay, số đếm dần | 2,5 nút bấm được (AC ≤ 2,6)
+// Chạm bất kỳ đâu từ 0,9 giây: tua tới bước cuối (finishWin). Giảm chuyển động: không phong bì/confetti, bảng hiện ngay,
+// Tem Điểm cách nhau 150 ms. "Tiếp tục" là nút chính; "Nhận x2" là nút phụ nhỏ, chỉ từ L11 và không có ở màn hết chương.
+const WIN_PALETTE = ['#fff3d6', '#d9473d', '#2f6fb3', '#d39a2c', '#8fc9a8'];   // kem, đỏ air-mail, xanh air-mail, vàng đồng, xanh bạc hà
+let winTL = null;          // { t0, steps, timers, ended, skipped, finalized, skipFrom }
+let winInfo = null;        // cho test: { reward, paid() }
+let winCatch = null, winCoinClone = null, winEnvs = [];
+function runWinTimeline(steps, skipFrom) {
+  const tl = { t0: performance.now(), steps, timers: [], ended: false, skipped: false, finalized: false, skipFrom };
+  for (const st of steps) {
+    st.ran = false;
+    tl.timers.push(setTimeout(() => { if (tl.finalized || winTL !== tl) return; st.ran = true; st.run(); }, st.at));
+  }
+  return tl;
+}
+/** Đưa màn thắng về trạng thái cuối ngay. skip = người chơi chạm để tua (mục tiêu xong trong 300 ms). */
+function finishWin(skip = false) {
+  const tl = winTL;
+  if (!tl || tl.finalized || (skip && tl.ended)) return;
+  tl.finalized = true;
+  if (skip) tl.skipped = true;
+  tl.timers.forEach(clearTimeout);
+  for (const st of tl.steps) if (st.finish) st.finish(st.ran);
+  tl.ended = true;
+}
+/** Rời màn thắng (vào level mới, về Trang chủ): dừng dòng thời gian, cộng nốt xu thưởng, dọn lớp phụ. */
+function endWin() {
+  const tl = winTL;
+  if (tl) {
+    tl.timers.forEach(clearTimeout);
+    if (!tl.finalized) { tl.finalized = true; for (const st of tl.steps) if (st.leave) st.leave(st.ran); }
+  }
+  winTL = null;
+  winEnvs.forEach(e => e.remove()); winEnvs = [];
+  if (winCatch) { winCatch.remove(); winCatch = null; }
+  if (winCoinClone) { winCoinClone.remove(); winCoinClone = null; }
+  document.body.classList.remove('win');
+}
+overlay.addEventListener('pointerdown', () => {
+  const tl = winTL;
+  if (!tl || tl.ended || tl.finalized || performance.now() - tl.t0 < tl.skipFrom) return;
+  finishWin(true);
+  // ngón tay vừa chạm để tua: nút chỉ nhận pointerup của một lần chạm MỚI (chạm tua không thành bấm nút)
+  if (panelOpen) panelOpen.p.querySelectorAll('.btn').forEach(b => { b._armed = false; });
+});
+/** Mỗi khay đích thành một phong bì, bay lần lượt (cách 80 ms) vào thanh tiến độ. Trả về các phần tử để tua/dọn. */
+function flyTraysAway() {
+  const bar = $('combo');
+  const tx = bar.offsetLeft + bar.offsetWidth / 2, ty = bar.offsetTop + bar.offsetHeight / 2;
+  const envs = [];
+  slotEls.forEach((_, k) => {
+    const p = slotPos(k);
+    const env = document.createElement('div');
+    env.style.cssText = 'position:absolute;left:0;top:0;width:230px;height:193px;background:url(assets/ui/envelope_closed.png) center/contain no-repeat;z-index:28;pointer-events:none;opacity:0';
+    overlay.append(env);
+    envs.push(env);
+    const e = { x: p.x + CW / 2, y: p.y + CH / 2, s: 0.2, a: 0, r: -6 };
+    const draw = () => { env.style.transform = `translate(${e.x - 115}px,${e.y - 96}px) rotate(${e.r}deg) scale(${e.s})`; env.style.opacity = e.a; };
+    draw();
+    setTimeout(() => {
+      if (!env.isConnected) return;
+      sfx('whoosh', { vol: 0.3, rate: 1.15 + k * 0.06 });
+      tween(e, { s: 0.72, a: 1, r: 0 }, { dur: 120, easing: ease.outBackSoft, onUpdate: draw })
+        .then(() => {
+          if (!env.isConnected) return null;
+          const sx = e.x, sy = e.y, f = { k: 0 };
+          return tween(f, { k: 1 }, { dur: 330, easing: ease.inOutCubic, onUpdate: () => {
+            e.x = sx + (tx - sx) * f.k; e.y = sy + (ty - sy) * f.k - Math.sin(f.k * Math.PI) * 120;
+            e.s = 0.72 - 0.5 * f.k; e.r = -8 * Math.sin(f.k * Math.PI); draw();
+          } });
+        })
+        .then(() => {
+          if (!env.isConnected) return;
+          env.remove();
+          sparkle(tx, ty, 5, { colors: ['#ffd84a', '#ffffff', '#8cc8ff'] });
+          bar.classList.remove('bump'); void bar.offsetWidth; bar.classList.add('bump');
+        });
+    }, k * 80);
+  });
+  return envs;
+}
 async function winSequence() {
   clearRun();
   levelActive = false;
@@ -2052,9 +2216,6 @@ async function winSequence() {
   track('level_complete', done);
   track('af_level_achieved', { af_level: lvNum, af_score: done.stars });      // sự kiện chuẩn AppsFlyer
   if (specialOf(L)) track(`milestone_level_${lvNum}`, done);                  // mốc UA (L5, L10)
-  sfx('win');
-  confetti(170);
-  haptic([20, 60, 20, 60, 40]);
   const st = stars();
   const reward = 10 + st * 10;
   const lv = levelIdx + 1;
@@ -2063,46 +2224,105 @@ async function winSequence() {
   if (gain) track('points_earned', { level: lv, gain, total: pointsEarned(), left: pointsLeft() });
   save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, lv + 1));
   extraKept = -1;
-  persist();
-  const token = levelToken;
-  await wait(700);
-  if (token !== levelToken) return;
   const last = lv === LEVELS.length;
   const chEnd = CHAPTERS.find(c => c.to === lv);          // level cuối chương -> thưởng chương
   const explainPts = gain > 0 && !save.seen.pts_explain;
-  if (explainPts) { save.seen.pts_explain = 1; persist(); }
+  if (explainPts) save.seen.pts_explain = 1;
   // đủ Tem Điểm cho món decor kế tiếp của chương này: mời trang trí ngay (mỗi món mời 1 lần), không thì vòng meta vô hình
   const dch = chapterOf(lv);
   const dnext = dch.decor[save[dch.key] || 0];
   const promptDecor = !chEnd && dnext && pointsLeft() >= dnext.cost && save.seen['decor_prompt_' + dnext.id] !== 1;
-  if (promptDecor) { save.seen['decor_prompt_' + dnext.id] = 1; persist(); }
-  panel({
+  if (promptDecor) save.seen['decor_prompt_' + dnext.id] = 1;
+  persist();
+  const showX2 = lv >= 11 && !chEnd;                      // PO chốt (R12): x2 từ L11, không ở màn hết chương
+
+  endWin();
+  const calm = reduceMotion();
+  document.body.classList.add('win');
+  overlay.style.pointerEvents = 'auto';
+  overlay.style.zIndex = '';
+  winCatch = document.createElement('div');
+  winCatch.className = 'win-catch';
+  overlay.append(winCatch);
+  // ô xu nằm dưới lớp mờ (#ui z 6 < #overlay z 10): chép một bản lên trên lớp mờ, cùng toạ độ
+  winCoinClone = $('coins').cloneNode(true);
+  winCoinClone.removeAttribute('id');
+  winCoinClone.classList.add('clone');
+  winCoinClone.style.transform = '';
+  overlay.append(winCoinClone);
+
+  let pEl = null, coinCtl = null, paidDirect = false;
+  winInfo = { level: lv, reward, paid: () => (paidDirect ? reward : coinCtl ? reward - coinCtl.left : 0) };
+  const winButton = (button, fn) => {
+    const tl = winTL;
+    finishWin(false);
+    track('win_button', { level: lv, button, ms: tl ? Math.round(performance.now() - tl.t0) : -1, skipped: !!(tl && tl.skipped) });
+    fn();
+  };
+  const buttons = [
+    { label: t('cont'), cls: 'wait', act: () => winButton('continue', () => (chEnd ? chapterReward(chEnd) : startLevel(levelIdx + 1))) },
+    ...(promptDecor ? [{ label: t('decorate_now', { name: t('decor_' + dnext.id) }), cls: 'brown wait', act: () => winButton('decorate', () => { goHome(dch.id); decorPanel(); }) }] : []),
+    ...(showX2 ? [{ label: t('claim2'), cls: 'small wait', act: () => winButton('x2', () => fakeAd(() => {
+      coinsTo(reward, 540, 900);
+      const tk = levelToken;
+      setTimeout(() => { if (tk === levelToken) startLevel(levelIdx + 1); }, 1300);
+    }, 'win_x2')) }] : []),
+  ];
+  if (showX2) track('ad_offer', { level: lv, placement: 'win_x2' });
+  const openPanel = instant => panel({
     title: chEnd ? t('win_last') : st === 3 ? t('win_title') : st === 2 ? t('win_great') : t('win_ok'),
-    radial: true,
+    radial: true, kind: 'win', instant,
     body: `<div class="stars"><i></i><i></i><i></i></div>
       <div class="pts-line">${gain ? t('pts_gain', { n: gain }) : t('pts_best', { n: save.stars[lv] })}</div>
-      ${explainPts ? `<p style="font-size:36px;margin:0 0 6px">${t('pts_explain')}</p>` : ''}
+      ${explainPts ? `<p style="font-size:${fs(42)};margin:0 0 6px">${t('pts_explain')}</p>` : ''}
       ${S.moves === Infinity ? '' : `<p>${t('moves_left', { n: S.moves })}</p>`}
-      ${L.moves != null && !overtime && st < 3 ? `<p style="font-size:36px;margin:0">${t('stars_hint')}</p>` : ''}
+      ${L.moves != null && !overtime && st < 3 ? `<p style="font-size:${fs(42)};margin:0">${t('stars_hint')}</p>` : ''}
       ${last ? `<p>${t('win_end')}</p>` : ''}
       ${lastDelivered ? `<p class="note"><b>${residentOf(lastDelivered)}:</b> “${residentNote(residentOf(lastDelivered))}”</p>` : ''}
       <div class="coins-line"><i></i><span>+${reward}</span></div>`,
-    buttons: [
-      { label: t('claim2'), cls: 'orange', act: () => fakeAd(() => {
-        coinsTo(reward, 540, 900);
-        const tk = levelToken;
-        setTimeout(() => { if (tk === levelToken) (chEnd ? chapterReward(chEnd) : startLevel(levelIdx + 1)); }, 1300);
-      }) },
-      { label: t('cont'), act: () => (chEnd ? chapterReward(chEnd) : startLevel(levelIdx + 1)) },
-      ...(promptDecor ? [{ label: t('decorate_now', { name: t('decor_' + dnext.id) }), cls: 'brown', act: () => { goHome(dch.id); decorPanel(); } }] : []),
-    ],
-    onOpen: pEl => {
-      const ss = pEl.querySelectorAll('.stars i');
-      // Tem Điểm "đóng cộp" từng cái (tiếng con dấu + chuông nhỏ lên dần)
-      for (let k = 0; k < st; k++) setTimeout(() => { ss[k].classList.add('on'); sfx('stamp', { rate: [0.94, 1, 1.06][k] }); sfx('claim', { vol: 0.4, rate: [1, 1.1225, 1.2599][k], delay: 0.05 }); haptic(14); }, 380 + k * 300);
-      setTimeout(() => coinsTo(reward, 540, 1000), 380 + st * 260 + 200);
-    },
+    buttons,
   });
+  const T = calm ? { win: 0, panel: 150, stamp0: 350, gap: 150 } : { win: 900, panel: 1100, stamp0: 1400, gap: 300 };
+  T.coins = calm ? T.stamp0 + 3 * T.gap : 2200;
+  T.ready = calm ? T.coins + 300 : 2500;          // AC <= 2,6 giây: chừa 100 ms cho độ trễ setTimeout
+  const unwait = () => { if (pEl) pEl.querySelectorAll('.btn.wait').forEach(b => b.classList.remove('wait')); };
+  const steps = [];
+  if (!calm) steps.push({ at: 200, run: () => { winEnvs = flyTraysAway(); }, finish: () => { winEnvs.forEach(e => e.remove()); winEnvs = []; } });
+  steps.push({ at: T.win, run: () => {
+    sfx('win');
+    if (!calm) confetti(50, { palette: WIN_PALETTE, drag: 3.2, gravity: 650, life: 2.1, spread: 0.75 });
+    haptic('success');
+  } });
+  steps.push({ at: T.panel, run: () => { pEl = openPanel(calm); }, finish: ran => { if (!ran) pEl = openPanel(true); } });
+  let stampSkipped = false;
+  for (let k = 0; k < st; k++) {
+    steps.push({ at: T.stamp0 + k * T.gap,
+      run: () => {
+        const i = pEl && pEl.querySelectorAll('.stars i')[k];
+        if (i) i.classList.add('on');
+        sfx('stamp', { rate: [0.94, 1, 1.06][k] });
+        sfx('claim', { vol: 0.4, rate: [1, 1.1225, 1.2599][k], delay: 0.05 });
+        haptic('progress');
+      },
+      finish: ran => {
+        if (ran) return;
+        const i = pEl && pEl.querySelectorAll('.stars i')[k];
+        if (i) i.classList.add('on', 'now');
+        if (!stampSkipped) { stampSkipped = true; sfx('stamp'); }
+      } });
+  }
+  steps.push({ at: T.coins,
+    run: () => { coinCtl = coinsTo(reward, 540, 1000); },
+    finish: ran => {
+      if (ran && coinCtl) { coinCtl.finish(); bumpCoins({ instant: true, pop: false }); return; }
+      if (!paidDirect) { paidDirect = true; save.coins += reward; persist(); bumpCoins({ instant: true }); sfx('coins', { vol: 0.6 }); }
+    },
+    leave: ran => {
+      if (ran && coinCtl) coinCtl.finish();
+      else if (!paidDirect) { paidDirect = true; save.coins += reward; persist(); }
+    } });
+  steps.push({ at: T.ready, run: () => { unwait(); if (winTL) winTL.ended = true; }, finish: unwait });
+  winTL = runWinTimeline(steps, calm ? T.panel : 900);
 }
 // Cuối chương: thưởng một lần + mời sang chương sau (hoặc mở album) -> lý do quay lại (đo D1)
 function chapterReward(ch = CHAPTERS[0]) {
@@ -2150,19 +2370,23 @@ $('decorBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click');
 $('albumClose').addEventListener('pointerup', () => { sfx('close'); $('album').classList.add('off'); });
 function outOfMoves(again = false) {
   ended = true;
-  if (!again) { sfx('lose'); haptic([30, 50, 30]); }
+  if (!again) { sfx('lose'); haptic('deny'); }
   if (!again) track('level_fail', { level: levelIdx + 1, attempt: play.attempt, reason: 'out_of_moves', delivered: S.delivered, total: S.total, special: specialOf(L) || '' });
   if (safetyOf(L) === 'retry') {
     // Level khó kiểu "chơi lại miễn phí": không phạt, giữ Ô phụ, vào lại ngay
+    track('ad_offer', { level: levelIdx + 1, placement: 'soclose_more' });
     panel({ title: t('soclose'), body: `<p>${t('soclose_body')}</p>`, buttons: [
       { label: t('try_again'), act: () => startLevel(levelIdx) },
-      { label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) },
+      { label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad'), 'soclose_more') },
     ] });
     return;
   }
   const canFree = !freeMovesUsed;
   const buttons = [];
-  if (canFree) buttons.push({ label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad')) });
+  if (canFree) {
+    track('ad_offer', { level: levelIdx + 1, placement: 'oom_more' });
+    buttons.push({ label: t('more_ad'), cls: 'orange', act: () => fakeAd(() => addMoves(5, true, 'ad'), 'oom_more') });
+  }
   const short = save.coins < COSTS.moves;
   buttons.push({ cls: short ? 'off' : '', label: t('more_coins', { n: COSTS.moves }) + (short ? `<br><small>${t('coins_need', { n: COSTS.moves - save.coins })}</small>` : ''), act: () => {
     if (save.coins < COSTS.moves) { outOfMoves(true); toast(t('coins_short')); sfx('deny'); return; }
@@ -2198,14 +2422,16 @@ function addMoves(n, free = false, source = 'debug') {
   updateHUD(true);
   saveRun();
 }
-function fakeAd(done) {
+// Quảng cáo giả (prototype). placement: chỗ đặt quảng cáo cho analytics (ad_offer -> ad_watch).
+function fakeAd(done, placement = 'unknown') {
+  const lv = levelIdx + 1;
   const p = panel({ title: t('ad_break'), body: `<p>${t('ad_mock')}</p><p id="adc">2</p>`, buttons: [] });
   let n = 2;
   const timer = setInterval(() => {
     n--;
     const c = p.querySelector('#adc');
     if (c) c.textContent = n;
-    if (n <= 0) { clearInterval(timer); closePanel(); done(); }
+    if (n <= 0) { clearInterval(timer); closePanel(); track('ad_watch', { level: lv, placement }); done(); }
   }, 700);
 }
 
@@ -2262,13 +2488,27 @@ function playLevel(i) {
 function askResume(run) {
   panel({
     title: t('resume_title'),
-    body: `<p>${t('resume_body', { n: run.idx + 1 })}</p><p style="font-size:36px;margin:0">${t('resume_free')}</p>`,
+    body: `<p>${t('resume_body', { n: run.idx + 1 })}</p><p style="font-size:${fs(42)};margin:0">${t('resume_free')}</p>`,
     buttons: [
       { label: t('resume_yes'), act: () => startLevel(run.idx, { resume: run }) },
       { label: t('resume_new'), cls: 'brown', act: () => { track('level_resume_decline', { level: run.idx + 1, moves_used: run.s.used }); clearRun(); startLevel(run.idx); } },
     ],
   });
 }
+// Đứng yên lâu giữa ván (R12/M8): ghi 1 lần cho mỗi đợt đứng yên > IDLE_S giây (?idle=<giây> để test, mặc định 30).
+// Thời gian panel mở / chưa vào ván không tính là đứng yên.
+const IDLE_S = (() => { const m = location.search.match(/[?&]idle=(\d+)/); return m ? Math.max(1, +m[1]) : 30; })();
+let lastInputAt = performance.now(), idleLogged = false;
+stage.addEventListener('pointerdown', () => { lastInputAt = performance.now(); idleLogged = false; }, true);
+setInterval(() => {
+  const now = performance.now();
+  if (!levelActive || panelOpen || ended || busyInput || !S || document.hidden) { lastInputAt = now; idleLogged = false; return; }
+  const idle = now - Math.max(lastInputAt, lastActAt);
+  if (idle >= IDLE_S * 1000 && !idleLogged) {
+    idleLogged = true;
+    track('idle_long', { level: levelIdx + 1, s: Math.round(idle / 1000), moves_used: S.used });
+  }
+}, Math.min(5000, IDLE_S * 500));
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) return;
   saveRun();
@@ -2279,6 +2519,7 @@ addEventListener('pagehide', () => saveRun());
 // ============================================================ level flow
 // resume: bản lưu ván dở (loadRun) của đúng level i -> dựng lại bàn y như lúc dừng, không tính lượt chơi mới
 async function startLevel(i, { resume = null } = {}) {
+  endWin();
   closePanel(true);
   setMusicScene('play');
   if (levelActive && L && S) track('level_quit', { level: levelIdx + 1, attempt: play.attempt, moves_used: S.used, delivered: S.delivered, total: S.total, time_s: Math.round((Date.now() - play.start) / 1000) });
@@ -2394,7 +2635,7 @@ async function startLevel(i, { resume = null } = {}) {
     persist();
     await bannerDone;
     if (token !== levelToken) return;
-    await new Promise(res => showRules(res));
+    await new Promise(res => showRules(res, 'first_level'));
   }
   if (token !== levelToken) return;
   await bannerDone;
@@ -2437,19 +2678,20 @@ function levelBanner() {
   const el = document.createElement('div');
   bannerEl = el;
   const sp = specialOf(L);
-  el.innerHTML = (sp ? `<div class="hard-pill">${t(sp === 'superhard' ? 'superhard' : 'hard')}</div>` : '') + `<div style="font-size:110px;line-height:1">${t('level', { n: levelIdx + 1 })}</div>
-    <div style="margin-top:22px;display:inline-block;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.25);font-size:46px">
+  el.innerHTML = (sp ? `<div class="hard-pill">${t(sp === 'superhard' ? 'superhard' : 'hard')}</div>` : '') + `<div style="font-size:${fs(110)};line-height:1">${t('level', { n: levelIdx + 1 })}</div>
+    <div style="margin-top:22px;display:inline-block;max-width:960px;padding:14px 34px;border-radius:30px;background:rgba(0,0,0,.25);font-size:${fs(48)}">
       ${t('goal', { n: tp.total - tp.done, moves: L.moves == null ? t('goalInf') : t('goalMoves', { n: L.moves }) })}</div>`;
   el.style.cssText = `position:absolute;left:0;right:0;top:${660 + (STAGE_H - 1920) / 2}px;padding:40px 0 46px;text-align:center;color:#fff;background:rgba(50,32,20,.55);
     text-shadow:0 5px 0 #5a3a26,3px 0 0 #5a3a26,-3px 0 0 #5a3a26,0 -3px 0 #5a3a26;z-index:4000;pointer-events:none`;
   overlay.append(el);
-  const o = { y: -60, a: 0, s: 0.6 };
+  const calm = reduceMotion();                     // giảm chuyển động: chỉ hiện/ẩn bằng mờ, không bật nảy
+  const o = calm ? { y: 0, a: 0, s: 1 } : { y: -60, a: 0, s: 0.6 };
   const draw = () => { el.style.transform = `translateY(${o.y}px) scale(${o.s})`; el.style.opacity = o.a; };
   draw();
   if (sp) { sfx('boom', { vol: 0.5 }); shake(8); }
-  return tween(o, { y: 0, a: 1, s: 1 }, { dur: 380, easing: ease.outBack, onUpdate: draw })
+  return tween(o, { y: 0, a: 1, s: 1 }, { dur: calm ? 250 : 380, easing: calm ? ease.linear : ease.outBack, onUpdate: draw })
     .then(() => wait(sp ? 2300 : 1700))
-    .then(() => tween(o, { y: -40, a: 0 }, { dur: 260, onUpdate: draw }))
+    .then(() => tween(o, { y: calm ? 0 : -40, a: 0 }, { dur: 260, onUpdate: draw }))
     .then(() => { el.remove(); if (bannerEl === el) bannerEl = null; });
 }
 // Luật thắng/thua (game gốc chỉ có vài câu ở level 1; mình làm rõ hơn): hiện ở level đầu có moves và trong Pause.
@@ -2462,17 +2704,18 @@ function rulesHtml() {
     <div style="position:absolute;left:30px;top:-12px;width:36px;height:34px;background:url(assets/ui/crown.png) center/contain no-repeat"></div>`);
   const stampCard = box(`<div style="position:absolute;inset:0;background:url(assets/ui/face_3.png) center/100% 100%"></div>
     <img src="assets/cards/cat/5.png" style="position:absolute;left:12px;top:16px;width:72px;height:72px">`);
-  const env = box(`<div style="position:absolute;inset:8px -6px;background:url(assets/ui/envelope_closed.png) center/contain no-repeat"></div>
+  const env = box(`<div style="position:absolute;inset:8px 0;background:url(assets/ui/envelope_closed.png) center/contain no-repeat"></div>
     <div style="position:absolute;left:30px;top:40px;width:36px;height:42px;background:url(assets/ui/wax.png) center/contain no-repeat"></div>`);
   const moves = box(`<div style="position:absolute;inset:0;background:url(assets/ui/hud_moves.png) center/100% 100%"></div>
     <div style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:44px;color:#4a2a1a">12</div>`);
   const undo = box(`<div style="position:absolute;left:4px;top:14px;width:88px;height:88px;background:url(assets/ui/btn_undo.png) center/contain no-repeat"></div>`);
   const row = (fig, txt) => `<div style="display:flex;align-items:center;gap:24px;margin:0 0 14px;text-align:left">${fig}
-    <div style="font-size:38px;line-height:1.22;color:#5a3a26">${txt}</div></div>`;
+    <div style="flex:1;min-width:0;font-size:${fs(44)};line-height:1.2;color:#5a3a26">${txt}</div></div>`;
   return `<div>${row(crownCard, t('r1'))}${row(stampCard, t('r2'))}${row(env, t('r3'))}${row(moves, t('r4'))}${row(undo, t('r6'))}
-    <p style="font-size:36px;margin:4px 0 0">${t('r5')}</p></div>`;
+    <p style="font-size:${fs(42)};margin:4px 0 0">${t('r5')}</p></div>`;
 }
-function showRules(onClose) {
+function showRules(onClose, via = 'pause') {
+  track('rules_open', { level: levelIdx + 1, via });
   panel({ title: t('howto'), body: rulesHtml(), buttons: [{ label: t('got_it'), act: () => onClose && onClose() }] });
 }
 let deferredIntro = false;
@@ -2507,6 +2750,7 @@ function featureIntro(force = false) {
 
 // ============================================================ home / pause
 function goHome(chId) {
+  endWin();
   setMusicScene('home');
   homeCh = CHAPTERS.find(c => c.id === chId) || chapterOf(save.unlocked);
   if (levelActive && S) {
@@ -2591,7 +2835,7 @@ function decorPanel() {
     body: `<div class="feature-icon" style="background-image:url(assets/decor/${d.id}.png)"></div>
       <p><b>${t('decor_' + d.id)}</b> · ${n + 1}/${DECOR.length}</p>
       <div class="pts-line">${t('pts_have', { n: left })}</div>
-      ${ok ? '' : `<p style="font-size:36px;margin:0">${pointsEarned() ? t('pts_need', { n: d.cost - left }) : t('pts_first')}</p>`}`,
+      ${ok ? '' : `<p style="font-size:${fs(42)};margin:0">${pointsEarned() ? t('pts_need', { n: d.cost - left }) : t('pts_first')}</p>`}`,
     buttons: [
       { label: t('decor_place', { n: d.cost }), cls: ok ? '' : 'off', act: () => {
         if (!ok) { decorPanel(); return; }
@@ -2599,7 +2843,7 @@ function decorPanel() {
         persist();
         track('decor_place', { chapter: homeCh.id, id: d.id, index: n + 1, cost: d.cost, points_left: pointsLeft() });
         sfx('decor');
-        haptic([15, 40, 15]);
+        haptic('milestone');
         renderDecor(n);
       } },
       { label: t('close'), cls: 'orange', act: () => {} },
@@ -2644,20 +2888,71 @@ $('pauseBtn').addEventListener('pointerup', () => {
   if (panelOpen) return;
   unlockAudio();
   sfx('click');
+  track('pause_open', { level: levelIdx + 1, moves_used: S ? S.used : 0 });
+  pausePanel();
+});
+// Pause gọn còn 5 nút (R13): âm thanh, nhạc, ngôn ngữ chuyển vào bảng Cài đặt
+function pausePanel() {
   panel({
     title: t('paused'),
     body: `<p>${t('level', { n: levelIdx + 1 })}</p>`,
     buttons: [
       { label: t('resume'), act: () => {} },
       { label: t('howto'), cls: 'brown', act: () => showRules() },
+      { label: t('settings'), cls: 'brown', act: () => settingsPanel({ back: pausePanel }) },
       { label: t('restart'), cls: 'brown', act: () => confirmRestart() },
-      { label: isMuted() ? t('sound_off') : t('sound_on'), cls: 'brown', act: () => { setMuted(!isMuted()); } },
-      { label: isMusicOn() ? t('music_on') : t('music_off'), cls: 'brown', act: () => { setMusicOn(!isMusicOn()); } },
-      { label: t('lang'), cls: 'brown', act: () => { setLang(getLang() === 'vi' ? 'en' : 'vi'); applyStaticCopy(); relabelCards(); updateSlotLabels(); updateHUD(); if (script) tut(t(scriptStep() && scriptStep().booster ? 'script_' + scriptStep().booster : `script_${L.id}_${script.i}`)); } },
       { label: t('home'), cls: 'brown', act: () => confirmHome() },
     ],
   });
-});
+}
+// ============================================================ bảng Cài đặt (R13)
+// Mở từ Pause (Đóng -> quay lại Pause) và từ nút Cài đặt ở màn chính. Mỗi lựa chọn áp ngay; đổi cỡ chữ / ngôn ngữ thì
+// dựng lại bảng (instant) để người chơi thấy ngay cỡ chữ mới.
+function settingsPanel({ back = null, instant = false } = {}) {
+  const segs = (key, opts, cur) => `<div class="seg" data-key="${key}">${opts.map(([v, lbl]) =>
+    `<b data-v="${v}" class="${String(v) === String(cur) ? 'on' : ''}" role="button">${lbl}</b>`).join('')}</div>`;
+  const row = (lbl, ctl, inline = false) => `<div class="set-row${inline ? ' inline' : ''}"><div class="set-lbl">${lbl}</div>${ctl}</div>`;
+  const onOff = (key, on) => segs(key, [[1, t('on')], [0, t('off')]], on ? 1 : 0);
+  const body = `<div class="set-list">
+    ${row(t('set_text'), segs('text', [0, 1, 2].map(v => [v, t('text_' + v)]), getSetting('text')))}
+    ${row(t('set_sfx'), segs('sfx', [0, 1, 2].map(v => [v, t('sfx_' + v)]), sfxVolume()))}
+    ${row(t('set_music'), onOff('music', isMusicOn()), true)}
+    ${row(t('set_haptics'), onOff('haptics', hapticsEnabled()), true)}
+    ${row(t('set_motion'), onOff('motion', getSetting('motion') === 'reduce'), true)}
+    ${row(t('set_lang'), segs('lang', [['en', 'English'], ['vi', 'Tiếng Việt']], getLang()))}
+  </div>`;
+  const p = panel({ title: t('settings'), kind: 'tall', instant, body,
+    buttons: [{ label: t('close'), act: () => { if (back) back(); } }] });
+  p.querySelectorAll('.seg b').forEach(b => b.addEventListener('pointerup', ev => {
+    ev.stopPropagation();
+    unlockAudio();
+    const key = b.parentElement.dataset.key, raw = b.dataset.v;
+    const v = key === 'lang' ? raw : Number(raw);
+    const from = { text: getSetting('text'), sfx: sfxVolume(), music: isMusicOn() ? 1 : 0, haptics: hapticsEnabled() ? 1 : 0,
+      motion: getSetting('motion') === 'reduce' ? 1 : 0, lang: getLang() }[key];
+    if (from === v) return;
+    if (key === 'text') setSetting('text', v);
+    else if (key === 'sfx') setSetting('sfx', v);
+    else if (key === 'music') setMusicOn(!!v);
+    else if (key === 'haptics') { setHapticsEnabled(!!v); if (v) haptic('tap'); }
+    else if (key === 'motion') setSetting('motion', v ? 'reduce' : 'auto');
+    else if (key === 'lang') { setLang(v); applyLang(); }
+    track('setting_change', { key, from, to: v, level: levelActive ? levelIdx + 1 : 0 });
+    sfx('click', { vol: 0.7 });                    // nghe thử mức âm lượng vừa chọn
+    settingsPanel({ back, instant: true });
+  }));
+  return p;
+}
+onSetting(() => applySettings());
+// đổi ngôn ngữ (bảng Cài đặt): viết lại mọi chữ đang hiện
+function applyLang() {
+  applyStaticCopy();
+  relabelCards();
+  if (S && L) { updateSlotLabels(); updateHUD(); }
+  if (script) tut(t(scriptStep() && scriptStep().booster ? 'script_' + scriptStep().booster : `script_${L.id}_${script.i}`));
+  if (!$('home').classList.contains('off')) goHome(homeCh.id);
+}
+$('gearBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); settingsPanel(); });
 // Giữa ván (đã đi ít nhất 1 nước) mới hỏi; nút an toàn "Chơi tiếp" đứng đầu, nút làm mất ván màu nâu
 const midLevel = () => levelActive && !ended && S && S.used > 0;
 function confirmRestart() {
@@ -2696,8 +2991,12 @@ function buildDebug() {
     const f = funnelSummary();
     const rows = Object.keys(f).sort((a, b) => a - b).map(k => `<tr><td>${k}</td><td>${f[k].start}</td><td>${f[k].complete}</td><td>${f[k].fail}</td><td>${f[k].overtime}</td></tr>`).join('');
     const last = allEvents().slice(-12).reverse().map(e => `<div>${e.name} ${e.level ? 'L' + e.level : ''}</div>`).join('');
-    panel({ title: 'Events', body: `<table style="width:100%;font-size:26px;color:#5a3a26"><tr><th>Lv</th><th>start</th><th>win</th><th>fail</th><th>OT</th></tr>${rows}</table><div style="text-align:left;font-size:22px;color:#7a5238;margin-top:16px">${last}</div>`,
-      buttons: [{ label: 'Copy JSON', act: () => { try { navigator.clipboard.writeText(JSON.stringify(allEvents())); toast('Copied'); } catch (e) { toast('Copy failed'); } } }, { label: 'Close', cls: 'brown', act: () => {} }] });
+    // sự kiện của AC R12 (30-day-plan.md): đếm trong bộ đệm để soát nhanh
+    const ac = ['tap_drift', 'win_button', 'ad_offer', 'ad_watch', 'app_hidden', 'idle_long', 'pause_open', 'rules_open', 'setting_change'];
+    const cnt = n => allEvents().filter(e => e.name === n).length;
+    const acRow = `<div style="text-align:left;font-size:22px;color:#5a3a26;margin-top:12px">${ac.map(n => `${n}: <b>${cnt(n)}</b>`).join(' · ')}</div>`;
+    panel({ title: 'Events', body: `<table style="width:100%;font-size:26px;color:#5a3a26"><tr><th>Lv</th><th>start</th><th>win</th><th>fail</th><th>OT</th></tr>${rows}</table>${acRow}<div style="text-align:left;font-size:22px;color:#7a5238;margin-top:16px">${last}</div>`,
+      buttons: [{ label: 'Copy JSON', act: () => { try { navigator.clipboard.writeText(JSON.stringify(allEvents())).then(() => toast('Copied'), () => toast('Copy failed')); } catch (e) { toast('Copy failed'); } } }, { label: 'Close', cls: 'brown', act: () => {} }] });
   });
   // đồng hồ FPS (chỉ debug)
   const fps = document.createElement('div');
@@ -2731,7 +3030,11 @@ window.__game = { variant: VARIANT, get S() { return S; }, get level() { return 
   get scriptStep() { return scriptStep(); }, get panelTitle() { return panelOpen ? panelOpen.p.querySelector('.head').textContent : ''; },
   loadRun, saveRun, clearRun, playLevel,
   get tipDebug() { return { tutorial, tipGate, introHold: !!introHold, deferredIntro, tap: !!(S && tapTeachAction()), seen: save.seen }; },
-  get busy() { return !!(drag || busyInput || panelOpen || ended || completing.size); } };
+  get busy() { return !!(drag || busyInput || panelOpen || ended || completing.size); },
+  // R12/R13: màn thắng, cài đặt, các bảng (tests/win-screen.browser.js, tests/settings.browser.js)
+  get win() { return winInfo && { level: winInfo.level, reward: winInfo.reward, paid: winInfo.paid(), ended: !!(winTL && winTL.ended), skipped: !!(winTL && winTL.skipped), active: !!winTL }; },
+  settings: { get: getSetting, set: setSetting, music: isMusicOn, haptics: hapticsEnabled, sfx: sfxVolume, reduceMotion },
+  settingsPanel, pausePanel, showRules: () => showRules(() => {}, 'test'), openAlbum, askResume, confirmRestart, outOfMoves, finishWin };
 
 // đổi ngôn ngữ giữa ván: viết lại tên chủ đề trên lá vương miện
 function relabelCards() {
@@ -2757,11 +3060,12 @@ function applyStaticCopy() {
   $('ch2Close').textContent = t('close');
   $('albumTitle').textContent = t('album_title');
   $('albumClose').textContent = t('close');
+  $('gearBtn').textContent = t('settings');
 }
 (async function boot() {
   applyStaticCopy();
   initFx($('fx'));
-  setLite(LITE);
+  applySettings();
   buildDebug();
   try { manifest = await (await fetch('assets/manifest.json')).json(); } catch (e) { manifest = {}; }
   await preload(['back', 'topic_frame', 'crown', 'slot_tray', 'tray_front', 'btn_undo_off', 'hud_moves', 'token', 'joker_card', 'envelope_closed', 'wax', 'hand', 'coin', 'tem_diem', 'lock', 'plus', 'recycle', 'radial', 'logo',

@@ -1,7 +1,7 @@
 // Toàn bộ chữ người chơi thấy. Quy tắc (docs/design/ftue-copy.md):
 //  - mỗi câu <= ~8 từ, một ý, bắt đầu bằng động từ; từ khoá trong <em>
 //  - từ vựng cố định: "crown stamp" (lá mở ô, có vương miện) ≠ "Golden Stamp" (Joker); "slot" = ô trống, "pile" = ô đã mở
-// Chọn ngôn ngữ: ?lang=vi | ?lang=en, hoặc theo máy (vi* -> vi), hoặc nút trong Pause.
+// Chọn ngôn ngữ: ?lang=vi | ?lang=en, hoặc theo máy (vi* -> vi), hoặc bảng Cài đặt (Pause / màn chính).
 
 const STR = {
   en: {
@@ -96,7 +96,11 @@ const STR = {
     soclose: 'So Close!', soclose_body: 'Hard level: try again <b>for free</b>.', try_again: 'Try again',
     stuck_title: 'No Moves Left', stuck_body: 'No useful move left, even in the deck.',
     use_joker: 'Use a Golden Stamp', use_pack: 'Use a Magnet', extra_slot: 'Extra slot', undo: 'Undo',
-    paused: 'Paused', resume: 'Resume', restart: 'Restart', sound_on: 'Sound: On', sound_off: 'Sound: Off', music_on: 'Music: On', music_off: 'Music: Off', lang: 'Language: English',
+    paused: 'Paused', resume: 'Resume', restart: 'Restart',
+    // bảng Cài đặt (R13)
+    settings: 'Settings', set_text: 'Text size', text_0: 'Normal', text_1: 'Large', text_2: 'Extra large',
+    set_sfx: 'Sound effects', sfx_0: 'Off', sfx_1: 'Low', sfx_2: 'Medium', set_music: 'Music', set_haptics: 'Vibration',
+    set_motion: 'Reduce motion', set_lang: 'Language', on: 'On', off: 'Off',
     extra_title: 'Extra Slot', extra_body: 'One more slot for this level.', free_ad: 'Free <small>(ad)</small>', coins: '{n} coins', close: 'Close',
     play: 'Play  Level {n}', ad_break: 'Ad Break',
     win_great: 'Great!', win_ok: 'Well done!', stars_hint: 'More moves left = more Stamp Points',
@@ -199,7 +203,10 @@ const STR = {
     soclose: 'Suýt nữa!', soclose_body: 'Level khó: chơi lại <b>miễn phí</b>.', try_again: 'Chơi lại',
     stuck_title: 'Hết đường đi', stuck_body: 'Hết nước có ích, kể cả trong bộ bài.',
     use_joker: 'Dùng Tem Vàng', use_pack: 'Dùng Nam châm', extra_slot: 'Ô phụ', undo: 'Hoàn tác',
-    paused: 'Tạm dừng', resume: 'Chơi tiếp', restart: 'Chơi lại', sound_on: 'Âm thanh: Bật', sound_off: 'Âm thanh: Tắt', music_on: 'Nhạc nền: Bật', music_off: 'Nhạc nền: Tắt', lang: 'Ngôn ngữ: Tiếng Việt',
+    paused: 'Tạm dừng', resume: 'Chơi tiếp', restart: 'Chơi lại',
+    settings: 'Cài đặt', set_text: 'Cỡ chữ', text_0: 'Thường', text_1: 'Lớn', text_2: 'Rất lớn',
+    set_sfx: 'Âm thanh', sfx_0: 'Tắt', sfx_1: 'Nhỏ', sfx_2: 'Vừa', set_music: 'Nhạc nền', set_haptics: 'Rung',
+    set_motion: 'Giảm chuyển động', set_lang: 'Ngôn ngữ', on: 'Bật', off: 'Tắt',
     extra_title: 'Ô phụ', extra_body: 'Thêm một ô cho level này.', free_ad: 'Miễn phí <small>(quảng cáo)</small>', coins: '{n} xu', close: 'Đóng',
     play: 'Chơi  Level {n}', ad_break: 'Quảng cáo',
     win_great: 'Rất tốt!', win_ok: 'Hoàn thành!', stars_hint: 'Còn nhiều nước = nhiều Tem Điểm',

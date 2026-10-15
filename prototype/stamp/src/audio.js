@@ -9,6 +9,9 @@ const NAMES = ['pick', 'place', 'open', 'complete', 'flip', 'back', 'draw', 'hin
 for (let i = 1; i <= 11; i++) NAMES.push('combo' + i);
 
 const SFX_LEVEL = 0.8;
+// Âm lượng SFX 3 mức (R13, bảng Cài đặt): 0 = Tắt (setMuted), 1 = Nhỏ (-6 dB), 2 = Vừa (mức gốc). Không đụng nhạc nền.
+const SFX_GAIN = [0, 0.5, 1];
+let sfxGain = 1;
 let ctx = null;
 let master = null;
 const buffers = {};
@@ -24,7 +27,7 @@ export async function initAudio() {
   if (!AC) return;
   ctx = new AC();
   master = ctx.createGain();
-  master.gain.value = muted ? 0 : SFX_LEVEL;
+  master.gain.value = muted ? 0 : SFX_LEVEL * sfxGain;
   master.connect(ctx.destination);
   initMusicGraph();
   await Promise.all(NAMES.map(async (k) => {
@@ -71,9 +74,19 @@ export function comboSfx(step) {
 export function setMuted(m) {
   muted = m;
   try { localStorage.setItem('ss_muted', m ? '1' : '0'); } catch (e) { /* ignore */ }
-  if (master) master.gain.value = m ? 0 : SFX_LEVEL;
+  if (master) master.gain.value = m ? 0 : SFX_LEVEL * sfxGain;
 }
 export const isMuted = () => muted;
+
+/** Mức SFX 0 | 1 | 2 (settings.js 'sfx'). Mức 0 dùng chung cờ tắt âm cũ ('ss_muted'). */
+export function setSfxVolume(level) {
+  const lv = Math.max(0, Math.min(2, Math.round(Number(level) || 0)));
+  if (lv === 0) { if (!muted) setMuted(true); return; }
+  sfxGain = SFX_GAIN[lv];
+  if (muted) setMuted(false);
+  else if (master) master.gain.value = SFX_LEVEL * sfxGain;
+}
+export const sfxVolume = () => (muted ? 0 : SFX_GAIN.indexOf(sfxGain));
 
 // ============================================================ nhạc nền + không khí (P10)
 // Đồ thị: nguồn -> gain bản nhạc (mức trong meta.json, fade) -> duck -> musicBus (bật/tắt, ẩn app) -> loa.

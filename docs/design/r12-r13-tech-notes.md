@@ -180,3 +180,79 @@ Tên hàm lấy theo `prototype/stamp/src/main.js`. Không ghi số dòng vì Po
 - **Asset `[ART]` chưa có:** túi thư (P6), icon bánh răng (P9). Cả hai đều có phương án tạm, không chặn R12 hay R13.
 - **Nút x2 từ L11 làm giảm số lần xem quảng cáo** so với hiện tại. PO đã chốt trong R12. Theo dõi bằng `ad_offer` / `ad_watch`.
 - **Mặc định chữ Lớn** làm panel cao hơn. Pause phải gọn còn 5 nút (bước R13.2) trước khi đổi mặc định.
+
+---
+
+## Kết quả triển khai (2026-10-15, Feature Dev)
+
+File đã sửa: `src/main.js`, `src/copy.js`, `src/audio.js`, `src/fx.js`, `index.html`, `src/analytics.js` (chỉ `MAX` 800 → 5000), file mới `src/settings.js`, `tests/win-screen.browser.js`, `tests/settings.browser.js`. Ảnh: `docs/qa/img/r12-r13/`.
+
+### P0 vùng an toàn (TestFlight 4, làm trước R12)
+
+- **Nguyên nhân thật:** `main.js` đã đọc `env(safe-area-inset-*)` trong `fit()` (biến `--hud`, `--bot`), nhưng chỉ đo **một lần lúc nạp module** và khi `resize`. Trong WKWebView của Capacitor (`contentInset: never`) inset có sau khi webview gắn vào cửa sổ, lúc đó không có sự kiện `resize` nên HUD giữ inset 0. Đây là **giả thuyết mạnh**, chưa kiểm trên máy thật.
+- **Sửa:**
+  - `checkInsets()` đo lại ở 0, 60, 200, 500, 1000, 1600, 2500, 4000 ms, rồi mỗi 2 giây, và khi `orientationchange`, `pageshow`, `focus`, `visibilitychange`, `resume`. Inset đổi thì `fit()` + `placeChrome()`.
+  - Lưới an toàn: trong app iOS native mà `env()` vẫn 0 sau 1,5 giây thì đoán theo màn hình. Máy có Dynamic Island (cao ≥ 852pt) dùng 59pt trên, máy có tai thỏ dùng 47pt, cả hai 34pt dưới. Máy tỉ lệ < 2 (SE/8) dùng 20pt trên, 0 dưới.
+  - `?sat=59&sab=34` ép inset (pt) để test trên Chrome.
+  - Biến mới `--sab`: album, chương 2, chân trang màn chính, `max-height` của panel tránh thanh home.
+- Ảnh trước/sau có thanh trạng thái giả: `docs/qa/img/r12-r13/safe-area/` (Dynamic Island 59/34, tai thỏ 47/34, SE 20/0). Trước: "10:18" đè ô MOVES, pin đè nút tạm dừng, thanh home đè nhãn booster. Sau: HUD nằm dưới thanh trạng thái, dải booster nằm trên thanh home.
+- **Cần kiểm trên máy thật** ở build TestFlight kế tiếp.
+
+### Quyết định khi làm (tự chọn theo benchmark/plan, ghi lại để PO/GD soát)
+
+1. **Cỡ chữ mức Thường đạt chuẩn review #3**, mặc định là Lớn.
+   - Chữ chính trong popup (`.panel p`, `.btn`, `h3`), toast, tut: 48px.
+   - Dòng phụ (lời cư dân, gợi ý Tem Điểm, "Ván mới không mất gì"): 42px, tức ≥ 48px ở mức Lớn mặc định.
+   - Nhãn booster, Undo: 40px.
+   - Số trên khay và bộ bài: 40px cố định, không nhân `--fs` vì khay có kích thước cố định.
+2. **Có trần ×1,15 (không nhân 1,3):**
+   - nhãn booster, Undo: dải booster rộng cố định, ở 1,3 thì "Golden Stamp" chạm nhãn bên cạnh;
+   - nút Album, Trang trí, Cài đặt ở màn chính.
+   - Nút Play rộng theo chữ (`width: fit-content`, tối đa 940px). Đã đo: "Chơi tiếp Level 12" vừa ở Rất lớn.
+3. **Panel tràn:** `max-height` đặt trên `.panel`, phần thân bọc trong `.pin`. Class `.scroll` (cuộn dọc) chỉ bật khi thân thật sự tràn. Lý do: `overflow` luôn bật sẽ cắt ruy băng tiêu đề và hiệu ứng Tem Điểm đóng cộp (scale 2,4).
+4. **Toast neo đáy** ngay trên hàng rút bài, chữ to thì mọc lên. `.high` tính theo chiều cao đo thật của toast. Tut dời lên `1480 + bot`, line-height 1,12, để 2 dòng ở Rất lớn không đè dải booster.
+5. **Nhãn vương miện:** luôn 34px, tên dài xuống 2 dòng. Từ đơn > 8 ký tự thì khít chữ (letter-spacing −1,5 đến −2,5px), không co chữ, không cắt "...".
+6. **Chạm để tua không thành bấm nút.** Nút có `.wait` thì không nhận chạm. Sau khi tua, mọi nút bị "tước" (`_armed = false`) và chỉ nhận `pointerup` của một lần `pointerdown` mới. Test: nhấc ngón đúng trên nút "Tiếp tục" sau khi tua, bảng vẫn còn.
+7. **Nút sẵn sàng ở 2,5 giây** (spec ≤ 2,6), vì đo thật ra 2601 ms do độ trễ `setTimeout`. Xu bay lúc 2,2 giây vẫn đang bay khi nút đã bấm được. Bấm nút thì gọi `finishWin()`, cộng nốt xu trước khi rời màn.
+8. **Thứ tự nút màn thắng:**
+   - "Tiếp tục" (vàng);
+   - "Trang trí: …" (nâu, chỉ khi đủ Tem Điểm);
+   - "Nhận x2" nhỏ cuối cùng.
+   - Tối đa 2 nút to. x2 không có ở L1–L10 và ở màn hết chương.
+9. **Phong bì bay vào `#combo`** (túi thư `[ART]` chưa có). Phần tử nằm trong `#overlay` (z 28), dưới lớp mờ.
+10. **Ô xu trên lớp mờ:** bản sao `.hud-coins.clone` nằm trong `#overlay` (z 32), số đếm dần cập nhật cả hai bản. Bản sao bị dọn ở `startLevel`/`goHome` (`endWin()`). Toạ độ đích của xu bay cộng thêm `DY_HUD`, vì ô xu đã dời theo vùng an toàn.
+11. **Bảng Cài đặt:**
+    - Chữ và Âm thanh dùng 3 nút chia đoạn dưới nhãn. Nhạc, Rung, Giảm chuyển động dùng Bật/Tắt cùng dòng với nhãn. Ngôn ngữ dùng 2 nút.
+    - Đóng bảng mở từ Pause thì quay lại Pause.
+    - Đổi chữ hoặc ngôn ngữ thì dựng lại bảng ngay (`instant`, không tiếng popup). Bấm chọn âm lượng phát tiếng `click` ở mức mới để nghe thử.
+12. **SFX 3 mức:** `setSfxVolume(0|1|2)` trong `audio.js`, hệ số 0 / 0,5 / 1 trên `master`. Mức 0 dùng chung cờ `ss_muted` cũ: người đã tắt âm ở nút Pause cũ được giữ Tắt. Nhạc nền không đổi.
+13. **Bậc haptic:**
+    - `tap`: nhặt, thả, rút, hoàn tác.
+    - `progress`: tem vào ô, lật vương miện, đặt Tem Vàng, Tem Điểm.
+    - `milestone`: gửi thư, Stamper, Nam châm, ô phụ, Ca tối, decor.
+    - `success`: thắng.
+    - `deny`: thả sai, hết nước.
+14. **Giảm chuyển động:**
+    - Bỏ: rung màn, phong bì, confetti. `levelBanner` chỉ hiện/ẩn bằng mờ. Xu không đếm dần.
+    - CSS tắt pulse `.lvl.cur`, logo lắc lư, nút Trang trí nhấp nháy, vòng sáng xoay.
+    - `fx.setLite(true)`.
+    - Tốc độ lá bay và kéo thả giữ nguyên.
+15. **Test thắng dùng `autoplay(270)`, không dùng 40.** `onDeck` bỏ mọi chạm trong 250 ms sau thao tác trước (`tooSoon`), nên bước 40 ms làm lời giải lệch ở lần rút bài đầu tiên.
+16. `idle_long`: bỏ qua thời gian panel mở, chưa vào ván, đang chia bài, app ẩn. Mốc thao tác cuối là `pointerdown` trên `#stage` (mọi chạm, kể cả booster) hoặc `lastActAt`.
+17. Bảng Events trong `?debug` có thêm dòng đếm các sự kiện AC: `tap_drift`, `win_button`, `ad_offer`, `ad_watch`, `app_hidden`, `idle_long`, `pause_open`, `rules_open`, `setting_change`.
+
+### Kết quả test (Chrome headless 375×812)
+
+- `win-screen.browser.js` 4/4 + `runEvents` 5/5:
+  - L3: nút sẵn sàng ở 2504 ms;
+  - L12: chạm ở 1002 ms, tua xong sau 2 ms;
+  - giảm chuyển động: sẵn sàng ở 1106 ms.
+- `settings.browser.js`: tràn 3/3 mức (7 bảng + toast + màn thắng), giảm chuyển động (0/95 khung rung), giữ cài đặt sau reload.
+- Hồi quy:
+  - `drag-scenarios` 13/13;
+  - `resume` 5/5 + reload;
+  - `runDrift` pass ở mức Lớn và Rất lớn;
+  - `runDriftScript` pass;
+  - `naive-drag run` không lỗi ở seed 1 và L6 seed 3.
+  - Có 1 HIT_MISS ở chế độ vội (seed 2, 5), **giống hệt bản HEAD trước khi sửa**: lỗi đo của test khi lá đang bay, không phải hồi quy.
+- `fuzz.test.mjs` 104/104.

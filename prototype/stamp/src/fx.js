@@ -92,14 +92,15 @@ export function sparkle(x, y, n = 10, { spread = 1, colors = ['#fff7b0', '#ffe36
   }
   loop();
 }
-/** Confetti khi thắng. */
-export function confetti(n = 160) {
+/** Confetti khi thắng. Mặc định giữ như cũ (6 màu sáng); màn thắng dàn dựng (R12) truyền palette giấy,
+ *  drag cao, trọng lực thấp để hạt rơi chậm (benchmark mục 4.3 và 8: ít hạt, rơi chậm cho người lớn tuổi). */
+export function confetti(n = 160, { palette = COLORS, drag = 1.6, gravity = 1500, life = 2.4, spread = 1 } = {}) {
   n = Math.round(n * PSCALE);
   for (let i = 0; i < n; i++) {
-    parts.push({ kind: 'rect', x: 540 + (Math.random() - 0.5) * 300, y: 700, vx: (Math.random() - 0.5) * 1700,
-      vy: -900 - Math.random() * 1100, g: 1500, drag: 1.6, life: 2.4 + Math.random(), t: 0, w: 16 + Math.random() * 14,
+    parts.push({ kind: 'rect', x: 540 + (Math.random() - 0.5) * 300, y: 700, vx: (Math.random() - 0.5) * 1700 * spread,
+      vy: (-900 - Math.random() * 1100) * spread, g: gravity, drag, life: life + Math.random() * (life / 2.4), t: 0, w: 16 + Math.random() * 14,
       h: 9 + Math.random() * 8, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14,
-      color: COLORS[(Math.random() * COLORS.length) | 0] });
+      color: palette[(Math.random() * palette.length) | 0] });
   }
   loop();
 }

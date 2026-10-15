@@ -80,7 +80,7 @@ body.hard #stage::before{background:linear-gradient(#4a4d48,rgba(74,77,72,0))}
   color:#fff3dc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px;transform-origin:50% 100%;
   opacity:0;transform:scaleY(.2)}
 .slot.open .ribbon{opacity:1;transform:none;transition:transform .28s cubic-bezier(.3,1.6,.5,1),opacity .15s}
-.slot .count{position:absolute;left:0;right:0;top:calc(8px * var(--ck,1));height:34px;text-align:center;font-size:34px;line-height:34px;color:#4a2a12;opacity:0}
+.slot .count{position:absolute;left:0;right:0;top:calc(5px * var(--ck,1));height:40px;text-align:center;font-size:40px;line-height:40px;color:#4a2a12;opacity:0}   /* >= 40px (review GD v2 #3); khay cỡ cố định nên không nhân --fs */
 .slot.open .count{opacity:1}
 .slot.locked::before,.slot.locked .tray-front{opacity:.5}
 /* ô trống: vương miện mờ = "ô này dành cho tem vương miện" (affordance, không cần chữ) */
@@ -93,7 +93,7 @@ body.hard #stage::before{background:linear-gradient(#4a4d48,rgba(74,77,72,0))}
 .colzone.target{background:rgba(255,240,140,.22);box-shadow:inset 0 0 0 4px rgba(255,240,140,.6)}
 .deck-hit{position:absolute;width:calc(165px * var(--ck,1) + 20px);height:calc(214px * var(--ck,1) + 20px);cursor:pointer}
 .deck-count{position:absolute;width:128px;height:60px;padding-left:26px;background:url(assets/ui/deck_tag.png) center/100% 100% no-repeat;
-  color:var(--ink);font-size:36px;line-height:62px;text-align:center;z-index:900}
+  color:var(--ink);font-size:40px;line-height:62px;text-align:center;z-index:900}
 .recycle{position:absolute;width:calc(165px * var(--ck,1));height:calc(214px * var(--ck,1));border-radius:16px;background:rgba(90,58,38,.06);box-shadow:inset 0 0 0 3px rgba(90,58,38,.12);display:grid;place-items:center}
 .recycle i{width:92px;height:92px;background:url(assets/ui/recycle.png) center/contain no-repeat;opacity:.95}
 
@@ -125,6 +125,7 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
   background:url(assets/ui/envelope_closed.png) left center/42px auto no-repeat;white-space:nowrap}
 .hud-coins{position:absolute;right:164px;top:calc(46px + var(--hud,0px));height:60px;padding:0 22px 0 66px;border-radius:30px;background:var(--cream);
   border:4px solid var(--ink);box-shadow:0 4px 0 rgba(90,58,38,.25);font-size:34px;line-height:52px;color:var(--ink)}
+.hud-coins.clone{z-index:32;pointer-events:auto}   /* màn thắng: bản sao ô xu nằm trên lớp mờ (R12), xu bay về thấy được */
 .hud-coins i{position:absolute;left:4px;top:4px;width:48px;height:48px;background:url(assets/ui/coin.png) center/contain no-repeat}
 .btn-round{position:absolute;width:108px;height:108px;background:url(assets/ui/btn_pause.png) center/contain no-repeat;cursor:pointer}
 #pauseBtn{right:40px;top:calc(32px + var(--hud,0px))}
@@ -142,7 +143,7 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .booster .badge{position:absolute;right:-6px;top:-8px;min-width:66px;height:62px;border-radius:31px;background:var(--red);color:#fff;
   border:4px solid var(--ink);font-size:32px;line-height:54px;text-align:center;padding:0 8px}
 .booster .badge.coin{background:#ffcf3f;color:var(--ink);font-size:32px}
-.booster .name{position:absolute;left:-30px;right:-30px;bottom:-48px;text-align:center;font-size:36px;white-space:nowrap;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
+.booster .name{position:absolute;left:-30px;right:-30px;bottom:-48px;text-align:center;font-size:calc(40px * min(var(--fs,1), 1.15));white-space:nowrap;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
 .booster.locked{opacity:.8}
 .booster.locked i{display:none}   /* không dùng filter (nặng trên GPU yếu), khoá ở giữa là đủ */
 .booster.locked .lockbig{position:absolute;left:50px;top:42px;width:64px;height:78px;background:url(assets/ui/lock.png) center/contain no-repeat}
@@ -157,17 +158,17 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .btn-undo .badge{position:absolute;right:-8px;top:-8px;min-width:52px;height:52px;border-radius:26px;background:var(--red);color:#fff;
   border:4px solid var(--ink);font-size:30px;line-height:44px;text-align:center;padding:0 6px}
 .btn-undo .badge.coin{background:#ffcf3f;color:var(--ink);font-size:30px}
-.btn-undo .lbl{position:absolute;left:-24px;right:-24px;bottom:-54px;text-align:center;font-size:36px;white-space:nowrap;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
+.btn-undo .lbl{position:absolute;left:-24px;right:-24px;bottom:-54px;text-align:center;font-size:calc(40px * min(var(--fs,1), 1.15));white-space:nowrap;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
 
 /* ---------- toast / tutorial ---------- */
-.toast{position:absolute;left:100px;right:100px;top:calc(var(--rowa,1212px) - 130px);   /* ngay trên hàng rút bài */padding:18px 24px;border-radius:24px;background:var(--cream);color:var(--ink);
+.toast{position:absolute;left:100px;right:100px;bottom:calc(100% - var(--rowa,1212px) + 16px);   /* đáy toast ngay trên hàng rút bài, chữ to thì mọc lên */padding:18px 24px;border-radius:24px;background:var(--cream);color:var(--ink);
   border:4px solid var(--ink);box-shadow:0 5px 0 rgba(90,58,38,.25);
-  text-align:center;font-size:42px;line-height:1.25;opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none;z-index:40}   /* z 40: nằm trên lớp mờ và panel khi toast được chuyển vào #overlay */
+  text-align:center;font-size:calc(48px * var(--fs,1));line-height:1.2;opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none;z-index:40}   /* z 40: nằm trên lớp mờ và panel khi toast được chuyển vào #overlay */
 .toast.on{opacity:1;transform:none}
-.toast.high{top:calc(var(--bd,0px) + 160px)}   /* cột dài chạm hàng rút bài: toast lên phía trên khay đích, không che lá trên cùng */
+.toast.high{top:calc(var(--bd,0px) + 160px);bottom:auto}   /* cột dài chạm hàng rút bài: toast lên phía trên khay đích, không che lá trên cùng */
 .toast em{font-style:normal;color:var(--red)}
-.tut{position:absolute;left:70px;right:70px;top:calc(1490px + var(--bot,0px));padding:8px 26px;color:var(--ink);
-  border:34px solid transparent;border-image:url(assets/ui/tipbox.png) 70 fill / 36px stretch;text-align:center;font-size:44px;line-height:1.25;opacity:0;transform:scale(.9);
+.tut{position:absolute;left:70px;right:70px;top:calc(1480px + var(--bot,0px));padding:4px 22px;color:var(--ink);
+  border:34px solid transparent;border-image:url(assets/ui/tipbox.png) 70 fill / 36px stretch;text-align:center;font-size:calc(48px * var(--fs,1));line-height:1.12;opacity:0;transform:scale(.9);
   transition:.25s cubic-bezier(.3,1.5,.5,1);pointer-events:none;z-index:9}
 .tut.on{opacity:1;transform:none}
 .tut em{font-style:normal;color:var(--red)}
@@ -177,35 +178,53 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 /* ---------- panels ---------- */
 .scrim{position:absolute;inset:-1200px;background:rgba(60,40,25,.5);opacity:0;transition:opacity .25s;pointer-events:auto;z-index:30}
 .scrim.on{opacity:1}
-.panel{position:absolute;left:100px;right:100px;top:calc(480px + var(--mid,0px));padding:64px 10px 0;color:var(--ink);text-align:center;z-index:31;
+.panel{--ptop:480px;position:absolute;left:100px;right:100px;top:calc(var(--ptop) + var(--mid,0px));padding:64px 10px 0;color:var(--ink);text-align:center;z-index:31;
   border:60px solid transparent;border-image:url(assets/ui/panel.png) 110 fill / 64px stretch;
+  display:flex;flex-direction:column;max-height:calc(100% - var(--ptop) - var(--mid,0px) - 40px - var(--sab,0px));   /* chữ to: đáy panel không ra khỏi màn hình */
   transform:scale(.6);opacity:0;transition:transform .35s cubic-bezier(.3,1.6,.5,1),opacity .2s}
 .panel.on{transform:none;opacity:1}
+.panel.tall{--ptop:400px}
+/* lưới an toàn khi chữ Rất lớn: phần thân cuộn được (chỉ bật khi tràn, để không cắt hiệu ứng Tem Điểm đóng cộp) */
+.panel .pin{flex:0 1 auto;min-height:0}
+.panel .pin.scroll{overflow-y:auto;touch-action:pan-y;padding-bottom:24px}
+/* màn thắng (R12): bảng trượt từ dưới lên 280 ms outBackSoft thay vì bật ra giữa */
+.panel.win{transform:translateY(620px);transition:transform .28s cubic-bezier(.3,1.25,.5,1),opacity .18s}
+.panel.win.on{transform:none}
+.panel.instant,.panel.instant .stars i{transition:none}
+.scrim.instant{transition:none}
+.win-catch{position:absolute;inset:0;z-index:1;pointer-events:auto}   /* màn thắng: chặn chạm vào bàn, chạm để tua */
 .panel .head{position:absolute;left:-110px;right:-110px;top:-140px;height:150px;background:url(assets/ui/ribbon.png) center/100% 100% no-repeat;
   font-size:54px;line-height:124px;color:#fff;text-shadow:0 4px 0 rgba(120,30,20,.45)}
-.panel h3{margin:10px 0 24px;font-size:44px;font-weight:normal}
-.panel p{margin:10px 0;font-size:40px;line-height:1.3;color:#7a5238}
+.panel h3{margin:10px 0 24px;font-size:calc(48px * var(--fs,1));font-weight:normal}
+.panel p{margin:10px 0;font-size:calc(48px * var(--fs,1));line-height:1.25;color:#7a5238}
 .panel p b{color:var(--ink)}
-.panel p.note{font-size:36px;line-height:1.3;margin:14px 10px 6px;color:#6a4a30;font-style:italic}
-.btn{display:inline-block;min-width:380px;margin:14px 10px 0;padding:0 24px;font-size:44px;line-height:56px;color:var(--ink);cursor:pointer;
+.panel p.note{font-size:calc(42px * var(--fs,1));line-height:1.25;margin:14px 10px 6px;color:#6a4a30;font-style:italic}
+.btn{display:inline-block;min-width:380px;max-width:100%;margin:14px 10px 0;padding:0 24px;font-size:calc(48px * var(--fs,1));line-height:1.18;color:var(--ink);cursor:pointer;
   border:34px solid transparent;border-width:34px 48px 40px;border-image:url(assets/ui/btn_yellow.png) 70 90 80 fill / 34px 48px 40px stretch}
 .btn.orange{border-image-source:url(assets/ui/btn_blue.png);color:#fff;text-shadow:0 3px 0 rgba(20,60,110,.45)}
-.btn.brown{border-image-source:url(assets/ui/banner.png);border-image-slice:60 fill;border-width:30px;padding:10px 40px;font-size:40px}
+.btn.brown{border-image-source:url(assets/ui/banner.png);border-image-slice:60 fill;border-width:30px;padding:10px 40px;font-size:calc(44px * var(--fs,1))}
+/* nút phụ nhỏ (R12): "Nhận x2" dưới nút chính, nền giấy kem viền nâu; vùng chạm mở rộng tới >= 44pt */
+.btn.small{position:relative;min-width:0;margin-top:30px;padding:16px 36px;font-size:calc(34px * var(--fs,1));line-height:1.2;color:var(--ink);
+  border:4px solid rgba(90,58,38,.55);border-image:none;border-radius:40px;background:var(--cream);box-shadow:0 4px 0 rgba(90,58,38,.2)}
+.btn.small::after{content:'';position:absolute;inset:-20px -10px}
+.btn.small small{font-size:inherit;opacity:.8}
+.btn.wait{opacity:.6;pointer-events:none}
 .btn:active{transform:translateY(5px) scale(.98)}
 .btn.off{opacity:.55}
-.btn small{font-size:32px;opacity:.95}
+.btn small{font-size:calc(36px * var(--fs,1));opacity:.95}
 .btn i{display:inline-block;width:46px;height:46px;vertical-align:-10px;background:url(assets/ui/tem_diem.png) center/contain no-repeat}
 .stars{display:flex;justify-content:center;gap:24px;margin:0 0 20px;height:130px}
 .stars i{width:130px;height:130px;background:url(assets/ui/tem_diem.png) center/contain no-repeat;filter:grayscale(1) brightness(1.1);opacity:.28;transform:scale(.8)}
 .stars i.on{filter:none;opacity:1;animation:stampin .32s cubic-bezier(.5,0,.6,1.4) forwards}
+.stars i.on.now{animation:none;transform:rotate(var(--r,0deg))}   /* chạm để tua: hiện ngay */
 .stars i:nth-child(1).on{--r:-8deg}.stars i:nth-child(3).on{--r:7deg}
 /* Tem Điểm đóng xuống như con dấu: to, nghiêng, rồi đập xuống */
 @keyframes stampin{0%{transform:scale(2.4) rotate(-18deg);opacity:0}70%{transform:scale(.9) rotate(var(--r,0deg));opacity:1}100%{transform:scale(1) rotate(var(--r,0deg));opacity:1}}
-.pts-line{font-size:38px;color:#7a5238;margin:-6px 0 6px}
+.pts-line{font-size:calc(42px * var(--fs,1));color:#7a5238;margin:-6px 0 6px}
 .pts-line i{display:inline-block;width:48px;height:48px;vertical-align:-10px;background:url(assets/ui/tem_diem.png) center/contain no-repeat}
 .stars i:nth-child(2){margin-top:-30px}
 @keyframes starpop{0%{transform:scale(2.2) rotate(-25deg);opacity:0}100%{transform:scale(1);opacity:1}}
-.coins-line{font-size:48px;display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
+.coins-line{font-size:calc(48px * var(--fs,1));display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
 .coins-line i{width:60px;height:60px;background:url(assets/ui/coin.png) center/contain no-repeat}
 .feature-icon{width:260px;height:260px;margin:0 auto 10px;background:center/contain no-repeat}
 .radial{position:absolute;left:50%;top:50%;width:900px;height:900px;margin:-450px 0 0 -450px;background:url(assets/ui/radial.png) center/contain no-repeat;
@@ -217,6 +236,22 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 @media (orientation: landscape) and (max-height: 520px){#rotate{display:flex;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;text-align:center;
   background:#d1d9c3;color:#5a3a26;font:28px/1.4 inherit;font-family:inherit}}
 @media (prefers-reduced-motion: reduce){*{animation-duration:1ms !important;animation-iteration-count:1 !important;transition-duration:1ms !important}}
+/* Giảm chuyển động (R13, cài đặt hoặc prefers-reduced-motion): tắt chuyển động trang trí lặp mãi. Nhịp kéo thả, lá bay giữ nguyên. */
+body.reduce-motion .lvl.cur,body.reduce-motion .home .logo,body.reduce-motion .home .decor-btn.ready,body.reduce-motion .radial,
+body.reduce-motion .ch2-soon{animation:none}
+/* ---------- bảng Cài đặt (R13): nhãn + điều khiển, vùng chạm >= 44pt (127px stage) ---------- */
+.set-list{text-align:left;margin:0 0 6px}
+.set-row{padding:10px 0 14px;border-bottom:3px dashed rgba(90,58,38,.16)}
+.set-row:last-child{border-bottom:0}
+.set-row.inline{display:flex;align-items:center;gap:20px}
+.set-lbl{font-size:calc(46px * var(--fs,1));line-height:1.15;color:var(--ink);margin:0 0 10px}
+.set-row.inline .set-lbl{flex:1;min-width:0;margin:0}
+.seg{display:flex;gap:10px}
+.seg b{flex:1 1 0;min-width:0;min-height:112px;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px 10px;border-radius:26px;
+  font-weight:normal;font-size:calc(40px * var(--fs,1));line-height:1.05;color:var(--ink);background:rgba(255,248,234,.9);box-shadow:inset 0 0 0 4px rgba(90,58,38,.35);cursor:pointer}
+.seg b.on{background:var(--gold);box-shadow:inset 0 0 0 5px var(--ink),0 4px 0 rgba(90,58,38,.3)}
+.seg b:active{transform:scale(.97)}
+.set-row.inline .seg{flex:0 0 auto;width:330px}
 /* ---------- home ---------- */
 .home{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;color:var(--ink);padding-top:var(--hud,0px);
   background:#d1d9c3 url(assets/ui/bg_game.jpg) center bottom/1080px 1920px no-repeat;transition:opacity .35s}
@@ -245,13 +280,13 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
   display:grid;place-items:center;font-size:70px;line-height:1;color:var(--ink);cursor:pointer}
 .ch-arrow.none{visibility:hidden}
 .ch-arrow.locked i{width:50px;height:50px;background:url(assets/ui/lock.png) center/contain no-repeat}
-.ch-lbl{flex:1;text-align:center;font-size:38px;line-height:1.05;color:var(--cream);white-space:nowrap;
+.ch-lbl{flex:1;text-align:center;font-size:calc(38px * var(--fs,1));line-height:1.05;color:var(--cream);white-space:nowrap;
   text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
-.ch-lbl small{display:block;font-size:30px}
-.home .play{position:absolute;left:0;right:0;width:520px;white-space:nowrap;margin:0 auto;text-align:center;top:calc(1640px + var(--bot,0px))}  /* nút Play trên kệ, vùng ngón cái */
-.home .foot{position:absolute;bottom:40px;font-size:24px;opacity:.85;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
+.ch-lbl small{display:block;font-size:calc(30px * var(--fs,1))}
+.home .play{position:absolute;left:0;right:0;width:fit-content;min-width:520px;max-width:940px;white-space:nowrap;margin:0 auto;text-align:center;top:calc(1640px + var(--bot,0px))}   /* chữ Rất lớn: nút rộng ra, không tràn */  /* nút Play trên kệ, vùng ngón cái */
+.home .foot{position:absolute;bottom:calc(40px + var(--sab,0px));font-size:24px;opacity:.85;color:var(--cream);text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px 2px 0 var(--ink)}
 /* ---------- Chương 2 sắp mở (teaser Bến Cảng, concept mục 3.1) ---------- */
-.ch2{position:absolute;left:30px;right:30px;top:calc(40px + var(--hud,0px));bottom:30px;z-index:47;display:flex;flex-direction:column;align-items:center;
+.ch2{position:absolute;left:30px;right:30px;top:calc(40px + var(--hud,0px));bottom:calc(30px + var(--sab,0px));z-index:47;display:flex;flex-direction:column;align-items:center;
   border:60px solid transparent;border-image:url(assets/ui/panel.png) 110 fill / 64px stretch;color:var(--ink);transition:opacity .25s}
 .ch2.off{opacity:0;pointer-events:none}
 .ch2-head{font-size:60px;text-align:center;margin-top:-10px}
@@ -280,9 +315,11 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .ch2.open .ch2-st img{opacity:1}
 .ch2.open .ch2-soon{border-color:#3f8f4e;color:#3f8f4e}
 /* ---------- album tem ---------- */
-.home .album-btn,.home .decor-btn{position:absolute;min-width:0;width:300px;padding:0 8px;white-space:nowrap;margin:0;text-align:center;font-size:38px;top:calc(1480px + var(--bot,0px))}
-.home .album-btn{left:208px}
-.home .decor-btn{left:528px}
+.home .album-btn,.home .decor-btn{position:absolute;min-width:0;width:340px;padding:0 4px;border-width:34px 26px 40px;white-space:nowrap;margin:0;text-align:center;font-size:calc(38px * min(var(--fs,1), 1.15));top:calc(1480px + var(--bot,0px))}
+.home .album-btn{left:190px}
+.home .decor-btn{left:550px}
+/* nút Cài đặt trên màn chính (R13). Icon bánh răng [ART] chưa có: tạm dùng chữ (P9) */
+.home .gear-btn{position:absolute;right:30px;top:calc(36px + var(--hud,0px));min-width:0;margin:0;padding:6px 26px;font-size:calc(40px * min(var(--fs,1), 1.15));z-index:2}
 .home .decor-btn.ready{animation:pulse 2s ease-in-out infinite}
 /* ---------- Bưu điện nhỏ: decor đặt trên ảnh nền (nền neo đáy nên neo theo bottom, cờ dây neo theo đỉnh) ---------- */
 .decor{position:absolute;inset:0;pointer-events:none}
@@ -303,17 +340,17 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
 .dc-buoy{right:84px;width:180px;bottom:470px}
 .dc-lantern{left:46px;width:140px;bottom:330px}
 .dc-boatbed{right:12px;width:230px;bottom:322px}
-.album{position:absolute;left:30px;right:30px;top:calc(40px + var(--hud,0px));bottom:30px;z-index:46;display:flex;flex-direction:column;align-items:center;
+.album{position:absolute;left:30px;right:30px;top:calc(40px + var(--hud,0px));bottom:calc(30px + var(--sab,0px));z-index:46;display:flex;flex-direction:column;align-items:center;
   border:60px solid transparent;border-image:url(assets/ui/panel.png) 110 fill / 64px stretch;color:var(--ink);transition:opacity .25s}
 .album.off{opacity:0;pointer-events:none}
 .album-head{font-size:56px;text-align:center;margin-top:-10px}
-.album-head small{display:block;font-size:34px;color:#7a5238}
+.album-head small{display:block;font-size:calc(38px * var(--fs,1));color:#7a5238}
 .album-body{flex:1;width:100%;overflow-y:auto;touch-action:pan-y;margin:16px 0;padding-right:6px}
 .al-row{display:flex;gap:20px;align-items:flex-start;padding:16px 4px;border-bottom:3px dashed rgba(90,58,38,.18)}
 .al-ic{width:84px;height:84px;object-fit:contain;flex:0 0 84px}
-.al-info{flex:1}
-.al-info b{font-size:40px;font-weight:normal}
-.al-info span{display:block;font-size:32px;color:#7a5238;margin:2px 0 8px}
+.al-info{flex:1;min-width:0}
+.al-info b{font-size:calc(44px * var(--fs,1));font-weight:normal}
+.al-info span{display:block;font-size:calc(36px * var(--fs,1));color:#7a5238;margin:2px 0 8px}
 .al-cells{display:flex;flex-wrap:wrap;gap:10px}
 .al-st{width:74px;height:96px;background:url(assets/ui/face_3.png) center/100% 100% no-repeat;display:grid;place-items:center}
 .al-st img{width:58px;height:58px;object-fit:contain}
@@ -367,6 +404,7 @@ body.hard .combo .txt{color:#fff3d6;text-shadow:0 2px 0 rgba(0,0,0,.45)}
     <div class="btn play" id="playBtn">Play</div>
     <div class="btn orange album-btn" id="albumBtn">Album</div>
     <div class="btn decor-btn" id="decorBtn">Decorate</div>
+    <div class="btn brown gear-btn" id="gearBtn">Settings</div>
   </div>
 </div>
 <script type="module" src="src/main.js"></script>
