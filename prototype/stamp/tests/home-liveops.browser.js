@@ -81,7 +81,7 @@ export function gapDebug() {
   const sel = ['#homeCoins', '#gearBtn', '.home .logo', '#grid', '#playBtn', '#albumBtn', '#decorBtn', '#dailyBtn', '#eventTile', '#homePip'];
   return sel.map(q => { const el = document.querySelector(q); if (!el || !el.offsetParent) return q + ' -'; const r = el.getBoundingClientRect(); return `${q} ${Math.round(r.top)}-${Math.round(r.bottom)}`; }).join(' | ') + ' H ' + innerHeight;
 }
-scen('L5: điểm chạm chính theo level (L1–L4: 3, từ L5: 4, ô Event mờ không tính), luôn <= 5; không vùng trống > 20%', async () => {
+scen('L5: điểm chạm chính theo level (L1–L4: 3, từ L5: 4, ô Event mờ không tính, event đang chạy và đủ level: 5), luôn <= 5; không vùng trống > 20%', async () => {
   const rows = [];
   let pass = true;
   for (const [won, pd] of [[0, 1], [4, 1], [5, 1], [11, 2], [13, 2], [32, 8], [66, 22], [78, 27]]) {
@@ -94,10 +94,12 @@ scen('L5: điểm chạm chính theo level (L1–L4: 3, từ L5: 4, ô Event m�
     const tp = G().touchPoints();
     const ev = document.getElementById('eventTile');
     const evState = ev.classList.contains('off') ? 'ẩn' : ev.classList.contains('on') ? 'sáng' : 'mờ: ' + ev.textContent.replace(/\s+/g, ' ').trim();
-    const want = won >= 5 ? ['play', 'album', 'decor', 'daily'] : ['play', 'album', 'decor'];
+    const ls = G().live.state();
+    const lit = won >= 5 && !!ls.big;               // L6–L9: event đang chạy và đủ level thì ô Event sáng (điểm chạm thứ 5)
+    const want = won >= 5 ? ['play', 'album', 'decor', 'daily', ...(lit ? ['event'] : [])] : ['play', 'album', 'decor'];
     const gap = maxGap();
     const ok = tp.length <= 5 && want.every(x => tp.includes(x)) && tp.length === want.length && gap <= 0.2
-      && (won < 5 || pd === 1 ? evState === 'ẩn' : evState.startsWith('mờ'));
+      && (won < 5 || pd === 1 ? evState === 'ẩn' : lit ? evState === 'sáng' : evState.startsWith('mờ'));
     if (!ok) pass = false;
     rows.push(`L${won + 1}/pd${pd}: ${tp.length} [${tp.join(',')}] event ${evState}, trống ${Math.round(gap * 100)}%${ok ? '' : ' ✗'}`);
   }

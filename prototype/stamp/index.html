@@ -344,6 +344,71 @@ body.reduce-motion .motes,.lite .motes{display:none}
 .event-tile.on .ev-bar{display:block}
 .event-tile.dim{background:rgba(255,248,234,.6);box-shadow:0 0 0 4px rgba(90,58,38,.3) inset}
 .event-tile.dim i{opacity:.5}
+/* L6: dải băng Cuối tuần (E3, không bấm được) giữa ô xu và bánh răng; thanh Túi thư của Pip (F5) dưới nút Chơi */
+.wkend{position:absolute;left:230px;right:230px;top:calc(24px + var(--hud,0px));height:112px;background:url(assets/ui/ribbon.png) center/100% 100% no-repeat;pointer-events:none;z-index:3;
+  font-size:calc(34px * min(var(--fs,1), 1.1));line-height:94px;text-align:center;color:#fff;white-space:nowrap;text-shadow:0 3px 0 rgba(120,30,20,.5)}
+.wkend.off,.bag-bar.off{display:none}
+.home.bag .play{bottom:calc(var(--sab,0px) + 80px)}
+.bag-bar{position:absolute;left:50%;width:470px;margin-left:-235px;bottom:calc(var(--sab,0px) + 14px);height:62px;border-radius:31px;background:rgba(255,248,234,.96);
+  box-shadow:0 0 0 4px rgba(90,58,38,.55) inset,0 4px 0 rgba(90,58,38,.2);display:flex;align-items:center;gap:10px;padding:0 14px 0 8px;pointer-events:none;z-index:2}
+.bag-bar .bb-ic{flex:0 0 58px;height:54px;background:url(assets/ui/mailbag_open.png) center/contain no-repeat}
+.bag-bar .bb-track{flex:1;height:22px;border-radius:11px;background:rgba(90,58,38,.22);overflow:hidden}
+.bag-bar .bb-fill{display:block;height:100%;background:linear-gradient(#ffe58a,#f0b93a)}
+.bag-bar .bb-txt{font-size:32px;color:var(--ink);min-width:70px;text-align:center}
+.bag-bar .bb-next{flex:0 0 48px;height:48px;background:center/contain no-repeat}
+.event-tile .dot{display:none;position:absolute;right:-8px;top:-8px;width:46px;height:46px;border-radius:50%;background:var(--red);border:5px solid var(--cream);box-shadow:0 0 0 3px var(--ink)}
+.event-tile.new .dot{display:block}
+/* màn thắng: dòng event (trạm tuyến, túi thư) và nhãn x2 cuối tuần */
+.coins-line .x2{font-style:normal;font-size:calc(32px * var(--fs,1));padding:4px 14px;border-radius:20px;background:var(--red);color:#fff}
+.ev-lines{display:flex;flex-direction:column;align-items:center;gap:6px;margin:4px 0 2px}
+.evl{display:inline-flex;align-items:center;gap:10px;font-size:calc(34px * var(--fs,1));line-height:1.15;color:#6a4a30}
+.evl i{flex:0 0 48px;width:48px;height:48px;background:center/contain no-repeat}
+.evl.full{color:var(--ink)}
+.evl .gift-chip{font-size:calc(30px * var(--fs,1));padding:2px 12px 2px 4px}
+.evl .gift-chip i{width:40px;height:40px;flex-basis:40px}
+/* E2: dấu tem mùa trên lá (góc phải trên, không che hình tem) và dấu bay lên khi gửi lá */
+.card .season-mark{position:absolute;right:-6px;top:-4px;width:74px;height:74px;background:center/contain no-repeat;pointer-events:none}
+.card.infound .season-mark{display:none}
+.season-fly{position:absolute;left:0;top:0;width:80px;height:80px;background:center/contain no-repeat;z-index:4000;pointer-events:none}
+/* panel event (E1, E2, E4) */
+.panel.event .pin{text-align:center}
+.rt-scene{position:relative;margin:0 auto 10px;width:100%;max-width:700px}
+.rt-scene img{display:block;width:100%;height:220px;object-fit:cover;border-radius:16px;box-shadow:0 0 0 4px rgba(90,58,38,.3)}
+.rt-scene span{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);padding:4px 22px;border-radius:24px;background:var(--cream);box-shadow:0 0 0 3px rgba(90,58,38,.5);font-size:calc(32px * min(var(--fs,1), 1.15));white-space:nowrap}
+.rt-track{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;margin:28px 0 6px;justify-items:center}
+.rt-dot{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;border:3px dashed rgba(90,58,38,.35);font-size:24px;font-weight:normal;color:#8a6a50}
+.rt-dot.on{border:4px solid #c8452f;background:#fff8ea;color:#c8452f}
+.rt-dot.gift{background:url(assets/ui/envelope_closed.png) center/40px no-repeat}
+.rt-dot.gift.on{background:#fff8ea url(assets/ui/envelope_closed.png) center/40px no-repeat}
+.rt-dot.cur{box-shadow:0 0 0 5px rgba(217,164,65,.6);background:#fff8ea url(assets/ui/mailbag_full.png) center/44px no-repeat;color:transparent}
+.ev-ms{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:3px dashed rgba(90,58,38,.15);text-align:left}
+.ev-ms:last-of-type{border-bottom:0}
+.ev-ms-l{flex:1;min-width:0;font-size:calc(34px * min(var(--fs,1), 1.15));line-height:1.12;color:#7a5238}
+.ev-ms-l small{display:block;font-size:calc(26px * min(var(--fs,1), 1.15))}
+.ev-ms.reached .ev-ms-l{color:var(--ink)}
+.gift-list.mini{flex:0 0 auto;gap:6px;margin:0;flex-direction:column;align-items:flex-end}
+.gift-list.mini .gift-chip{font-size:calc(28px * min(var(--fs,1), 1.15));padding:2px 12px 2px 4px}
+.gift-list.mini .gift-chip i{width:40px;height:40px}
+.ev-claim{flex:0 0 auto;min-width:150px;min-height:110px;display:flex;align-items:center;justify-content:center;padding:0 6px;font-weight:normal;font-size:calc(34px * min(var(--fs,1), 1.15));color:var(--ink);cursor:pointer;
+  border:24px solid transparent;border-width:24px 40px 32px;border-image:url(assets/ui/btn_primary.png) 44 96 60 fill / 24px 40px 32px stretch}
+.ev-claim:active{border-image-source:url(assets/ui/btn_primary_down.png);transform:translateY(3px)}
+.ev-got{flex:0 0 150px;text-align:center;font-size:calc(28px * min(var(--fs,1), 1.15));color:#3f8f4e}
+.ev-ms.done{opacity:.75}
+.er-bar{display:block;width:90%;height:14px;margin:6px 0 2px;border-radius:7px;background:rgba(90,58,38,.2);overflow:hidden}
+.er-bar b{display:block;height:100%;background:linear-gradient(#ffe58a,#f0b93a)}
+.ss-head{display:flex;align-items:center;justify-content:center;gap:12px;font-size:calc(38px * min(var(--fs,1), 1.15));color:var(--ink)}
+.ss-head i{width:70px;height:70px;background:var(--motif) center/contain no-repeat}
+.ss-row{margin-top:8px}
+.ss-cells{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;justify-items:center}
+.ss-cell{width:66px;height:66px;border-radius:50%;border:3px dashed rgba(90,58,38,.3)}
+.ss-cell.on{border:0;background:var(--motif) center/contain no-repeat}
+/* album: tem tuyến, trang tem mùa */
+.al-special{margin:14px 0 4px;padding:14px 10px 12px;border-radius:24px;background:rgba(255,248,234,.75);box-shadow:inset 0 0 0 3px rgba(90,58,38,.18)}
+.al-rs{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.al-rst{width:200px;text-align:center;font-size:calc(28px * min(var(--fs,1), 1.15));color:#7a5238}
+.al-rst img{display:block;width:100%;height:134px;object-fit:cover;border-radius:10px;border:6px solid #fffdf6;box-shadow:0 0 0 3px rgba(90,58,38,.3);transform:rotate(-2deg)}
+.al-sp{width:180px;text-align:center;font-size:calc(28px * min(var(--fs,1), 1.15));color:#7a5238}
+.al-sp i{display:block;width:96px;height:96px;margin:0 auto 4px;background:center/contain no-repeat}
 /* Pip ngồi chờ trên kệ (P9, pip_wait): lấp khoảng giữa màn khi chương chưa có giường của Pip (decor chỗ KỆ-PHẢI) */
 .home-pip{position:absolute;left:452px;bottom:290px;width:176px;height:206px;background:url(assets/ui/pip_wait.png) center bottom/contain no-repeat;pointer-events:none;
   transform-origin:50% 100%;animation:pipbreath 4s ease-in-out infinite}
@@ -559,7 +624,9 @@ body.reduce-motion .daily-btn.new .dot{animation:none}
     <div class="home-tile album-btn" id="albumBtn" role="button" data-touch="album"><i></i><span class="lbl">Album</span></div>
     <div class="home-tile decor-btn" id="decorBtn" role="button" data-touch="decor"><i></i><span class="lbl">Decorate</span><b class="pts">0</b></div>
     <div class="daily-btn off" id="dailyBtn" role="button" data-touch="daily"><i></i><div class="lbl">Today's Post</div><b class="dot"></b><b class="tick"></b><b class="wk"></b></div>
-    <div class="event-tile off" id="eventTile"><i></i><div class="lbl"></div><div class="sub"></div><span class="ev-bar"><b></b></span></div>
+    <div class="event-tile off" id="eventTile"><i></i><div class="lbl"></div><div class="sub"></div><span class="ev-bar"><b></b></span><b class="dot"></b></div>
+    <div class="wkend off" id="wkendRibbon" aria-hidden="true"></div>
+    <div class="bag-bar off" id="bagBar" role="img"><i class="bb-ic"></i><span class="bb-track"><b class="bb-fill"></b></span><span class="bb-txt"></span><i class="bb-next"></i></div>
   </div>
 </div>
 <script type="module" src="src/main.js"></script>

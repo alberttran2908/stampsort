@@ -15,7 +15,10 @@ import { haptic, hapticsEnabled, setHapticsEnabled } from './haptics.js';   // 4
 import { getSetting, setSetting, onSetting, textScale } from './settings.js';   // cài đặt của máy (R13)
 import { tween, ease, wait, initFx, sparkle, confetti, coinFly, ring, killTweens, killKey, setLite, clearParticles, setFxSize, preloadFx } from './fx.js';
 import { candidateActions, isDeadlocked } from './solver.js';
-import { track, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js';
+import { track as trackRaw, events as allEvents, funnelSummary, clearEvents, setCommon } from './analytics.js';
+import * as EV from './events.js';
+// L9: bộ đếm Tuần việc vặt lấy từ chính các sự kiện analytics (level_complete, daily_complete, deliver, decor_place)
+function track(name, data = {}) { trackRaw(name, data); try { onMeta(name, data); } catch (e) { /* đếm việc vặt không được làm hỏng ván */ } }
 import { t, getLang, setLang, topicName, residentOf, residentNote } from './copy.js';
 
 // ============================================================ constants
@@ -309,6 +312,7 @@ let play = { start: 0, attempt: 0, boosters: 0, undo: 0, rescues: 0, continues: 
 let levelActive = false;
 let extraKept = -1;          // level đã mua Ô phụ (giữ khi Retry cùng level)
 let levelToken = 0;
+let seasonCard = null, seasonKey = '';   // E2: id lá mang dấu tem mùa của ván này, khoá level để không nhận 2 lần
 let dailyRun = null;            // đang chơi Thư hôm nay: { key, day, lv, catchup, replay }
 const runKey = () => (dailyRun ? L.id : levelIdx);   // khoá "cùng một ván" cho Ô phụ giữ khi chơi lại
 const completing = new Set();   // slot đang chạy animation phong bì
@@ -396,7 +400,8 @@ function makeView(card) {
     el.classList.add('joker');
   } else {
     front.style.backgroundImage = `url(assets/ui/face_${faceIndex(card)}.png)`;
-    front.innerHTML = `<img class="art" src="${artUrl(card)}" draggable="false">`;
+    front.innerHTML = `<img class="art" src="${artUrl(card)}" draggable="false">${card.id === seasonCard ? `<i class="season-mark" style="background-image:url(${motifUrl()})"></i>` : ''}`;
+    if (card.id === seasonCard) el.classList.add('seasonal');
   }
   inner.append(front, back);
   el.append(inner);
@@ -1967,6 +1972,8 @@ async function completeAnimInner(slot, ids, topic, delay, token) {
   vs.forEach(v => { if (v.card && v.card.k === 'stamp') got.add(v.card.art); });
   save.album[topic] = [...got];
   persist();
+  track('deliver', { level: dailyRun ? dailyRun.key : levelIdx + 1, topic, stamps: vs.filter(v => v.card && v.card.k === 'stamp').length });
+  if (seasonCard != null && ids.includes(seasonCard)) seasonCollectFx(views.get(seasonCard));
   await wait(delay);
   if (token !== levelToken) return;
   // gom
@@ -2294,8 +2301,11 @@ async function winSequence() {
   track('af_level_achieved', { af_level: lvNum, af_score: done.stars });      // sự kiện chuẩn AppsFlyer
   if (specialOf(L)) track(`milestone_level_${lvNum}`, done);                  // mốc UA (L5, L10)
   const st = stars();
-  const reward = 10 + st * 10;
+  const mult = EV.weekendMult(LIVE.liveState(save.live, LIVE.nowMs(), wonLevel()));   // E3: Thứ Bảy, Chủ nhật xu thắng x2 (từ L8)
+  const reward = (10 + st * 10) * mult;
+  if (mult > 1) track('weekend_bonus', { level: levelIdx + 1, base: reward / mult, reward });
   const lv = levelIdx + 1;
+  EV.gentleRecord(save.losses = save.losses || {}, lv, true);
   const gain = Math.max(0, st - (save.stars[lv] || 0));     // Tem Điểm mới: chỉ phần vượt điểm cao nhất cũ
   save.stars[lv] = Math.max(save.stars[lv] || 0, st);
   if (gain) track('points_earned', { level: lv, gain, total: pointsEarned(), left: pointsLeft() });
@@ -2311,6 +2321,7 @@ async function winSequence() {
   const promptDecor = !chEnd && dnext && pointsLeft() >= dnext.cost && save.seen['decor_prompt_' + dnext.id] !== 1;
   if (promptDecor) save.seen['decor_prompt_' + dnext.id] = 1;
   persist();
+  const evLines = winMeta();                     // E1 đi 1 trạm, F5 túi thư +1 (sau khi unlocked cập nhật: thắng L15 là mở túi thư)
   const showX2 = lv >= 11 && !chEnd;                      // PO chốt (R12): x2 từ L11, không ở màn hết chương
 
   endWin();
@@ -2356,7 +2367,7 @@ async function winSequence() {
       ${L.moves != null && !overtime && st < 3 ? `<p style="font-size:${fs(42)};margin:0">${t('stars_hint')}</p>` : ''}
       ${last ? `<p>${t('win_end')}</p>` : ''}
       ${lastDelivered ? `<p class="note"><b>${residentOf(lastDelivered)}:</b> “${residentNote(residentOf(lastDelivered))}”</p>` : ''}
-      <div class="coins-line"><i></i><span>+${reward}</span></div>`,
+      <div class="coins-line"><i></i><span>+${reward}</span>${mult > 1 ? `<em class="x2">${t('weekend_x2')}</em>` : ''}</div>${evLines}`,
     buttons,
   });
   const T = calm ? { win: 0, panel: 150, stamp0: 350, gap: 150 } : { win: 900, panel: 1100, stamp0: 1400, gap: 300 };
@@ -2430,6 +2441,7 @@ function dailyWinSequence() {
   }
   const total = reward + (pageDone ? DAILY_REWARD.page : 0) + (wkBox ? wkBox.coins : 0);
   persist();
+  const evLines = winMeta();
   track('daily_complete', { day: run.key, attempt: play.attempt, moves_used: S.used, moves_left: S.moves === Infinity ? 0 : S.moves, catchup: !!run.catchup,
     replay: !first, reward: total, stamps: D.stamps.length, time_s: Math.round((Date.now() - play.start) / 1000), src: L.src });
   if (first && run.catchup) track('daily_catchup', { day: run.key });
@@ -2450,7 +2462,7 @@ function dailyWinSequence() {
       ${first ? `<div class="pts-line">${t('book_title')} · ${inPage}/${STAMP_PAGE}</div>` : `<p>${t('daily_no_reward')}</p>`}
       ${pageDone ? `<p>${t('book_page_done', { n: DAILY_REWARD.page })}</p>` : ''}
       ${wkBox ? `<p><b>${t('weekly_box')}</b></p>${giftChips({ hint: wkBox.hint, pack: wkBox.pack, coins: wkBox.coins })}` : ''}
-      ${total ? `<div class="coins-line"><i></i><span>+${total}</span></div>` : ''}`,
+      ${total ? `<div class="coins-line"><i></i><span>+${total}</span></div>` : ''}${evLines}`,
     buttons: [{ label: t('daily_home'), cls: 'wait', act: () => { const tl = winTL; finishWin(false); track('win_button', { level: run.key, button: 'home', ms: tl ? Math.round(performance.now() - tl.t0) : -1 }); goHome(); } }],
   });
   const T = calm ? { win: 0, panel: 150, stamp: 350, coins: 650, ready: 900 } : { win: 300, panel: 500, stamp: 850, coins: 1250, ready: 1600 };
@@ -2505,7 +2517,11 @@ function openAlbum() {
       : `<div class="al-st miss"></div>`).join('');
     return `<div class="al-row"><img class="al-ic" src="${iconUrl(tp)}"><div class="al-info"><b>${topicName(tp)}</b><span>${all.filter(a => got.has(a)).length}/${all.length} · ${t('to_resident', { name: residentOf(tp) })}</span><div class="al-cells">${cells}</div></div></div>`;
   }).join('');
-  $('albumBody').innerHTML = (dailyOn() ? stampBookHtml() : '') + rows;   // L2: trang Sổ dấu ngày đầu album
+  // L7, L8: tem tuyến (xong 20 trạm) và trang tem mùa (đủ 3 bộ) đứng đầu album, sau Sổ dấu ngày
+  const rs = save.routeStamps || [], sp = save.seasonPages || [];
+  const extra = (rs.length ? `<div class="al-special"><div class="sb-head">${t('album_route')} · ${rs.length}</div><div class="al-rs">${rs.map(r => { const sc = routeScene(r.k); return `<div class="al-rst"><img src="${sc.postcard}" alt=""><span>${chPlace(sc)}</span></div>`; }).join('')}</div></div>` : '')
+    + (sp.length ? `<div class="al-special"><div class="sb-head">${t('album_season')} · ${sp.length}</div><div class="al-rs">${sp.map(x => `<div class="al-sp"><i style="background-image:url(${motifUrl(x.motif)})"></i><span>${t('season_' + x.motif)}</span></div>`).join('')}</div></div>` : '');
+  $('albumBody').innerHTML = (dailyOn() ? stampBookHtml() : '') + extra + rows;   // L2: trang Sổ dấu ngày đầu album
   $('albumCount').textContent = t('album_count', { n: have, total });
   $('album').classList.remove('off');
   track('album_open', { have, total });
@@ -2517,7 +2533,10 @@ function outOfMoves(again = false) {
   ended = true;
   if (!again) { sfx('lose'); haptic('deny'); }
   if (!again && dailyRun) track('daily_fail', { day: dailyRun.key, attempt: play.attempt, delivered: S.delivered, total: S.total });
-  else if (!again) track('level_fail', { level: levelIdx + 1, attempt: play.attempt, reason: 'out_of_moves', delivered: S.delivered, total: S.total, special: specialOf(L) || '' });
+  else if (!again) {
+    track('level_fail', { level: levelIdx + 1, attempt: play.attempt, reason: 'out_of_moves', delivered: S.delivered, total: S.total, special: specialOf(L) || '' });
+    EV.gentleRecord(save.losses = save.losses || {}, levelIdx + 1, false); persist();   // F11: đếm thua liền ở cùng level
+  }
   if (safetyOf(L) === 'retry') {
     // Level khó kiểu "chơi lại miễn phí": không phạt, giữ Ô phụ, vào lại ngay
     track('ad_offer', { level: levelIdx + 1, placement: 'soclose_more' });
@@ -2731,6 +2750,17 @@ async function startLevel(i, { resume = null, daily = null } = {}) {
     welcomeMoves = save.welcomeMoves; S.moves += welcomeMoves; save.welcomeMoves = 0; persist();
     track('welcome_moves_used', { level: levelIdx + 1, moves: welcomeMoves });
   }
+  // F11 (L10) Thử lại nhẹ tay: thua 2 lần liền ở cùng level thường (từ L11) -> lần này +3 nước và 1 lá đầu bộ bài lật sẵn
+  let gentle = false;
+  if (!restored && !daily && L.moves != null && EV.gentleOn(save.losses || {}, levelIdx + 1, { special: !!specialOf(L) })) {
+    gentle = true;
+    S.moves += EV.GENTLE.moves;
+    if (S.deck.length) { const c = S.deck.pop(); c.up = true; S.waste.push(c); }
+    track('gentle_retry', { level: levelIdx + 1, losses: save.losses.n, moves: EV.GENTLE.moves });
+  }
+  // E2 Tem theo mùa (L8): 1 lá mang dấu tem mùa (Thư hôm nay luôn có, chiến dịch khoảng một nửa), chọn tất định
+  seasonCard = null; seasonKey = daily ? 'D' + daily.key : 'L' + L.id;
+  { const es = evState(); if (es.cur && es.cur.id === 'season') seasonCard = EV.seasonCardFor(L, es.cur.k, es.s, seasonKey); }
   undoStack = restored ? restored.undo : [];
   undoLeft = restored ? restored.undoLeft : 5;   // người lớn tuổi đi sai nhiều hơn: 5 lần hoàn tác miễn phí mỗi level
   combo = restored ? restored.combo : 0;
@@ -2829,6 +2859,7 @@ async function startLevel(i, { resume = null, daily = null } = {}) {
   busyInput = false;
   relayout({ dur: 120 });
   if (welcomeMoves) toast(t('wb_toast', { n: welcomeMoves }), 1800);
+  else if (gentle) toast(t('gentle_toast'), 1800);
   if (L.moves != null && !save.seen.rules) {
     save.seen.rules = 1;
     persist();
@@ -3036,15 +3067,26 @@ function dailyPanel(source = 'home') {
     buttons });
 }
 /** Lần đầu thấy nút Thư hôm nay: 1 popup (1 câu, 1 hình, 1 nút "Xem"), theo luật mở khoá mục 2. Gọi qua hàng đợi homePopups. */
-const featureDue = () => dailyOn() && !save.seen.feat_daily;
+// Popup "Tính năng mới" theo bảng mở khoá (mục 2): mỗi thứ 1 lần, tối đa 1 popup mỗi phiên (hàng đợi homePopups).
+// Event chỉ giới thiệu khi đang chạy và đủ level (L12 Tuyến đưa thư, L20 Tem theo mùa, L30 Tuần việc vặt).
+const FEATURE_POPS = [
+  { id: 'daily', due: () => dailyOn(), icon: () => 'assets/ui/ic_daily.png', text: 'daily_intro', open: () => dailyPanel('intro') },
+  { id: 'route', due: () => evActive('route'), icon: () => 'assets/ui/ic_event.png', text: 'route_intro', open: () => eventPanel('route') },
+  { id: 'mailbag', due: () => !EV.KILL.mailbag && LIVE.featureOn('mailbag', wonLevel()), icon: () => 'assets/ui/mailbag_full.png', text: 'bag_intro', open: null },
+  { id: 'season', due: () => evActive('season'), icon: () => motifUrl(), text: 'season_intro', open: () => eventPanel('season') },
+  { id: 'errands', due: () => evActive('errands'), icon: () => 'assets/decor/chalk_board.png', text: 'errands_intro', open: () => eventPanel('errands') },
+];
+const featureNext = () => FEATURE_POPS.find(f => !save.seen['feat_' + f.id] && f.due());
+const featureDue = () => !!featureNext();
 function dailyIntro() {
-  if (!featureDue() || panelOpen) return false;
-  save.seen.feat_daily = 1; persist();
-  track('feature_unlock', { feature: 'daily', level: wonLevel() });
+  const f = featureNext();
+  if (!f || panelOpen) return false;
+  save.seen['feat_' + f.id] = 1; persist();
+  track('feature_unlock', { feature: f.id, level: wonLevel() });
   sfx('feature');
   panel({ title: t('feat_new'), radial: true,
-    body: `<div class="feature-icon" style="background-image:url(assets/ui/ic_daily.png)"></div><p>${t('daily_intro')}</p>`,
-    buttons: [{ label: t('feat_see'), act: () => dailyPanel('intro') }] });
+    body: `<div class="feature-icon" style="background-image:url(${f.icon()})"></div><p>${t(f.text)}</p>`,
+    buttons: [{ label: f.open ? t('feat_see') : t('got_it'), act: () => { if (f.open) f.open(); } }] });
   return true;
 }
 // ============================================================ L3: Thẻ tuần 5/7 (F3)
@@ -3067,6 +3109,8 @@ function giftChips(r) {
   if (r.stamper) out.push(chip('assets/ui/ic_stamper.png', `${t('b_stamper')} +${r.stamper}`));
   if (r.joker) out.push(chip('assets/ui/ic_wild.png', `${t('b_joker')} +${r.joker}`));
   if (r.moves) out.push(chip('assets/ui/plus.png', t('wb_moves', { n: r.moves })));
+  if (r.stamp || r.routeStamp) out.push(chip('assets/ui/ic_album.png', t('route_stamp')));
+  if (r.page || r.seasonPage) out.push(chip('assets/ui/ic_album.png', t('season_page')));
   return `<div class="gift-list">${out.join('')}</div>`;
 }
 /** Nút Thư hôm nay trên màn chính: ẩn trước khi mở khoá, chấm đỏ khi chưa giao thư hôm nay, dấu tích khi đã giao, huy hiệu Thẻ tuần n/5. */
@@ -3105,8 +3149,12 @@ function refreshEventTile() {
   if (!show) return;
   el.querySelector('.lbl').textContent = t('ev_' + id);
   const ev = LIVE.BIG_EVENTS.find(e => e.id === id);
-  el.querySelector('.sub').textContent = st.big ? (ui ? '' : t('ev_soon')) : t('ev_opens', { n: ev.minLevel });
-  if (ui) { const pr = ui.progress(); el.querySelector('.ev-bar b').style.width = `${Math.round(100 * pr.p / Math.max(1, pr.n))}%`; }
+  el.querySelector('i').style.backgroundImage = `url(${{ route: 'assets/ui/ic_event.png', season: motifUrl(), errands: 'assets/decor/chalk_board.png' }[id]})`;
+  let pr = null;
+  if (ui) pr = ui.progress();
+  el.querySelector('.sub').textContent = st.big ? (ui ? `${pr.p}/${pr.n}` : t('ev_soon')) : t('ev_opens', { n: ev.minLevel });
+  if (pr) el.querySelector('.ev-bar b').style.width = `${Math.round(100 * pr.p / Math.max(1, pr.n))}%`;
+  el.classList.toggle('new', !!(ui && ui.dot && ui.dot()));      // có mốc quà chờ nhận: chấm đỏ (không đếm ngược)
 }
 $('eventTile').addEventListener('pointerup', () => {
   const id = $('eventTile').dataset.event, ui = EVENT_UI[id];
@@ -3155,6 +3203,195 @@ function giftPopup(due) {
     } }] });
   return true;
 }
+// ============================================================ L6–L9: event và túi thư (events.js)
+// save.ev = { route | season | errands: trạng thái phiên đang chạy }. Phiên đã qua được chốt khi mở app / về màn chính /
+// có thắng thua: quà đã đạt mà chưa nhận chuyển vào save.gifts (phong bì quà gộp), tem tuyến và trang tem mùa vào album.
+function evState() {
+  save.ev = save.ev || {};
+  const had = JSON.stringify(save.ev);
+  const cur = EV.currentEvent(save.live, LIVE.nowMs(), wonLevel());
+  const r = EV.syncEvents(save.ev, cur);
+  if (r.gifts.length) {
+    const keep = [];
+    for (const g of r.gifts) {
+      if (g.routeStamp) addRouteStamp();
+      if (g.seasonPage) addSeasonPage();
+      delete g.routeStamp; delete g.seasonPage;
+      if (['coins', 'hint', 'pack', 'stamper', 'joker'].some(k => g[k])) keep.push(g);
+    }
+    save.gifts = (save.gifts || []).concat(keep);
+    track('event_end_gifts', { n: r.gifts.length, src: [...new Set(r.gifts.map(g => g.src))].join(',') });
+  }
+  if (r.gifts.length || JSON.stringify(save.ev) !== had) persist();
+  return { cur, s: r.cur };
+}
+const evActive = id => { const e = EV.currentEvent(save.live, LIVE.nowMs(), wonLevel()); return !!e && e.id === id; };
+/** E2: lá tem mùa vừa được gửi: +1 tem (giữ cả khi thua sau đó), dấu tem bay lên đỉnh màn. */
+function seasonCollectFx(v) {
+  const es = evState();
+  if (!es.cur || es.cur.id !== 'season') return;
+  const n = EV.seasonCollect(es.s, seasonKey);
+  if (n == null) return;
+  persist();
+  track('season_stamp_get', { n, level: seasonKey, k: es.cur.k });
+  if (n % EV.SEASON.set === 0 && n <= 24) track('season_set_complete', { set: n / EV.SEASON.set, k: es.cur.k });
+  sfx('claim', { vol: 0.6, rate: 1.12 });
+  const tx = 540, ty = 150 + DY_HUD;
+  floatText(t('season_get', { n: Math.min(n, 24), m: 24 }), tx, ty + 120);
+  if (reduceMotion() || !v) return;
+  const el = document.createElement('div');
+  el.className = 'season-fly';
+  el.style.backgroundImage = `url(${motifUrl()})`;
+  board.append(el);
+  const o = { x: v.x + CW - 40, y: v.y + 20, s: 1 };
+  const draw = () => { el.style.transform = `translate(${o.x - 40}px,${o.y - 40}px) scale(${o.s})`; };
+  draw();
+  tween(o, { x: tx, y: ty, s: 0.7 }, { dur: 620, easing: ease.inOutCubic, onUpdate: draw }).then(() => { el.remove(); sparkle(tx, ty, 6); });
+}
+function addRouteStamp() {
+  const e = EV.currentEvent(save.live, LIVE.nowMs(), wonLevel());
+  save.routeStamps = save.routeStamps || [];
+  save.routeStamps.push({ k: e ? e.k : (save.routeStamps.length), day: today() });
+}
+function addSeasonPage() {
+  save.seasonPages = save.seasonPages || [];
+  save.seasonPages.push({ motif: EV.SEASON_MOTIF(new Date(today() * 864e5).getUTCMonth() + 1), day: today() });
+}
+// cảnh tuyến theo chu kỳ: bưu thiếp chương 2..13 xoay vòng (Phố Chính không có bưu thiếp)
+const routeScene = k => CHAPTERS[1 + (k % 12)] || CHAPTERS[1];
+const motifNow = () => EV.SEASON_MOTIF(new Date(today() * 864e5).getUTCMonth() + 1);
+const motifUrl = (m = motifNow()) => `assets/ui/season_${m}.svg`;
+/** Cộng 1 phần quà (từ mốc event, túi thư). Xu cộng ngay, booster vào kho, tem tuyến/trang mùa vào album. */
+function applyReward(r) {
+  if (r.coins) save.coins += r.coins;
+  for (const k of ['hint', 'pack', 'stamper', 'joker']) if (r[k]) save[k] = (save[k] || 0) + r[k];
+  if (r.routeStamp) addRouteStamp();
+  if (r.seasonPage) addSeasonPage();
+  persist();
+}
+/** Đếm việc vặt (E4) từ sự kiện chơi. */
+function evBump(on, n = 1) {
+  const { cur, s } = evState();
+  if (!cur || cur.id !== 'errands') return;
+  const done = EV.errandBump(s, cur.k, on, n);
+  persist();
+  for (const id of done) {
+    trackRaw('errand_complete', { errand: id, k: cur.k });
+    if (!$('home').classList.contains('off')) continue;
+    const e = EV.ERRAND_POOL.find(x => x.id === id);
+    if (!winTL) toast(t('ev_line_errand', { name: t('er_' + id, { n: e.need }) }), 1600);
+  }
+}
+function onMeta(name, d) {
+  if (name === 'level_complete') { evBump('win'); if (d.stars === 3) evBump('stars3'); if (d.special) evBump('hard_win'); }
+  else if (name === 'daily_complete' && !d.replay) evBump('daily_day');
+  else if (name === 'decor_place') evBump('decor');
+  else if (name === 'deliver') { evBump('deliver'); if (d.stamps >= 6) evBump('deliver_big'); }
+}
+/** Thắng 1 ván (chiến dịch hoặc Thư hôm nay): đi 1 trạm (E1), túi thư +1 (F5). Trả các dòng hiển thị ở màn thắng. */
+function winMeta() {
+  const lines = [];
+  const { cur, s } = evState();
+  if (cur && cur.id === 'route') {
+    const p = EV.routeStep(s);
+    if (p != null) {
+      persist();
+      track('route_step', { station: p, k: cur.k });
+      if (p === EV.ROUTE.stations) track('route_complete', { k: cur.k });
+      lines.push(`<span class="evl"><i style="background-image:url(assets/ui/ic_event.png)"></i>${p <= EV.ROUTE.stations ? t('ev_line_route', { n: p, m: EV.ROUTE.stations }) : t('route_trip', { n: Math.ceil((p - EV.ROUTE.stations) / EV.ROUTE.trip.len), m: EV.ROUTE.trip.max })}</span>`);
+    }
+  }
+  save.mailbag = save.mailbag || { n: 0, i: 0 };
+  const got = EV.mailbagWin(save.mailbag, wonLevel());
+  if (LIVE.featureOn('mailbag', wonLevel()) && !EV.KILL.mailbag) {
+    if (got) {
+      applyReward(got);
+      track('mailbag_open', { kind: got.kind, round: save.mailbag.i });
+      lines.push(`<span class="evl full"><i style="background-image:url(assets/ui/mailbag_full.png)"></i>${t('bag_full')} ${giftChips(got).replace(/<\/?div class="gift-list">/g, '')}</span>`);
+    } else lines.push(`<span class="evl"><i style="background-image:url(assets/ui/mailbag_open.png)"></i>${t('ev_line_bag', { n: save.mailbag.n, m: EV.MAILBAG.need })}</span>`);
+  }
+  persist();
+  return lines.length ? `<div class="ev-lines">${lines.join('')}</div>` : '';
+}
+// ---- panel event (bấm ô Event): tiến độ, mốc quà, nút Nhận cho từng mốc đã đạt
+function rewardMini(r) { return giftChips(r).replace('gift-list', 'gift-list mini'); }
+function msRow(id, cur, m, label) {
+  const btn = m.claimed ? `<span class="ev-got">${t('ev_claimed')}</span>`
+    : m.reached ? `<b class="ev-claim" role="button" data-mid="${m.mid}">${t('claim')}</b>` : '';
+  return `<div class="ev-ms${m.reached ? ' reached' : ''}${m.claimed ? ' done' : ''}"><div class="ev-ms-l">${label}</div>${rewardMini(m.reward)}${btn}</div>`;
+}
+function eventPanel(id, { instant = false } = {}) {
+  const { cur, s } = evState();
+  if (!cur || cur.id !== id) { refreshHome(); return; }
+  track('event_open', { event: id, k: cur.k, instant });
+  const ms = EV.milestones(id, s, cur.k);
+  let body = '';
+  if (id === 'route') {
+    const sc = routeScene(cur.k);
+    const p = Math.min(s.p, EV.ROUTE.stations);
+    const dots = Array.from({ length: EV.ROUTE.stations }, (_, i) => {
+      const n = i + 1, gift = EV.ROUTE.milestones.some(m => m.at === n);
+      return `<b class="rt-dot${n <= p ? ' on' : ''}${n === p ? ' cur' : ''}${gift ? ' gift' : ''}">${gift ? '' : n}</b>`;
+    }).join('');
+    body = `<div class="rt-scene"><img src="${sc.postcard}" alt=""><span>${chPlace(sc)}</span></div>
+      <div class="rt-track">${dots}</div><p class="small">${t('route_rule')}</p>
+      ${ms.filter(m => !m.trip || s.p >= EV.ROUTE.stations).map(m => msRow(id, cur, m, m.trip ? t('route_trip', { n: m.trip, m: EV.ROUTE.trip.max }) : t('route_stop', { n: m.at, m: EV.ROUTE.stations }))).join('')}`;
+  } else if (id === 'season') {
+    const motif = motifNow();
+    const sets = EV.SEASON.sets.map((m, si) => {
+      const cells = Array.from({ length: EV.SEASON.set }, (_, i) => `<b class="ss-cell${si * 8 + i < s.n ? ' on' : ''}"></b>`).join('');
+      return `<div class="ss-row"><div class="ss-cells" style="--motif:url(${motifUrl(motif)})">${cells}</div></div>${msRow(id, cur, ms[si], t('season_set', { n: si + 1 }))}`;
+    }).join('');
+    const extra = s.n >= 24 ? ms.filter(m => m.extra).map(m => msRow(id, cur, m, t('season_extra', { n: m.extra, m: EV.SEASON.extra.max }))).join('') : '';
+    body = `<div class="ss-head" style="--motif:url(${motifUrl(motif)})"><i></i>${t('season_' + motif)} · ${t('season_get', { n: Math.min(s.n, 24), m: 24 })}</div>
+      <p class="small">${t('season_rule')}</p>${sets}${extra}`;
+  } else {
+    body = `<p class="small">${t('errands_rule')}</p>${ms.map(m => {
+      if (m.box) return msRow(id, cur, m, t('er_box'));
+      const c = s.c[m.errand.id] || 0;
+      return msRow(id, cur, m, `${t('er_' + m.errand.id, { n: m.errand.need })}<span class="er-bar"><b style="width:${Math.round(100 * c / m.errand.need)}%"></b></span><small>${c}/${m.errand.need}</small>`);
+    }).join('')}`;
+  }
+  const p = panel({ title: t('ev_' + id), kind: 'tall event ev-' + id, instant, body, buttons: [{ label: t('close'), cls: 'sec', act: () => refreshHome() }] });
+  p.querySelectorAll('.ev-claim').forEach(b => b.addEventListener('pointerup', ev => {
+    ev.stopPropagation();
+    const st = evState();
+    if (!st.cur || st.cur.id !== id) return;
+    const r = EV.claim(id, st.s, b.dataset.mid, st.cur.k);
+    if (!r) return;
+    applyReward(r);
+    track('event_claim', { event: id, mid: b.dataset.mid, k: st.cur.k, ...r });
+    if (r.routeStamp) toast(t('route_done'), 1800);
+    sfx('coins', { vol: 0.6 }); haptic('milestone');
+    bumpCoins();
+    eventPanel(id, { instant: true });
+  }));
+}
+for (const id of ['route', 'season', 'errands']) {
+  EVENT_UI[id] = {
+    progress: () => { const { cur, s } = evState(); return cur && cur.id === id ? EV.progress(id, s, cur.k) : { p: 0, n: 1 }; },
+    dot: () => { const { cur, s } = evState(); return !!(cur && cur.id === id && EV.claimable(id, s, cur.k).length); },
+    open: () => eventPanel(id),
+  };
+}
+// ---- E3 dải băng cuối tuần và F5 thanh túi thư trên màn chính
+function refreshWeekendBag() {
+  const st = LIVE.liveState(save.live, LIVE.nowMs(), wonLevel());
+  const wk = EV.weekendMult(st) > 1;
+  $('wkendRibbon').classList.toggle('off', !wk);
+  $('wkendRibbon').textContent = t('weekend_ribbon');
+  const bagOn = !EV.KILL.mailbag && LIVE.featureOn('mailbag', wonLevel());
+  $('home').classList.toggle('bag', bagOn);
+  const bb = $('bagBar');
+  bb.classList.toggle('off', !bagOn);
+  if (!bagOn) return;
+  const bag = save.mailbag || { n: 0, i: 0 };
+  bb.querySelector('.bb-fill').style.width = `${Math.round(100 * (bag.n || 0) / EV.MAILBAG.need)}%`;
+  bb.querySelector('.bb-txt').textContent = `${bag.n || 0}/${EV.MAILBAG.need}`;
+  const icon = { hint: 'ic_hint', pack: 'ic_magnet', stamper: 'ic_stamper', joker: 'ic_wild' }[EV.mailbagNext(bag)];
+  bb.querySelector('.bb-next').style.backgroundImage = `url(assets/ui/${icon}.png)`;
+  bb.setAttribute('aria-label', `${t('bag_title')} ${bag.n || 0}/${EV.MAILBAG.need}`);
+}
 // Hàng đợi popup tự hiện ở màn chính (mục 4): tối đa 1 popup mỗi lần mở app (boot, quay lại từ nền) và mỗi lần về màn chính.
 // Ưu tiên: hỏi chơi tiếp ván dở (chỉ lúc mở app) > phong bì quà (F6 > quà event cũ > F4, gộp 1 phong bì) > "Tính năng mới"
 // (tối đa 1 mỗi phiên). Thứ chưa hiện được thì đợi lần sau; quà đã đạt không mất.
@@ -3178,7 +3415,8 @@ function newVisit() { popupVisit++; }
 function refreshHome() {
   if ($('home').classList.contains('off')) return;
   LIVE.touch(save.live); persist();
-  refreshDailyBtn(); refreshEventTile(); renderDecor(); bumpCoins({ instant: true, pop: false });
+  evState();                                       // chốt phiên event đã qua (quà chưa nhận -> phong bì) trước khi tính popup
+  refreshDailyBtn(); refreshEventTile(); refreshWeekendBag(); renderDecor(); bumpCoins({ instant: true, pop: false });
 }
 $('dailyBtn').addEventListener('pointerup', () => { unlockAudio(); sfx('click'); dailyPanel('home'); });
 // quay lại từ nền (qua nửa đêm, vắng nhiều ngày): màn chính cập nhật; vắng >= 30 phút hoặc sang ngày mới thì tính là một lần mở app
@@ -3559,6 +3797,9 @@ window.__game = { variant: VARIANT, get S() { return S; }, get level() { return 
   // L3–L5 (tests/home-liveops.browser.js): về màn chính như từ một level, hàng đợi popup, Thẻ tuần, điểm chạm
   returnHome(chId) { $('home').classList.add('off'); goHome(chId); }, homePopups, get popupLog() { return popupLog.slice(); }, newVisit,
   weekly: () => weekly(), giftsDue, refreshEventTile,
+  // L6–L10 (tests/events.browser.js)
+  ev: { state: () => { const e = evState(); return e.cur ? { id: e.cur.id, k: e.cur.k, key: e.cur.key, s: JSON.parse(JSON.stringify(e.s)) } : null; }, panel: eventPanel,
+    get seasonCard() { return seasonCard; }, get seasonKey() { return seasonKey; }, EV },
   touchPoints: () => [...document.querySelectorAll('#home [data-touch]')].filter(el => el.offsetParent && getComputedStyle(el).visibility !== 'hidden').map(el => el.dataset.touch) };
 
 // đổi ngôn ngữ giữa ván: viết lại tên chủ đề trên lá vương miện
